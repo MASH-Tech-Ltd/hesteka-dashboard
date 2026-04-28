@@ -221,10 +221,10 @@ export default function PartnersPage() {
   const handleEditPartner = async (formData) => {
     setModalLoading(true);
     try {
-      const res = await api.patch(`/user/update-status/${editingUser._id}`, { status: formData.status });
+      const res = await api.patch(`/user/update-user-admin/${editingUser._id}`, formData);
       if (res.data.status === "ok") {
         setIsEditModalOpen(false);
-        toast.success("Partner status updated successfully");
+        toast.success("Partner updated successfully");
         fetchActivePartners();
       }
     } catch (err) {
@@ -240,6 +240,7 @@ export default function PartnersPage() {
     { name: "email", label: t.emailLabel || "Email", type: "email", required: true },
     { name: "password", label: t.passwordLabel || "Password", type: "password", required: true },
     { name: "company", label: t.companyName || "Company Name", required: true },
+    { name: "website", label: t.websiteLabel || "Website" },
     { name: "phone", label: t.phone || "Phone" },
     { name: "address", label: t.address || "Address" },
   ];
@@ -247,7 +248,8 @@ export default function PartnersPage() {
   const editFields = [
     { name: "firstName", label: t.firstName || "First Name", disabled: true },
     { name: "lastName", label: t.lastName || "Last Name", disabled: true },
-    { name: "company", label: t.companyName || "Company Name", disabled: true },
+    { name: "company", label: t.companyName || "Company Name" },
+    { name: "website", label: t.websiteLabel || "Website" },
     {
       name: "status",
       label: t.statusLabel || "Status",
@@ -269,6 +271,7 @@ export default function PartnersPage() {
     { name: "lastName", label: t.lastName || "Last Name", disabled: true },
     { name: "email", label: t.emailLabel || "Email", disabled: true },
     { name: "company", label: t.companyName || "Company Name", disabled: true },
+    { name: "website", label: t.websiteLabel || "Website", disabled: true },
     { name: "phone", label: t.phone || "Phone", disabled: true },
     { name: "address", label: t.address || "Address", disabled: true },
     { name: "status", label: t.statusLabel || "Status", disabled: true },
