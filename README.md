@@ -1,16 +1,92 @@
-# React + Vite
+# EmmaFVE Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+EmmaFVE Admin Dashboard is a comprehensive and modern administrative interface built with React, Vite, and Tailwind CSS. It is designed to manage various aspects of the EmmaFVE platform, providing features for user management, analytics, content administration, and real-time operations.
 
-Currently, two official plugins are available:
+## 🚀 Technologies Used
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Framework:** [React 18](https://react.dev/) with [Vite](https://vitejs.dev/)
+- **Styling:** [Tailwind CSS 4](https://tailwindcss.com/)
+- **Routing:** [React Router v6](https://reactrouter.com/)
+- **State Management & Context:** React Context API
+- **API & Data Fetching:** [Axios](https://axios-http.com/)
+- **Real-time Communication:** [Socket.io Client](https://socket.io/)
+- **Maps:** [React Leaflet](https://react-leaflet.js.org/) & Google Maps API
+- **Charts:** [Recharts](https://recharts.org/)
+- **Backend & Push Notifications:** [Firebase](https://firebase.google.com/)
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Toast Notifications:** [React Toastify](https://fkhadra.github.io/react-toastify/)
 
-## React Compiler
+## 📁 Project Structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The project follows a modular and scalable architecture:
 
-## Expanding the ESLint configuration
+```text
+emmafveAdminDashboard/
+├── public/                 # Static assets
+└── src/
+    ├── components/         # Reusable React components
+    │   ├── common/         # Generic UI components (Modals, Tables, Pagination, etc.)
+    │   ├── dashboard/      # Dashboard-specific components (Cards, Sidebar, Topbar)
+    │   └── ...             # Chat and layout-specific components
+    ├── context/            # React Context providers (Language, API Cache, Socket)
+    ├── layouts/            # Application layout wrappers (e.g., DashboardLayout)
+    ├── pages/              # Application screens and routes
+    │   ├── AnalyticsPage, DashboardPage, UsersPage,
+    │   ├── ContactsPage, CrowdfundingPage, DonationsPage,
+    │   └── ... (and more modular pages)
+    ├── utils/              # Utility functions and API configuration (e.g., api.js)
+    ├── App.jsx             # Main application component & routing setup
+    ├── main.jsx            # React application entry point
+    ├── firebase.js         # Firebase configuration and initialization
+    └── socket.js           # Socket.io connection setup
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠️ Key Features
+
+- **Comprehensive Dashboard:** Real-time metrics and activity monitoring with interactive charts.
+- **User Management:** View, manage, and track users across the platform.
+- **Content Administration:** Manage FAQs, Contacts, Missions, Partners, and Physical Items.
+- **Donation & Crowdfunding:** Track and validate donations and crowdfunding campaigns.
+- **Analytics & Reporting:** Detailed reports and analytics for platform activities.
+- **Real-time Notifications:** Integrated Firebase Cloud Messaging (FCM) and WebSocket events.
+- **Multi-language Support:** Built-in context for language localization.
+- **Interactive Maps:** Collection points and activity tracking using interactive mapping tools.
+
+## 📦 Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or higher recommended)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository and navigate to the project folder:
+   ```bash
+   cd emmafveAdminDashboard
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up your environment variables:
+   Create a `.env` file in the root directory and fill in the necessary keys (Firebase, API URLs, etc.).
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Build for production:
+   ```bash
+   npm run build
+   ```
+
+## 📜 Scripts
+
+- `npm run dev`: Starts the Vite development server.
+- `npm run build`: Builds the app for production.
+- `npm run lint`: Lints the codebase using ESLint.
+- `npm run preview`: Locally previews the production build.
