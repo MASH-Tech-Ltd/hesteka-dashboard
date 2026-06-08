@@ -64,7 +64,7 @@ export default function PartnersPage() {
   const [meta, setMeta] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
   const [confirmLoading, setConfirmLoading] = useState(false);
