@@ -64,7 +64,7 @@ export default function PartnersPage() {
   const [meta, setMeta] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -174,6 +174,8 @@ export default function PartnersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [addFieldErrors, setAddFieldErrors] = useState([]);
+  const [editFieldErrors, setEditFieldErrors] = useState([]);
 
   const openDetailsModal = async (userId) => {
     try {
@@ -201,18 +203,39 @@ export default function PartnersPage() {
     }
   };
 
+  const objectToFormData = (obj) => {
+    const fd = new FormData();
+    Object.keys(obj).forEach((key) => {
+      const val = obj[key];
+      // Skip null, undefined, and empty strings (treat as "not provided")
+      if (val === undefined || val === null || val === '') return;
+      fd.append(key, val);
+    });
+    return fd;
+  };
+
   const handleAddPartner = async (formData) => {
     setModalLoading(true);
+    setAddFieldErrors([]);
     try {
-      const res = await api.post("/auth/register-partner", formData);
+      const fd = objectToFormData(formData);
+      const res = await api.post("/auth/register-partner", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       if (res.data.status === "ok" || res.status === 201) {
         setIsAddModalOpen(false);
+        setAddFieldErrors([]);
         toast.success("Partner created successfully");
         fetchActivePartners();
         fetchPendingPartners();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create partner");
+      const serverErrors = err.response?.data?.data;
+      if (Array.isArray(serverErrors) && serverErrors.length > 0) {
+        setAddFieldErrors(serverErrors);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to create partner");
+      }
     } finally {
       setModalLoading(false);
     }
@@ -220,15 +243,25 @@ export default function PartnersPage() {
 
   const handleEditPartner = async (formData) => {
     setModalLoading(true);
+    setEditFieldErrors([]);
     try {
-      const res = await api.patch(`/user/update-user-admin/${editingUser._id}`, formData);
+      const fd = objectToFormData(formData);
+      const res = await api.patch(`/user/update-user-admin/${editingUser._id}`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       if (res.data.status === "ok") {
         setIsEditModalOpen(false);
+        setEditFieldErrors([]);
         toast.success("Partner updated successfully");
         fetchActivePartners();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to update partner");
+      const serverErrors = err.response?.data?.data;
+      if (Array.isArray(serverErrors) && serverErrors.length > 0) {
+        setEditFieldErrors(serverErrors);
+      } else {
+        toast.error(err.response?.data?.message || "Failed to update partner");
+      }
     } finally {
       setModalLoading(false);
     }
@@ -240,16 +273,33 @@ export default function PartnersPage() {
     { name: "email", label: t.emailLabel || "Email", type: "email", required: true },
     { name: "password", label: t.passwordLabel || "Password", type: "password", required: true },
     { name: "company", label: t.companyName || "Company Name", required: true },
+    { name: "phone", label: t.phone || "Phone", required: true },
+    { name: "address", label: t.address || "Address", required: true },
+    { name: "city", label: t.cityLabel || "City", required: true },
+    { name: "postalCode", label: "Postal Code (5 digits)", required: true },
+    { name: "country", label: "Country" },
+    { name: "logo", label: "Logo (Required)", type: "file", required: true },
+    { name: "partnerImage", label: "Partner Image", type: "file" },
+    { name: "description", label: "Description", type: "textarea" },
     { name: "website", label: t.websiteLabel || "Website" },
-    { name: "phone", label: t.phone || "Phone" },
-    { name: "address", label: t.address || "Address" },
+    { name: "facebook", label: "Facebook URL" },
+    { name: "instagram", label: "Instagram URL" },
+    { name: "twitter", label: "Twitter URL" },
+    { name: "linkedin", label: "LinkedIn URL" },
   ];
 
   const editFields = [
     { name: "firstName", label: t.firstName || "First Name", disabled: true },
     { name: "lastName", label: t.lastName || "Last Name", disabled: true },
     { name: "company", label: t.companyName || "Company Name" },
+    { name: "logo", label: "Logo", type: "file" },
+    { name: "partnerImage", label: "Partner Image", type: "file" },
+    { name: "description", label: "Description", type: "textarea" },
     { name: "website", label: t.websiteLabel || "Website" },
+    { name: "facebook", label: "Facebook URL" },
+    { name: "instagram", label: "Instagram URL" },
+    { name: "twitter", label: "Twitter URL" },
+    { name: "linkedin", label: "LinkedIn URL" },
     {
       name: "status",
       label: t.statusLabel || "Status",
@@ -271,7 +321,14 @@ export default function PartnersPage() {
     { name: "lastName", label: t.lastName || "Last Name", disabled: true },
     { name: "email", label: t.emailLabel || "Email", disabled: true },
     { name: "company", label: t.companyName || "Company Name", disabled: true },
+    { name: "logo", label: "Logo", disabled: true, type: "file" },
+    { name: "partnerImage", label: "Partner Image", disabled: true, type: "file" },
+    { name: "description", label: "Description", disabled: true, type: "textarea" },
     { name: "website", label: t.websiteLabel || "Website", disabled: true },
+    { name: "facebook", label: "Facebook URL", disabled: true },
+    { name: "instagram", label: "Instagram URL", disabled: true },
+    { name: "twitter", label: "Twitter URL", disabled: true },
+    { name: "linkedin", label: "LinkedIn URL", disabled: true },
     { name: "phone", label: t.phone || "Phone", disabled: true },
     { name: "address", label: t.address || "Address", disabled: true },
     { name: "status", label: t.statusLabel || "Status", disabled: true },
@@ -434,11 +491,12 @@ export default function PartnersPage() {
 
       <CRUDModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => { setIsAddModalOpen(false); setAddFieldErrors([]); }}
         title={t.addPartner || "Add Partner"}
         fields={partnerFields}
         onSubmit={handleAddPartner}
         loading={modalLoading}
+        fieldErrors={addFieldErrors}
       />
 
       <CRUDModal
@@ -446,12 +504,14 @@ export default function PartnersPage() {
         onClose={() => {
           setIsEditModalOpen(false);
           setEditingUser(null);
+          setEditFieldErrors([]);
         }}
         title={t.updateStatusTitle || "Update Status"}
         fields={editFields}
         initialData={editingUser}
         onSubmit={handleEditPartner}
         loading={modalLoading}
+        fieldErrors={editFieldErrors}
       />
 
       <CRUDModal

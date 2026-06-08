@@ -114,10 +114,24 @@ const LocationPicker = ({ lat, lng, onChange }) => {
   );
 };
 
-const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, loading, isViewOnly }) => {
+const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, loading, isViewOnly, fieldErrors: externalErrors }) => {
   const { t } = useLang();
   const [formData, setFormData] = useState({});
   const [previews, setPreviews] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  // Sync external field errors (from server) into local state
+  useEffect(() => {
+    if (externalErrors && externalErrors.length > 0) {
+      const map = {};
+      externalErrors.forEach(({ field, message }) => {
+        map[field] = message;
+      });
+      setFieldErrors(map);
+    } else {
+      setFieldErrors({});
+    }
+  }, [externalErrors]);
 
   useEffect(() => {
     if (isOpen) {
@@ -152,6 +166,7 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
         setFormData({});
         setPreviews({});
       }
+      setFieldErrors({});
     }
   }, [initialData, isOpen]);
 
@@ -160,6 +175,8 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
   const handleChange = (e) => {
     if (isViewOnly) return;
     const { name, value, type, checked, files } = e.target;
+    // Clear error for field on change
+    setFieldErrors(prev => ({ ...prev, [name]: undefined }));
     if (type === 'file') {
       const file = files[0];
       setFormData((prev) => ({
@@ -206,6 +223,8 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
   // Resolve best available image from initialData or live file preview
   const liveFilePreview = fileField ? previews[fileField.name] : null;
   const staticImageUrl =
+    initialData?.partnerImage?.secure_url ||
+    initialData?.logo?.secure_url ||
     initialData?.profileImage?.secure_url ||
     initialData?.photo?.secure_url ||
     initialData?.image?.secure_url ||
@@ -236,41 +255,55 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
         </div>
 
         {/* Cinematic Image Preview — shows for any record with an image */}
-        {bannerImageUrl ? (
-          <div className="w-full aspect-[21/9] bg-[#f5f0e8] border-b border-[#e8ddd0] relative overflow-hidden group">
-            <img
-              src={bannerImageUrl}
-              alt="Preview"
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#3a2a1a]/70 via-transparent to-transparent"></div>
-            <div className="absolute bottom-4 left-6 flex flex-col">
-              <span className="text-[9px] font-black text-white/90 uppercase tracking-[0.2em] mb-1">{t.visualPreview || "Visual Preview"}</span>
-              <span className="text-white font-black text-xl tracking-tight leading-none">{entityName}</span>
-            </div>
-          </div>
-        ) : entityName !== "Details" && (
-          // No image — show stylish initials banner
-          <div className="w-full h-[90px] bg-gradient-to-r from-[#3a2a1a] to-[#8B6914] border-b border-[#e8ddd0] relative overflow-hidden flex items-center px-6 gap-4">
-            <div className="w-14 h-14 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-2xl font-black text-white shrink-0">
-              {entityName?.charAt(0)?.toUpperCase() || "?"}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.2em] mb-0.5">{t.informationsLabel || "Details"}</span>
-              <span className="text-white font-black text-xl tracking-tight leading-none">{entityName}</span>
-            </div>
-          </div>
-        )}
+       {bannerImageUrl ? (
+  <div className="w-full aspect-[21/9] sm:aspect-[21/7] md:aspect-[21/6] bg-[#f5f0e8] border-b border-[#e8ddd0] relative overflow-hidden group">
+    {/* Optimized Image with Loading State */}
+    <img
+      src={bannerImageUrl}
+      alt="Preview"
+      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+      onLoad={(e) => e.target.classList.add('opacity-100')}
+    />
+    
+    {/* Enhanced Gradient Overlay for text readability on bright images */}
+    <div className="absolute inset-0 bg-gradient-to-t from-[#3a2a1a]/80 via-[#3a2a1a]/20 to-transparent"></div>
+    
+    <div className="absolute bottom-4 left-4 sm:left-6 flex flex-col">
+      <span className="text-[9px] font-black text-white/90 uppercase tracking-[0.2em] mb-1">
+        {t.visualPreview || "Visual Preview"}
+      </span>
+      <span className="text-white font-black text-lg sm:text-xl tracking-tight leading-none truncate max-w-[280px]">
+        {entityName}
+      </span>
+    </div>
+  </div>
+) : entityName !== "Details" && (
+  // Responsive fallback banner
+  <div className="w-full h-auto py-6 sm:h-[90px] bg-gradient-to-r from-[#3a2a1a] to-[#8B6914] border-b border-[#e8ddd0] relative overflow-hidden flex items-center px-4 sm:px-6 gap-4">
+    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-xl sm:text-2xl font-black text-white shrink-0">
+      {entityName?.charAt(0)?.toUpperCase() || "?"}
+    </div>
+    <div className="flex flex-col min-w-0">
+      <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.2em] mb-0.5">
+        {t.informationsLabel || "Details"}
+      </span>
+      <span className="text-white font-black text-lg sm:text-xl tracking-tight leading-none truncate">
+        {entityName}
+      </span>
+    </div>
+  </div>
+)}
         
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 max-h-[45vh] overflow-y-auto pr-3 custom-scrollbar pb-2">
             {fields.map((field) => {
               if (field.name === 'latitude' || field.name === 'longitude') return null;
 
+              const hasError = !!fieldErrors[field.name];
               return (
                 <div key={field.name} className={`flex flex-col gap-1.5 ${field.type === 'textarea' || field.type === 'file' ? 'md:col-span-2' : ''}`}>
-                  <label className="text-[9px] font-black text-[#9a8a7a] tracking-wider uppercase ml-1 opacity-80">
-                    {field.label}
+                  <label className={`text-[9px] font-black tracking-wider uppercase ml-1 opacity-80 ${hasError ? 'text-red-500' : 'text-[#9a8a7a]'}`}>
+                    {field.label}{field.required && <span className="text-red-400 ml-0.5">*</span>}
                   </label>
                   
                   {field.type === 'select' ? (
@@ -280,7 +313,7 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
                       onChange={handleChange}
                       required={field.required}
                       disabled={field.disabled || isViewOnly}
-                      className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-bold disabled:opacity-80"
+                      className={`bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-bold disabled:opacity-80 ${hasError ? 'border-red-400 bg-red-50/30' : 'border-[#e8ddd0]'}`}
                     >
                       <option value="">{t.selectOption || "Select..."}</option>
                       {field.options.map((opt) => (
@@ -297,12 +330,12 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
                       required={field.required}
                       disabled={field.disabled || isViewOnly}
                       rows="3"
-                      className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all resize-none font-medium disabled:opacity-80"
+                      className={`bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all resize-none font-medium disabled:opacity-80 ${hasError ? 'border-red-400 bg-red-50/30' : 'border-[#e8ddd0]'}`}
                       placeholder={`Enter ${field.label.toLowerCase()}...`}
                     />
                   ) : field.type === 'file' ? (
-                    <div className="flex flex-col gap-2">
-                      <div className={`relative flex items-center gap-4 bg-[#fcfaf7] border border-[#e8ddd0] border-dashed rounded-xl p-4 transition-all ${isViewOnly ? 'cursor-default' : 'hover:border-[#8B6914] cursor-pointer group'}`}>
+                    <div className="flex flex-col gap-1">
+                      <div className={`relative flex items-center gap-4 bg-[#fcfaf7] border border-dashed rounded-xl p-4 transition-all ${hasError ? 'border-red-400 bg-red-50/30' : 'border-[#e8ddd0]'} ${isViewOnly ? 'cursor-default' : 'hover:border-[#8B6914] cursor-pointer group'}`}>
                         {!isViewOnly && (
                           <input
                             type="file"
@@ -331,9 +364,14 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
                       onChange={handleChange}
                       required={field.required}
                       disabled={field.disabled || isViewOnly}
-                      className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-bold placeholder:font-medium placeholder:opacity-50 disabled:opacity-80"
+                      className={`bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-bold placeholder:font-medium placeholder:opacity-50 disabled:opacity-80 ${hasError ? 'border-red-400 bg-red-50/30' : 'border-[#e8ddd0]'}`}
                       placeholder={`Enter ${field.label.toLowerCase()}...`}
                     />
+                  )}
+                  {hasError && (
+                    <p className="text-[10px] text-red-500 font-semibold ml-1 flex items-center gap-1">
+                      <span>⚠</span> {fieldErrors[field.name]}
+                    </p>
                   )}
                 </div>
               );

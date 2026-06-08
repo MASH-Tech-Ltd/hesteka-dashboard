@@ -89,9 +89,17 @@ export default function UsersPage() {
     setModalLoading(true);
     try {
       if (editingUser) {
-        // Only status can be updated by admin via backend
+        // Collect updated fields for the admin update API
+        const updatePayload = {};
+        if (formData.role && formData.role !== editingUser.role) {
+          updatePayload.role = formData.role;
+        }
         if (formData.status && formData.status !== editingUser.status) {
-          await api.patch(`/user/update-status/${editingUser._id}`, { status: formData.status });
+          updatePayload.status = formData.status;
+        }
+
+        if (Object.keys(updatePayload).length > 0) {
+          await api.patch(`/user/update-user-admin/${editingUser._id}`, updatePayload);
         }
         setIsModalOpen(false);
         setEditingUser(null);
@@ -215,7 +223,7 @@ export default function UsersPage() {
       label: t.role || "Role", 
       type: "select", 
       required: true,
-      disabled: isEditing,
+      disabled: false,
       options: [
         { label: t.userRole || "User", value: "user" },
         { label: t.partnerRole || "Partner", value: "partners" },
