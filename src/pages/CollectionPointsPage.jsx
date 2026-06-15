@@ -9,7 +9,7 @@ import FilterBar from "../components/common/FilterBar";
 import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Store, ClipboardList, Plus, MapPin, X } from "lucide-react";
@@ -178,9 +178,13 @@ const CollectionPointsPage = React.memo(() => {
       header: t.point || "Point",
       cell: (p) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-[#8B6914] flex items-center justify-center text-white text-xs font-bold shrink-0">
-            <Store className="w-4 h-4" />
-          </div>
+          {p.photo?.secure_url ? (
+            <img src={p.photo.secure_url} alt={p.title} className="w-8 h-8 rounded object-cover shrink-0 border border-[#e8ddd0]" />
+          ) : (
+            <div className="w-8 h-8 rounded bg-[#8B6914] flex items-center justify-center text-white text-xs font-bold shrink-0">
+              <Store className="w-4 h-4" />
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="font-bold text-[#3a2a1a]">{p.title}</span>
             <span className="text-[10px] text-[#9a8a7a] truncate max-w-[150px]">{p.address}</span>
@@ -257,6 +261,9 @@ const CollectionPointsPage = React.memo(() => {
                     p.location.coordinates[0]  // longitude
                   ]}
                 >
+                  <Tooltip direction="top" offset={[0, -35]} opacity={1} permanent className="font-bold text-[#3a2a1a] border-0 shadow-md">
+                    {p.title}
+                  </Tooltip>
                   <Popup>
                     <div style={{ minWidth: 140 }}>
                       <div style={{ fontWeight: 'bold', fontSize: 12, color: '#3a2a1a' }}>{p.title}</div>

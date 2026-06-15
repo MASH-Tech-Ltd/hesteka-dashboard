@@ -32,6 +32,53 @@ const NotifItem = React.memo(({ icon, title, sub, stats, date, isRead, onClick }
   </div>
 ));
 
+const CustomSelect = ({ value, onChange, options, label }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
+      <label className="text-[9px] font-bold text-[#9a8a7a] uppercase">{label}</label>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2.5 text-xs text-[#3a2a1a] cursor-pointer hover:border-[#8B6914] transition-colors flex justify-between items-center"
+      >
+        <span className="truncate pr-4 font-medium">{selectedOption?.label || "Select..."}</span>
+        <svg className={`w-4 h-4 text-[#9a8a7a] transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute top-[100%] left-0 w-full mt-1 bg-white border border-[#e8ddd0] rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
+          {options.map((opt, idx) => (
+            <div 
+              key={idx}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`px-4 py-2.5 text-xs cursor-pointer transition-colors ${value === opt.value ? 'bg-[#f5f0e8] text-[#8B6914] font-bold' : 'text-[#3a2a1a] hover:bg-[#fcfaf7]'}`}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function NotificationsPage() {
   const { t } = useLang();
   const [history, setHistory] = useState([]);
@@ -50,6 +97,7 @@ export default function NotificationsPage() {
 
   const listRef = useRef(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [uniqueCities, setUniqueCities] = useState([]);
 
   const handleScroll = () => {
     if (listRef.current) {
@@ -105,6 +153,20 @@ export default function NotificationsPage() {
     };
     fetchNotifications();
   }, [viewMode, page]);
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const res = await api.get('/user/get-unique-locations');
+        if (res.data.status === "ok") {
+          setUniqueCities(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch unique locations", err);
+      }
+    };
+    fetchCities();
+  }, []);
 
   const getIcon = (type) => {
     switch (type) {
@@ -162,29 +224,26 @@ export default function NotificationsPage() {
             <Megaphone className="w-4 h-4 text-[#8B6914]" /> {t.createAlert || "Create an alert"}
           </h3>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[9px] font-bold text-[#9a8a7a] uppercase">{t.geoTarget || "GEOGRAPHIC TARGETING"}</label>
-              <select
-                value={alertTarget}
-                onChange={(e) => setAlertTarget(e.target.value)}
-                className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none hover:border-[#8B6914] transition-colors"
-              >
-                <option value="all_france">{t.allFrance || "Toute la France"}</option>
-                <option value="paca">{t.pacaRegion || "Provence-Alpes-Côte d'Azur"}</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[9px] font-bold text-[#9a8a7a] uppercase">{t.userType || "USER TYPE"}</label>
-              <select
-                value={alertRole}
-                onChange={(e) => setAlertRole(e.target.value)}
-                className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none hover:border-[#8B6914] transition-colors"
-              >
-                <option value="all">{t.allRoles || "Tous"}</option>
-                <option value="user">{t.userRole || "Propriétaires"}</option>
-                <option value="partner">{t.partnerRole || "Partenaires"}</option>
-              </select>
-            </div>
+            <CustomSelect
+              label={t.geoTarget || "GEOGRAPHIC TARGETING"}
+              value={alertTarget}
+              onChange={setAlertTarget}
+              options={[
+                { label: t.allFrance || "Toute la France", value: "all_france" },
+                { label: t.pacaRegion || "Provence-Alpes-Côte d'Azur", value: "paca" },
+                ...uniqueCities.map(city => ({ label: city, value: city }))
+              ]}
+            />
+            <CustomSelect
+              label={t.userType || "USER TYPE"}
+              value={alertRole}
+              onChange={setAlertRole}
+              options={[
+                { label: t.allRoles || "Tous", value: "all" },
+                { label: t.userRole || "Propriétaires", value: "user" },
+                { label: t.partnerRole || "Partenaires", value: "partner" }
+              ]}
+            />
             <div className="flex flex-col gap-1.5">
               <label className="text-[9px] font-bold text-[#9a8a7a] uppercase">{t.message || "MESSAGE"}</label>
               <textarea

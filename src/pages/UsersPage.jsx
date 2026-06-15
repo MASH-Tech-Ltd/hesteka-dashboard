@@ -90,16 +90,27 @@ export default function UsersPage() {
     try {
       if (editingUser) {
         // Collect updated fields for the admin update API
-        const updatePayload = {};
-        if (formData.role && formData.role !== editingUser.role) {
-          updatePayload.role = formData.role;
-        }
-        if (formData.status && formData.status !== editingUser.status) {
-          updatePayload.status = formData.status;
-        }
+        const formDataPayload = new FormData();
+        const editableFields = ["firstName", "lastName", "phone", "address", "company", "role", "status"];
+        
+        editableFields.forEach(field => {
+          if (formData[field] !== undefined && formData[field] !== editingUser[field]) {
+            formDataPayload.append(field, formData[field]);
+          }
+        });
 
-        if (Object.keys(updatePayload).length > 0) {
-          await api.patch(`/user/update-user-admin/${editingUser._id}`, updatePayload);
+        // Append files if selected
+        if (formData.profileImage) formDataPayload.append("profileImage", formData.profileImage);
+        if (formData.logo) formDataPayload.append("logo", formData.logo);
+        if (formData.partnerImage) formDataPayload.append("partnerImage", formData.partnerImage);
+
+        // Check if formDataPayload has any keys
+        const hasData = Array.from(formDataPayload.keys()).length > 0;
+
+        if (hasData) {
+          await api.patch(`/user/update-user-admin/${editingUser._id}`, formDataPayload, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
         }
         setIsModalOpen(false);
         setEditingUser(null);
@@ -139,11 +150,16 @@ export default function UsersPage() {
       header: t.user,
       cell: (user) => {
         const name = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "N/A";
+        const avatarUrl = user.profileImage?.secure_url || user.logo?.secure_url;
         return (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#8B6914] flex items-center justify-center text-white font-bold text-xs shrink-0">
-              {name.charAt(0).toUpperCase()}
-            </div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={name} className="w-8 h-8 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#8B6914] flex items-center justify-center text-white font-bold text-xs shrink-0">
+                {name.charAt(0).toUpperCase()}
+              </div>
+            )}
             <span className="font-bold text-[#3a2a1a] truncate">{name}</span>
           </div>
         );
@@ -211,13 +227,15 @@ export default function UsersPage() {
   ];
 
   const getUserFields = (isEditing) => [
-    { name: "firstName", label: t.firstName || "First Name", required: true, disabled: isEditing },
-    { name: "lastName", label: t.lastName || "Last Name", required: true, disabled: isEditing },
+    { name: "profileImage", label: "Profile Image / Logo", type: "file" },
+    { name: "partnerImage", label: "Cover Image", type: "file" },
+    { name: "firstName", label: t.firstName || "First Name", required: true },
+    { name: "lastName", label: t.lastName || "Last Name", required: true },
     { name: "email", label: t.emailLabel || "Email", type: "email", required: true, disabled: isEditing },
     ...(!isEditing ? [{ name: "password", label: t.passwordLabel || "Password", type: "password", required: true }] : []),
-    { name: "phone", label: t.phone || "Phone", required: true, disabled: isEditing },
-    { name: "address", label: t.address || "Address", required: true, disabled: isEditing },
-    { name: "company", label: t.company || "Company", disabled: isEditing },
+    { name: "phone", label: t.phone || "Phone", required: true },
+    { name: "address", label: t.address || "Address", required: true },
+    { name: "company", label: t.company || "Company" },
     { 
       name: "role", 
       label: t.role || "Role", 

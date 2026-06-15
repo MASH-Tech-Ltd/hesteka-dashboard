@@ -9,12 +9,16 @@ import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
 import { Medal, CheckCircle, ClipboardList, Plus } from "lucide-react";
 
-const PartnerCard = React.memo(({ partner, isPending, onApprove, onReject, onView, onEdit, t }) => (
+const PartnerCard = React.memo(({ partner, isPending, onApprove, onReject, onView, onEdit, onDelete, t }) => (
   <div className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl p-3 flex items-center justify-between hover:shadow-sm transition-all relative overflow-hidden">
     <div className="absolute left-0 top-0 w-1 h-full bg-[#8B6914]"></div>
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-[#8B6914] flex items-center justify-center text-white text-lg font-bold shrink-0">
-        {(partner.company || partner.firstName || 'P').charAt(0).toUpperCase()}
+      <div className="w-10 h-10 rounded-lg bg-[#8B6914] flex items-center justify-center text-white text-lg font-bold shrink-0 overflow-hidden">
+        {partner.logo?.secure_url || partner.profileImage?.secure_url ? (
+          <img src={partner.logo?.secure_url || partner.profileImage?.secure_url} alt="Logo" className="w-full h-full object-cover" />
+        ) : (
+          (partner.company || partner.firstName || 'P').charAt(0).toUpperCase()
+        )}
       </div>
       <div className="min-w-0">
         <h4 className="text-sm font-bold text-[#3a2a1a] truncate">{partner.company || `${partner.firstName} ${partner.lastName}`}</h4>
@@ -24,6 +28,12 @@ const PartnerCard = React.memo(({ partner, isPending, onApprove, onReject, onVie
     <div className="flex gap-2 shrink-0">
       {isPending ? (
         <>
+          <button
+            onClick={() => onView(partner._id)}
+            className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-blue-200 transition-colors"
+          >
+            {t.viewBtn || "View"}
+          </button>
           <button
             onClick={() => onApprove(partner._id)}
             className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-green-200 transition-colors"
@@ -50,6 +60,12 @@ const PartnerCard = React.memo(({ partner, isPending, onApprove, onReject, onVie
             className="bg-orange-100 text-orange-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-orange-200 transition-colors"
           >
             {t.editBtn}
+          </button>
+          <button
+            onClick={() => onDelete(partner._id)}
+            className="bg-red-100 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-red-200 transition-colors"
+          >
+            {t.deleteBtn || "Delete"}
           </button>
         </>
       )}
@@ -134,8 +150,9 @@ export default function PartnersPage() {
           const res = await api.patch(`/user/approve-partner/${id}`);
           if (res.data.status === "ok") {
             toast.success("Partner approved successfully");
-            fetchActivePartners();
+            setQueryParams(prev => ({ ...prev, status: 'active', search: '', page: 1 }));
             fetchPendingPartners();
+            fetchStats();
           }
         } catch (err) {
           toast.error(err.response?.data?.message || "Failed to approve partner");
@@ -159,9 +176,35 @@ export default function PartnersPage() {
           if (res.data.status === "ok") {
             toast.success("Partner rejected successfully");
             fetchPendingPartners();
+            fetchStats();
           }
         } catch (err) {
           toast.error(err.response?.data?.message || "Failed to reject partner");
+        } finally {
+          setConfirmLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const handleDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: t.deletePartnerTitle || "Delete Partner",
+      message: t.confirmDeleteMessage || "Are you sure you want to delete this partner? This action cannot be undone.",
+      onConfirm: async () => {
+        setConfirmLoading(true);
+        try {
+          const res = await api.delete(`/user/delete-user/${id}`);
+          if (res.data.status === "ok") {
+            toast.success("Partner deleted successfully");
+            fetchActivePartners();
+            fetchPendingPartners();
+            fetchStats();
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || "Failed to delete partner");
         } finally {
           setConfirmLoading(false);
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -228,6 +271,7 @@ export default function PartnersPage() {
         toast.success("Partner created successfully");
         fetchActivePartners();
         fetchPendingPartners();
+        fetchStats();
       }
     } catch (err) {
       const serverErrors = err.response?.data?.data;
@@ -254,6 +298,8 @@ export default function PartnersPage() {
         setEditFieldErrors([]);
         toast.success("Partner updated successfully");
         fetchActivePartners();
+        fetchPendingPartners();
+        fetchStats();
       }
     } catch (err) {
       const serverErrors = err.response?.data?.data;
@@ -276,16 +322,16 @@ export default function PartnersPage() {
     { name: "phone", label: t.phone || "Phone", required: true },
     { name: "address", label: t.address || "Address", required: true },
     { name: "city", label: t.cityLabel || "City", required: true },
-    { name: "postalCode", label: "Postal Code (5 digits)", required: true },
+    { name: "postalCode", label: "Postal Code (5 digits)", type: "number", required: true },
     { name: "country", label: "Country" },
     { name: "logo", label: "Logo (Required)", type: "file", required: true },
     { name: "partnerImage", label: "Partner Image", type: "file" },
     { name: "description", label: "Description", type: "textarea" },
-    { name: "website", label: t.websiteLabel || "Website" },
-    { name: "facebook", label: "Facebook URL" },
-    { name: "instagram", label: "Instagram URL" },
-    { name: "twitter", label: "Twitter URL" },
-    { name: "linkedin", label: "LinkedIn URL" },
+    { name: "website", label: t.websiteLabel || "Website", type: "url" },
+    { name: "facebook", label: "Facebook URL", type: "url" },
+    { name: "instagram", label: "Instagram URL", type: "url" },
+    { name: "twitter", label: "Twitter URL", type: "url" },
+    { name: "linkedin", label: "LinkedIn URL", type: "url" },
   ];
 
   const editFields = [
@@ -295,11 +341,16 @@ export default function PartnersPage() {
     { name: "logo", label: "Logo", type: "file" },
     { name: "partnerImage", label: "Partner Image", type: "file" },
     { name: "description", label: "Description", type: "textarea" },
-    { name: "website", label: t.websiteLabel || "Website" },
-    { name: "facebook", label: "Facebook URL" },
-    { name: "instagram", label: "Instagram URL" },
-    { name: "twitter", label: "Twitter URL" },
-    { name: "linkedin", label: "LinkedIn URL" },
+    { name: "website", label: t.websiteLabel || "Website", type: "url" },
+    { name: "facebook", label: "Facebook URL", type: "url" },
+    { name: "instagram", label: "Instagram URL", type: "url" },
+    { name: "twitter", label: "Twitter URL", type: "url" },
+    { name: "linkedin", label: "LinkedIn URL", type: "url" },
+    { name: "phone", label: t.phone || "Phone" },
+    { name: "address", label: t.address || "Address" },
+    { name: "city", label: t.cityLabel || "City" },
+    { name: "postalCode", label: "Postal Code (5 digits)", type: "number" },
+    { name: "country", label: "Country" },
     {
       name: "status",
       label: t.statusLabel || "Status",
@@ -324,13 +375,16 @@ export default function PartnersPage() {
     { name: "logo", label: "Logo", disabled: true, type: "file" },
     { name: "partnerImage", label: "Partner Image", disabled: true, type: "file" },
     { name: "description", label: "Description", disabled: true, type: "textarea" },
-    { name: "website", label: t.websiteLabel || "Website", disabled: true },
-    { name: "facebook", label: "Facebook URL", disabled: true },
-    { name: "instagram", label: "Instagram URL", disabled: true },
-    { name: "twitter", label: "Twitter URL", disabled: true },
-    { name: "linkedin", label: "LinkedIn URL", disabled: true },
+    { name: "website", label: t.websiteLabel || "Website", disabled: true, type: "url" },
+    { name: "facebook", label: "Facebook URL", disabled: true, type: "url" },
+    { name: "instagram", label: "Instagram URL", disabled: true, type: "url" },
+    { name: "twitter", label: "Twitter URL", disabled: true, type: "url" },
+    { name: "linkedin", label: "LinkedIn URL", disabled: true, type: "url" },
     { name: "phone", label: t.phone || "Phone", disabled: true },
     { name: "address", label: t.address || "Address", disabled: true },
+    { name: "city", label: t.cityLabel || "City", disabled: true },
+    { name: "postalCode", label: "Postal Code", disabled: true },
+    { name: "country", label: "Country", disabled: true },
     { name: "status", label: t.statusLabel || "Status", disabled: true },
     { name: "createdAt", label: t.joinedDate || "Joined Date", disabled: true, type: "date" },
   ];
@@ -375,6 +429,7 @@ export default function PartnersPage() {
                 onReject={handleReject}
                 onView={openDetailsModal}
                 onEdit={openEditModal}
+                onDelete={handleDelete}
                 t={t}
               />
             ))}
@@ -439,8 +494,12 @@ export default function PartnersPage() {
                   header: t.partnersLabel || "PARTNER",
                   cell: (p) => (
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-[#8B6914] flex items-center justify-center text-white font-bold text-[10px]">
-                        {(p.company || p.firstName).charAt(0).toUpperCase()}
+                      <div className="w-8 h-8 rounded bg-[#8B6914] flex items-center justify-center text-white font-bold text-[10px] overflow-hidden">
+                        {p.logo?.secure_url || p.profileImage?.secure_url ? (
+                          <img src={p.logo?.secure_url || p.profileImage?.secure_url} alt="Logo" className="w-full h-full object-cover" />
+                        ) : (
+                          (p.company || p.firstName || 'P').charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div>
                         <div className="font-bold">{p.company || `${p.firstName} ${p.lastName}`}</div>
@@ -471,6 +530,12 @@ export default function PartnersPage() {
                         className="bg-orange-100 text-orange-600 text-[10px] font-bold px-3 py-1 rounded-xl hover:bg-orange-200 transition-colors"
                       >
                         {t.editBtn}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p._id)}
+                        className="bg-red-100 text-red-600 text-[10px] font-bold px-3 py-1 rounded-xl hover:bg-red-200 transition-colors"
+                      >
+                        {t.deleteBtn || "Delete"}
                       </button>
                     </div>
                   )

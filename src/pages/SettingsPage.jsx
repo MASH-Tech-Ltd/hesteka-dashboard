@@ -57,6 +57,22 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAdminUpdate = async () => {
+    fetchAdmins();
+    const currentUser = JSON.parse(localStorage.getItem("adminUser") || "{}");
+    if (currentUser && selectedAdmin && currentUser._id === selectedAdmin._id) {
+      try {
+        const profileRes = await api.get("/user/get-my-profile");
+        if (profileRes.data.status === "ok") {
+          localStorage.setItem("adminUser", JSON.stringify(profileRes.data.data));
+          window.dispatchEvent(new Event("user-profile-updated"));
+        }
+      } catch (err) {
+        console.error("Failed to refresh profile after update", err);
+      }
+    }
+  };
+
   const logins = [
     { type: "Connexion admin \u2014 Emma", time: "Aujourd'hui 10h04", color: "bg-green-500" },
     { type: "Modification bar\u00E8me points", time: "Hier 16h30", color: "bg-orange-500" },
@@ -190,7 +206,7 @@ export default function SettingsPage() {
         isOpen={!!selectedAdmin}
         onClose={() => setSelectedAdmin(null)}
         user={selectedAdmin}
-        onUpdate={fetchAdmins}
+        onUpdate={handleAdminUpdate}
       />
     </div>
   );

@@ -9,7 +9,17 @@ import FilterBar from "../components/common/FilterBar";
 import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
-import { Target, Plus, X } from "lucide-react";
+import { Target, Plus, X, MapPin } from "lucide-react";
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 export default function MissionsPage() {
   const { t } = useLang();
@@ -91,11 +101,25 @@ export default function MissionsPage() {
     setModalLoading(true);
     try {
       const data = new FormData();
+      let hasLoc = false;
+      let lat = null, lng = null;
+
       Object.keys(formData).forEach(key => {
-        if (formData[key] !== undefined) {
+        if (key === 'latitude') {
+          hasLoc = true; lat = formData[key];
+        } else if (key === 'longitude') {
+          hasLoc = true; lng = formData[key];
+        } else if (formData[key] !== undefined) {
           data.append(key, formData[key]);
         }
       });
+
+      if (hasLoc && lat && lng) {
+        data.append('location', JSON.stringify({
+          type: "Point",
+          coordinates: [Number(lng), Number(lat)]
+        }));
+      }
 
       if (editingMission) {
         await api.patch(`/local-missions/update-local-mission/${editingMission._id}`, data, {
@@ -140,7 +164,10 @@ export default function MissionsPage() {
   const missionFields = [
     { name: "title", label: t.titleLabel || "Title", required: true },
     { name: "description", label: t.descriptionLabel || "Description", type: "textarea", required: true },
+    { name: "createdAt", label: t.dateLabel || "Date", type: "date", required: true },
     { name: "address", label: t.address || "Address", required: true },
+    { name: "latitude", label: t.latitude || "Latitude", type: "number", required: true },
+    { name: "longitude", label: t.longitude || "Longitude", type: "number", required: true },
     { name: "points", label: t.points || "Points Reward", type: "number", required: true },
     { name: "duration", label: t.durationLabel || "Duration", required: true },
     { name: "image", label: t.missionPhoto || "Mission Photo", type: "file" },
@@ -335,6 +362,24 @@ export default function MissionsPage() {
                 <h3 className="font-bold text-[#3a2a1a] text-sm">Description</h3>
                 <p className="text-sm text-[#5a4a3a] leading-relaxed whitespace-pre-wrap">{selectedMission.description || t.noDescription}</p>
               </div>
+
+              {selectedMission.location?.coordinates && selectedMission.location.coordinates.length === 2 && (
+                <div className="flex flex-col gap-3">
+                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#8B6914]"/> Location
+                  </h3>
+                  <div className="h-64 rounded-xl overflow-hidden shadow-inner border border-[#e8ddd0]">
+                    <MapContainer
+                      center={[selectedMission.location.coordinates[1], selectedMission.location.coordinates[0]]}
+                      zoom={14}
+                      className="w-full h-full"
+                    >
+                      <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                      <Marker position={[selectedMission.location.coordinates[1], selectedMission.location.coordinates[0]]} />
+                    </MapContainer>
+                  </div>
+                </div>
+              )}
 
               {selectedMission.photo?.secure_url && (
                 <div className="flex flex-col gap-3">

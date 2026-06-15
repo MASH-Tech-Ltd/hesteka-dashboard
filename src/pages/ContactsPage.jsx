@@ -209,21 +209,13 @@ export default function ContactsPage() {
           </button>
           <button
             onClick={() => openEditModal(contact)}
-            disabled={contact.type === 'partner'}
-            className={`w-17 py-1 rounded font-bold text-[10px] transition-colors ${contact.type === 'partner'
-                ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
-              }`}
+            className="w-17 py-1 rounded font-bold text-[10px] transition-colors bg-orange-100 text-orange-600 hover:bg-orange-200"
           >
             {t.editBtn || "Edit"}
           </button>
           <button
             onClick={() => handleDeleteContact(contact._id)}
-            disabled={contact.type === 'partner'}
-            className={`w-17 py-1 rounded font-bold text-[10px] transition-colors ${contact.type === 'partner'
-                ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                : 'bg-red-50 text-red-600 hover:bg-red-100'
-              }`}
+            className="w-17 py-1 rounded font-bold text-[10px] transition-colors bg-red-50 text-red-600 hover:bg-red-100"
           >
             {t.deleteBtn || "Delete"}
           </button>
@@ -239,14 +231,12 @@ export default function ContactsPage() {
       label: t.type || "Type",
       type: "select",
       required: !editingContact,
-      disabled: isViewOnly || !!editingContact,
+      disabled: isViewOnly,
       options: [
         { label: t.shelter || "Shelter", value: "shelter" },
         { label: t.veterinarian || "Veterinarian", value: "veterinarian" },
-        { label: t.authorityLabel || "Authority", value: "authority" },
-        // Only show Partner if we are viewing/editing an existing one
-        ...(editingContact?.type === "partner" ? [{ label: t.partnerRole || "Partner", value: "partner" }] : []),
-      ].filter(opt => opt.value !== "partner" || editingContact?.type === "partner"),
+        { label: t.partnerRole || "Partner", value: "partner" },
+      ],
     },
     { name: "email", label: t.emailLabel || "Email", type: "email", disabled: isViewOnly },
     { name: "phone", label: t.phone || "Phone", disabled: isViewOnly },
@@ -352,7 +342,6 @@ export default function ContactsPage() {
               options: [
                 { label: "Shelter", value: "shelter" },
                 { label: "Veterinarian", value: "veterinarian" },
-                { label: "Authority", value: "authority" },
                 { label: "Partner", value: "partner" },
               ],
             },

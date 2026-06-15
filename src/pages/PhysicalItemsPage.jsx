@@ -181,7 +181,11 @@ export default function PhysicalItemsPage() {
       }
       setIsModalOpen(false);
       toast.success(editingItem ? "Reward updated successfully" : "Reward created successfully");
-      fetchItems();
+      if (editingItem) {
+        fetchItems();
+      } else {
+        setItemsQuery(prev => ({ ...prev, page: 1, search: '', category: 'all', type: 'all' }));
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Operation failed");
     } finally {

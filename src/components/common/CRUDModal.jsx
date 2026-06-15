@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import { useLang } from '../../context/LanguageContext';
-import { Search, X, Image as ImageIcon } from 'lucide-react';
+import { Search, X, Image as ImageIcon, Pencil } from 'lucide-react';
 
 // Fix for default marker icon in Leaflet + React
 delete L.Icon.Default.prototype._getIconUrl;
@@ -39,10 +39,16 @@ const LocationPicker = ({ lat, lng, onChange }) => {
 
   const MapEvents = () => {
     useMapEvents({
-      click(e) {
+      async click(e) {
         const { lat, lng } = e.latlng;
         setPosition([lat, lng]);
-        onChange(lat, lng);
+        try {
+          const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          const address = res.data?.display_name || "";
+          onChange(lat, lng, address);
+        } catch(err) {
+          onChange(lat, lng);
+        }
       },
     });
     return position ? <Marker position={position} /> : null;
@@ -59,11 +65,11 @@ const LocationPicker = ({ lat, lng, onChange }) => {
     try {
       const response = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`);
       if (response.data && response.data.length > 0) {
-        const { lat, lon } = response.data[0];
+        const { lat, lon, display_name } = response.data[0];
         const newLat = parseFloat(lat);
         const newLng = parseFloat(lon);
         setPosition([newLat, newLng]);
-        onChange(newLat, newLng);
+        onChange(newLat, newLng, display_name);
       }
     } catch (error) {
       console.error("Search failed:", error);
@@ -114,6 +120,57 @@ const LocationPicker = ({ lat, lng, onChange }) => {
   );
 };
 
+const CustomSelectField = ({ name, value, options, onChange, disabled, hasError, t, required }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || { label: t.selectOption || "Select...", value: "" };
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <div 
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] transition-all font-bold flex justify-between items-center ${disabled ? 'cursor-default opacity-80' : 'cursor-pointer hover:border-[#8B6914] focus:border-[#8B6914]'} ${hasError ? 'border-red-400 bg-red-50/30' : 'border-[#e8ddd0]'}`}
+      >
+        <span className="truncate pr-4">{selectedOption.label}</span>
+        <svg className={`w-4 h-4 text-[#9a8a7a] transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute top-[100%] left-0 w-full mt-1 bg-white border border-[#e8ddd0] rounded-xl shadow-xl z-[500] max-h-60 overflow-y-auto custom-scrollbar">
+          {!required && (
+            <div 
+              onClick={() => { onChange({ target: { name, value: "", type: "select" }}); setIsOpen(false); }}
+              className={`px-4 py-2.5 text-xs cursor-pointer transition-colors ${value === "" ? 'bg-[#f5f0e8] text-[#8B6914] font-bold' : 'text-[#3a2a1a] hover:bg-[#fcfaf7]'}`}
+            >
+              {t.selectOption || "Select..."}
+            </div>
+          )}
+          {options.map((opt, idx) => (
+            <div 
+              key={idx}
+              onClick={() => { onChange({ target: { name, value: opt.value, type: "select" }}); setIsOpen(false); }}
+              className={`px-4 py-2.5 text-xs cursor-pointer transition-colors ${value === opt.value ? 'bg-[#f5f0e8] text-[#8B6914] font-bold' : 'text-[#3a2a1a] hover:bg-[#fcfaf7]'}`}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, loading, isViewOnly, fieldErrors: externalErrors }) => {
   const { t } = useLang();
   const [formData, setFormData] = useState({});
@@ -140,15 +197,19 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
         const initialPreviews = {};
         fields.forEach(f => {
           if (initialData[f.name] !== undefined) {
-            initial[f.name] = initialData[f.name];
+            if (f.type === 'date' && initialData[f.name]) {
+              try {
+                initial[f.name] = new Date(initialData[f.name]).toISOString().split('T')[0];
+              } catch (e) {
+                initial[f.name] = initialData[f.name];
+              }
+            } else {
+              initial[f.name] = initialData[f.name];
+            }
           }
           // Detect photo/image preview from any common field naming
           if (f.type === 'file') {
-            const imgUrl =
-              initialData.photo?.secure_url ||
-              initialData.image?.secure_url ||
-              initialData.profileImage?.secure_url ||
-              initialData[f.name]?.secure_url;
+            const imgUrl = initialData[f.name]?.secure_url;
             if (imgUrl) initialPreviews[f.name] = imgUrl;
           }
 
@@ -199,13 +260,15 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
     }
   };
 
-  const handleLocationChange = (lat, lng) => {
+  const handleLocationChange = (lat, lng, addressStr) => {
     if (isViewOnly) return;
-    setFormData(prev => ({
-      ...prev,
-      latitude: lat,
-      longitude: lng
-    }));
+    setFormData(prev => {
+      const updated = { ...prev, latitude: lat, longitude: lng };
+      if (addressStr) {
+        updated.address = addressStr;
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = (e) => {
@@ -217,20 +280,33 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
     onSubmit(formData);
   };
 
-  const fileField = fields.find(f => f.type === 'file');
   const hasLocation = fields.some(f => f.name === 'latitude') && fields.some(f => f.name === 'longitude');
 
-  // Resolve best available image from initialData or live file preview
-  const liveFilePreview = fileField ? previews[fileField.name] : null;
-  const staticImageUrl =
-    initialData?.partnerImage?.secure_url ||
-    initialData?.logo?.secure_url ||
-    initialData?.profileImage?.secure_url ||
-    initialData?.photo?.secure_url ||
-    initialData?.image?.secure_url ||
-    initialData?.images?.[0]?.secure_url ||
-    null;
-  const bannerImageUrl = liveFilePreview || staticImageUrl;
+  // Determine Logo URL
+  const logoLive = previews['logo'] || previews['profileImage'] || previews['avatar'];
+  const logoStatic = initialData?.logo?.secure_url || initialData?.profileImage?.secure_url || initialData?.avatar?.secure_url;
+  let logoImageUrl = logoLive || logoStatic;
+
+  // Determine Banner URL
+  const bannerLive = previews['partnerImage'] || previews['coverImage'] || previews['photo'] || previews['image'] || previews['banner'];
+  const bannerStatic = initialData?.partnerImage?.secure_url || initialData?.coverImage?.secure_url || initialData?.photo?.secure_url || initialData?.image?.secure_url || initialData?.banner?.secure_url || initialData?.images?.[0]?.secure_url;
+  let bannerImageUrl = bannerLive || bannerStatic;
+
+  // Generic fallback if we don't have explicit logo/banner fields but have file fields
+  const fileFields = fields.filter(f => f.type === 'file');
+  const logoField = fileFields.find(f => ['logo', 'profileImage', 'avatar'].includes(f.name));
+  const bannerField = fileFields.find(f => !['logo', 'profileImage', 'avatar'].includes(f.name));
+
+  if (!bannerImageUrl && fileFields.length > 0) {
+     if (bannerField) {
+         bannerImageUrl = previews[bannerField.name] || initialData?.[bannerField.name]?.secure_url;
+     }
+  }
+
+  if (!logoImageUrl && logoField) {
+      logoImageUrl = previews[logoField.name] || initialData?.[logoField.name]?.secure_url;
+  }
+  
   const entityName =
     formData.name ||
     formData.title ||
@@ -239,6 +315,8 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
     initialData?.title ||
     (initialData?.firstName ? `${initialData.firstName} ${initialData.lastName || ''}`.trim() : null) ||
     "Details";
+
+  const showCinematic = bannerImageUrl || logoImageUrl || fileFields.length > 0;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
@@ -254,27 +332,75 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
           </button>
         </div>
 
-        {/* Cinematic Image Preview — shows for any record with an image */}
-       {bannerImageUrl ? (
-  <div className="w-full aspect-[21/9] sm:aspect-[21/7] md:aspect-[21/6] bg-[#f5f0e8] border-b border-[#e8ddd0] relative overflow-hidden group">
-    {/* Optimized Image with Loading State */}
-    <img
-      src={bannerImageUrl}
-      alt="Preview"
-      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-      onLoad={(e) => e.target.classList.add('opacity-100')}
-    />
+        {/* Cinematic Image Preview — shows for any record with an image or file fields */}
+       {showCinematic ? (
+  <div className={`w-full aspect-[21/9] sm:aspect-[21/7] md:aspect-[21/6] ${bannerImageUrl ? 'bg-[#f5f0e8]' : 'bg-gradient-to-r from-[#3a2a1a] to-[#8B6914]'} border-b border-[#e8ddd0] relative overflow-hidden group`}>
+    {bannerImageUrl && (
+      <img
+        src={bannerImageUrl}
+        alt="Preview"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        onLoad={(e) => e.target.classList.add('opacity-100')}
+      />
+    )}
     
-    {/* Enhanced Gradient Overlay for text readability on bright images */}
-    <div className="absolute inset-0 bg-gradient-to-t from-[#3a2a1a]/80 via-[#3a2a1a]/20 to-transparent"></div>
+    <div className="absolute inset-0 bg-gradient-to-t from-[#3a2a1a]/90 via-[#3a2a1a]/30 to-transparent"></div>
     
-    <div className="absolute bottom-4 left-4 sm:left-6 flex flex-col">
-      <span className="text-[9px] font-black text-white/90 uppercase tracking-[0.2em] mb-1">
-        {t.visualPreview || "Visual Preview"}
-      </span>
-      <span className="text-white font-black text-lg sm:text-xl tracking-tight leading-none truncate max-w-[280px]">
-        {entityName}
-      </span>
+    {bannerField && !isViewOnly && (
+      <div className="absolute top-4 right-4 z-20">
+        <label className="w-8 h-8 rounded-full bg-white/30 hover:bg-white/50 backdrop-blur flex items-center justify-center text-white cursor-pointer transition-colors border border-white/40 shadow-sm relative group/btn">
+          <Pencil className="w-4 h-4" />
+          <span className="absolute top-full mt-2 right-0 whitespace-nowrap bg-[#3a2a1a] text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-50">
+            {bannerImageUrl ? (t.editCover || "Edit Cover") : (t.addCover || "Add Cover")}
+          </span>
+          <input
+            type="file"
+            name={bannerField.name}
+            onChange={handleChange}
+            accept="image/*"
+            className="hidden"
+          />
+        </label>
+      </div>
+    )}
+    
+    <div className="absolute bottom-4 left-4 sm:left-6 flex items-end gap-4">
+      {(logoImageUrl || logoField) && (
+        <div className="relative z-20 shrink-0">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-4 border-white bg-white shadow-sm overflow-hidden relative">
+            {logoImageUrl ? (
+              <img src={logoImageUrl} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-[#fcfaf7] flex items-center justify-center text-2xl font-black text-[#8B6914]">
+                {entityName?.charAt(0)?.toUpperCase() || "?"}
+              </div>
+            )}
+          </div>
+          {logoField && !isViewOnly && (
+            <label className="absolute -bottom-1.5 -right-1.5 w-6 h-6 sm:w-7 sm:h-7 bg-[#8B6914] hover:bg-[#6a5010] text-white rounded-full flex items-center justify-center cursor-pointer shadow-md border-2 border-white transition-colors group/editbtn">
+              <Pencil className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#3a2a1a] text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg opacity-0 pointer-events-none group-hover/editbtn:opacity-100 transition-opacity z-[100]">
+                {t.editPhoto || "Edit Photo"}
+              </span>
+              <input
+                type="file"
+                name={logoField.name}
+                onChange={handleChange}
+                accept="image/*"
+                className="hidden"
+              />
+            </label>
+          )}
+        </div>
+      )}
+      <div className="flex flex-col mb-1 sm:mb-2 relative z-10">
+        <span className="text-[9px] font-black text-white/90 uppercase tracking-[0.2em] mb-1">
+          {t.visualPreview || "Visual Preview"}
+        </span>
+        <span className="text-white font-black text-lg sm:text-2xl tracking-tight leading-none truncate max-w-[280px] drop-shadow-md">
+          {entityName !== "Details" ? entityName : (t.newRecord || "New Record")}
+        </span>
+      </div>
     </div>
   </div>
 ) : entityName !== "Details" && (
@@ -297,7 +423,7 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 max-h-[45vh] overflow-y-auto pr-3 custom-scrollbar pb-2">
             {fields.map((field) => {
-              if (field.name === 'latitude' || field.name === 'longitude') return null;
+              if (field.name === 'latitude' || field.name === 'longitude' || field.type === 'file') return null;
 
               const hasError = !!fieldErrors[field.name];
               return (
@@ -307,21 +433,16 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
                   </label>
                   
                   {field.type === 'select' ? (
-                    <select
+                    <CustomSelectField
                       name={field.name}
                       value={formData[field.name] || ''}
                       onChange={handleChange}
-                      required={field.required}
+                      options={field.options}
                       disabled={field.disabled || isViewOnly}
-                      className={`bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-bold disabled:opacity-80 ${hasError ? 'border-red-400 bg-red-50/30' : 'border-[#e8ddd0]'}`}
-                    >
-                      <option value="">{t.selectOption || "Select..."}</option>
-                      {field.options.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                      hasError={hasError}
+                      t={t}
+                      required={field.required}
+                    />
                   ) : field.type === 'textarea' ? (
                     <textarea
                       name={field.name}

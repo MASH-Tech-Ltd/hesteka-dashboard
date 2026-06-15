@@ -9,7 +9,17 @@ import FilterBar from "../components/common/FilterBar";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
 import CRUDModal from "../components/common/CRUDModal";
-import { PawPrint, MapPin, FileText, User, X, Plus, Dog, Cat, Bird, HelpCircle } from "lucide-react";
+import { PawPrint, MapPin, FileText, User, X, Plus, Dog, Cat, Bird, HelpCircle, ThumbsUp } from "lucide-react";
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 export default function ReportsPage() {
   const { t } = useLang();
@@ -24,6 +34,8 @@ export default function ReportsPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
+  const [formErrors, setFormErrors] = useState(null);
 
   const [queryParams, setQueryParams] = useState({
     page: 1,
@@ -123,60 +135,182 @@ export default function ReportsPage() {
     }
   };
 
-  const handleCreateReport = async (formData) => {
+  const handleSubmitReport = async (formData) => {
     setModalLoading(true);
+    setFormErrors(null);
     try {
       const data = new FormData();
+      let hasLoc = false;
+      let lat = null, lng = null, addressStr = null;
+
       Object.keys(formData).forEach(key => {
-        if (formData[key] !== undefined) data.append(key, formData[key]);
+        if (key === 'latitude') { hasLoc = true; lat = formData[key]; }
+        else if (key === 'longitude') { hasLoc = true; lng = formData[key]; }
+        else if (key === 'address') { hasLoc = true; addressStr = formData[key]; }
+        else if (key === 'eventDate' && formData[key]) {
+          data.append(key, new Date(formData[key]).toISOString());
+        }
+        else if (formData[key] !== undefined) {
+          data.append(key, formData[key]);
+        }
       });
 
-      const res = await api.post("/reports/create-report", data, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      if (hasLoc && lat && lng && addressStr) {
+        data.append('location', JSON.stringify({
+          type: "Point",
+          coordinates: [Number(lng), Number(lat)],
+          address: addressStr
+        }));
+      }
 
-      if (res.data.status === "ok" || res.status === 201) {
-        toast.success("Report created successfully");
-        fetchData();
-        setIsAddModalOpen(false);
+      if (editingReport) {
+        const res = await api.patch(`/reports/update-report/${editingReport._id}`, data, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        if (res.data.status === "ok" || res.status === 200) {
+          toast.success("Report updated successfully");
+          fetchData();
+          setIsAddModalOpen(false);
+        }
+      } else {
+        const res = await api.post("/reports/create-report", data, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        if (res.data.status === "ok" || res.status === 201) {
+          toast.success("Report created successfully");
+          setQueryParams(prev => ({
+            ...prev,
+            page: 1,
+            search: "",
+            status: "all",
+            species: "all"
+          }));
+          fetchData();
+          setIsAddModalOpen(false);
+        }
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create report");
+      if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
+        const cleanedErrors = err.response.data.data.map(e => ({
+          ...e,
+          message: e.message?.includes("Invalid option") || e.message?.includes("Invalid enum") ? (t.fieldRequired || "This field is required") : e.message
+        }));
+        setFormErrors(cleanedErrors);
+      }
+      toast.error(err.response?.data?.message || t.failedSaveReport || "Failed to save report");
     } finally {
       setModalLoading(false);
     }
   };
 
+  const openEditModal = (report) => {
+    setFormErrors(null);
+    let parsedDate = "";
+    try {
+      if (report.eventDate) {
+        parsedDate = new Date(report.eventDate).toISOString().split('T')[0];
+      }
+    } catch (e) {
+      console.warn("Invalid event date:", report.eventDate);
+    }
+
+    setEditingReport({
+      ...report,
+      address: report.location?.address || "",
+      latitude: report.location?.coordinates?.[1] || "",
+      longitude: report.location?.coordinates?.[0] || "",
+      eventDate: parsedDate,
+    });
+    setIsAddModalOpen(true);
+  };
+
   const reportFields = [
-    { name: "animalName", label: "Animal Name", required: true },
+    { name: "animalName", label: t.animalName || "Animal Name", required: true },
     {
       name: "species",
-      label: "Species",
+      label: t.animalSpecies || "Species",
       type: "select",
       required: true,
       options: [
-        { label: "Dog", value: "Dog" },
-        { label: "Cat", value: "Cat" },
-        { label: "Bird", value: "Bird" },
-        { label: "Other", value: "Other" }
+        { label: t.dog || "Dog", value: "Dog" },
+        { label: t.cat || "Cat", value: "Cat" },
+        { label: t.bird || "Bird", value: "Bird" },
+        { label: t.otherSpecies || "Other", value: "Other" }
       ]
     },
-    { name: "breed", label: "Breed" },
+    { name: "breed", label: t.breed || "Breed", required: true },
+    {
+      name: "gender",
+      label: t.gender || "Gender",
+      type: "select",
+      required: true,
+      options: [
+        { label: t.male || "Male", value: "Male" },
+        { label: t.female || "Female", value: "Female" }
+      ]
+    },
+    {
+      name: "age",
+      label: t.age || "Age",
+      type: "select",
+      required: true,
+      options: [
+        { label: t.junior || "Junior", value: "Junior" },
+        { label: t.adult || "Adult", value: "Adult" },
+        { label: t.senior || "Senior", value: "Senior" }
+      ]
+    },
     {
       name: "status",
-      label: "Status",
+      label: t.statusLabel || "Status",
       type: "select",
       required: true,
       options: [
-        { label: "Lost", value: "lost" },
-        { label: "Found", value: "found" },
-        { label: "Rescued", value: "rescued" },
-        { label: "Sighted", value: "sighted" }
+        { label: t.lost || "Lost", value: "lost" },
+        { label: t.found || "Found", value: "found" },
+        { label: t.rescued || "Rescued", value: "rescued" },
+        { label: t.sighted || "Sighted", value: "sighted" }
       ]
     },
-    { name: "address", label: "Location Address", required: true },
-    { name: "description", label: "Description", type: "textarea" },
-    { name: "image", label: "Animal Photo", type: "file" }
+    { name: "eventDate", label: t.eventDate || "Event Date", type: "date", required: true },
+    { name: "address", label: t.locationAddress || "Location Address", required: true },
+    { name: "latitude", label: t.latitudeLabel || "Latitude", type: "number", required: true },
+    { name: "longitude", label: t.longitudeLabel || "Longitude", type: "number", required: true },
+    { name: "description", label: t.descriptionLabel || "Description", type: "textarea", required: true },
+    {
+      name: "hasMicrochip",
+      label: t.hasMicrochip || "Has Microchip",
+      type: "select",
+      required: true,
+      options: [
+        { label: t.yes || "Yes", value: "Yes" },
+        { label: t.no || "No", value: "No" },
+        { label: t.unknown || "Unknown", value: "Unknown" }
+      ]
+    },
+    {
+      name: "hasTattoo",
+      label: t.hasTattoo || "Has Tattoo",
+      type: "select",
+      required: true,
+      options: [
+        { label: t.yes || "Yes", value: "Yes" },
+        { label: t.no || "No", value: "No" },
+        { label: t.unknown || "Unknown", value: "Unknown" }
+      ]
+    },
+    {
+      name: "hasCollarOrHarness",
+      label: t.hasCollarOrHarness || "Has Collar/Harness",
+      type: "select",
+      required: true,
+      options: [
+        { label: t.yes || "Yes", value: "Yes" },
+        { label: t.no || "No", value: "No" },
+        { label: t.unknown || "Unknown", value: "Unknown" }
+      ]
+    },
+    { name: "images", label: t.animalPhoto || "Animal Photo", type: "file" }
   ];
 
   const columns = [
@@ -254,7 +388,8 @@ export default function ReportsPage() {
       cell: (r) => (
         <div className="flex gap-1 justify-end">
           <button onClick={() => openReportDetails(r._id)} className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-blue-200 transition-colors">{t.viewBtn}</button>
-          {r.status === "found" && (
+          <button onClick={() => openEditModal(r)} className="bg-orange-100 text-orange-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-orange-200 transition-colors">{t.editBtn || "Edit"}</button>
+          {r.status === "found" && !r.isPointApproved && (
             <button
               onClick={() => handleApprovePoints(r._id)}
               className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-green-200 transition-colors"
@@ -318,20 +453,20 @@ export default function ReportsPage() {
               name: "status",
               label: t.allStatuses || "All statuses",
               options: [
-                { label: "Lost", value: "lost" },
-                { label: "Found", value: "found" },
-                { label: "Sighted", value: "sighted" },
-                { label: "Rescued", value: "rescued" }
+                { label: t.lost || "Lost", value: "lost" },
+                { label: t.found || "Found", value: "found" },
+                { label: t.sighted || "Sighted", value: "sighted" },
+                { label: t.rescued || "Rescued", value: "rescued" }
               ]
             },
             {
               name: "species",
               label: t.allSpecies || "All species",
               options: [
-                { label: "Dog", value: "Dog" },
-                { label: "Cat", value: "Cat" },
-                { label: "Bird", value: "Bird" },
-                { label: "Other", value: "Other" }
+                { label: t.dog || "Dog", value: "Dog" },
+                { label: t.cat || "Cat", value: "Cat" },
+                { label: t.bird || "Bird", value: "Bird" },
+                { label: t.otherSpecies || "Other", value: "Other" }
               ]
             }
           ]}
@@ -343,7 +478,11 @@ export default function ReportsPage() {
           ]}
           actionButton={
             <button
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={() => {
+                setEditingReport(null);
+                setFormErrors(null);
+                setIsAddModalOpen(true);
+              }}
               className="bg-[#8B6914] text-white text-[11px] font-bold px-4 py-2 rounded-xl hover:bg-[#6a5010] transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" /> {t.createReport || "Create Report"}
@@ -382,12 +521,18 @@ export default function ReportsPage() {
             <div className="p-6 flex flex-col gap-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-4">
-                  <div className="w-full aspect-video rounded-xl bg-gray-100 overflow-hidden border border-[#e8ddd0]">
+                  <div className="w-full aspect-video rounded-xl bg-gray-100 overflow-hidden border border-[#e8ddd0] relative">
                     {selectedReport.images?.[0]?.secure_url ? (
                       <img src={selectedReport.images[0].secure_url} alt="Report" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-6xl text-[#8B6914] opacity-20"><PawPrint className="w-24 h-24" /></div>
                     )}
+                    <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-lg flex items-center gap-2 border border-white/10 shadow-xl">
+                      <ThumbsUp className="w-4 h-4 text-white" />
+                      <span className="text-white text-xs font-black">
+                        {selectedReport.comments?.reduce((acc, c) => acc + (c.likes?.length || 0), 0) || 0}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -410,7 +555,19 @@ export default function ReportsPage() {
                 <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-[#8B6914]" /> Localisation
                 </h3>
-                <p className="text-sm text-[#5a4a3a] leading-relaxed">{selectedReport.location?.address || "Adresse non fournie"}</p>
+                <p className="text-sm text-[#5a4a3a] leading-relaxed mb-2">{selectedReport.location?.address || "Adresse non fournie"}</p>
+                {selectedReport.location?.coordinates?.length === 2 && (
+                  <div className="h-48 w-full rounded-xl overflow-hidden border border-[#e8ddd0] z-0 relative">
+                    <MapContainer
+                      center={[selectedReport.location.coordinates[1], selectedReport.location.coordinates[0]]}
+                      zoom={14}
+                      className="w-full h-full"
+                    >
+                      <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                      <Marker position={[selectedReport.location.coordinates[1], selectedReport.location.coordinates[0]]} />
+                    </MapContainer>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-2 bg-[#f5f0e8] p-4 rounded-xl">
@@ -443,10 +600,16 @@ export default function ReportsPage() {
 
       <CRUDModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Create New Report"
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingReport(null);
+          setFormErrors(null);
+        }}
+        title={editingReport ? (t.editReportTitle || "Edit Report") : (t.createReportTitle || "Create New Report")}
         fields={reportFields}
-        onSubmit={handleCreateReport}
+        initialData={editingReport}
+        fieldErrors={formErrors}
+        onSubmit={handleSubmitReport}
         loading={modalLoading}
       />
 
