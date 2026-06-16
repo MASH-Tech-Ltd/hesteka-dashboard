@@ -27,12 +27,16 @@ const MapFlyTo = ({ center }) => {
 
 const LocationPicker = ({ lat, lng, onChange }) => {
   const { t } = useLang();
-  const [position, setPosition] = useState(lat && lng ? [lat, lng] : [48.8566, 2.3522]); 
+  
+  const isValidCoord = (c) => typeof c === 'number' && !isNaN(c);
+  const initialPos = isValidCoord(lat) && isValidCoord(lng) ? [lat, lng] : [48.8566, 2.3522];
+  
+  const [position, setPosition] = useState(initialPos); 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
-    if (lat && lng) {
+    if (isValidCoord(lat) && isValidCoord(lng)) {
       setPosition([lat, lng]);
     }
   }, [lat, lng]);
@@ -503,7 +507,7 @@ const CRUDModal = ({ title, fields, initialData, isOpen, onClose, onSubmit, load
                 <label className="text-[9px] font-black text-[#9a8a7a] tracking-wider uppercase ml-1 flex justify-between items-center">
                   <span>{isViewOnly ? (t.locationDetails || "Location Details") : (t.mapLocation || "Map Location")}</span>
                   <span className="text-[9px] font-bold text-[#8B6914]">
-                    {formData.latitude?.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                    {typeof formData.latitude === 'number' ? formData.latitude.toFixed(4) : "N/A"}, {typeof formData.longitude === 'number' ? formData.longitude.toFixed(4) : "N/A"}
                   </span>
                 </label>
                 <LocationPicker 

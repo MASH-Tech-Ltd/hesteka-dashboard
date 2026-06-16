@@ -217,8 +217,8 @@ export default function ReportsPage() {
     setEditingReport({
       ...report,
       address: report.location?.address || "",
-      latitude: report.location?.coordinates?.[1] || "",
-      longitude: report.location?.coordinates?.[0] || "",
+      latitude: report.location?.coordinates?.[1] ?? undefined,
+      longitude: report.location?.coordinates?.[0] ?? undefined,
       eventDate: parsedDate,
     });
     setIsAddModalOpen(true);
