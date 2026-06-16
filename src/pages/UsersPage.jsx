@@ -91,7 +91,7 @@ export default function UsersPage() {
       if (editingUser) {
         // Collect updated fields for the admin update API
         const formDataPayload = new FormData();
-        const editableFields = ["firstName", "lastName", "phone", "address", "company", "role", "status"];
+        const editableFields = ["firstName", "lastName", "phone", "address", "postalCode", "city", "company", "role", "status"];
         
         editableFields.forEach(field => {
           if (formData[field] !== undefined && formData[field] !== editingUser[field]) {
@@ -235,6 +235,8 @@ export default function UsersPage() {
     ...(!isEditing ? [{ name: "password", label: t.passwordLabel || "Password", type: "password", required: true }] : []),
     { name: "phone", label: t.phone || "Phone", required: true },
     { name: "address", label: t.address || "Address", required: true },
+    { name: "postalCode", label: t.postalCode || "Postal Code" },
+    { name: "city", label: t.city || "City" },
     { name: "company", label: t.company || "Company" },
     { 
       name: "role", 

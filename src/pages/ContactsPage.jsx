@@ -45,8 +45,7 @@ export default function ContactsPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
-    // Only show full loading if we have no data yet
-    if (contacts.length === 0) setLoading(true);
+    setLoading(true);
 
     try {
       const params = { ...queryParams };
@@ -77,7 +76,7 @@ export default function ContactsPage() {
     } finally {
       setLoading(false);
     }
-  }, [queryParams, contacts.length]);
+  }, [queryParams]);
 
   useEffect(() => {
     fetchData();

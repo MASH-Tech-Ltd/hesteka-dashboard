@@ -10,16 +10,10 @@ import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
 import { Target, Plus, X, MapPin } from "lucide-react";
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+const mapContainerStyle = { width: "100%", height: "100%" };
+const libraries = ['places'];
 
 export default function MissionsPage() {
   const { t } = useLang();
@@ -37,13 +31,24 @@ export default function MissionsPage() {
     status: "all",
     search: "",
     sortBy: "date",
-    sort: "descending"
+    sort: "descending",
   });
 
   const [selectedMission, setSelectedMission] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const { isLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries,
+  });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -87,7 +92,9 @@ export default function MissionsPage() {
 
   const handleOpenView = async (id) => {
     try {
-      const res = await api.get(`/local-missions/get-single-local-mission/${id}`);
+      const res = await api.get(
+        `/local-missions/get-single-local-mission/${id}`,
+      );
       if (res.data.status === "ok") {
         setSelectedMission(res.data.data);
         setIsViewModalOpen(true);
@@ -102,36 +109,50 @@ export default function MissionsPage() {
     try {
       const data = new FormData();
       let hasLoc = false;
-      let lat = null, lng = null;
+      let lat = null,
+        lng = null;
 
-      Object.keys(formData).forEach(key => {
-        if (key === 'latitude') {
-          hasLoc = true; lat = formData[key];
-        } else if (key === 'longitude') {
-          hasLoc = true; lng = formData[key];
+      Object.keys(formData).forEach((key) => {
+        if (key === "latitude") {
+          hasLoc = true;
+          lat = formData[key];
+        } else if (key === "longitude") {
+          hasLoc = true;
+          lng = formData[key];
         } else if (formData[key] !== undefined) {
           data.append(key, formData[key]);
         }
       });
 
       if (hasLoc && lat && lng) {
-        data.append('location', JSON.stringify({
-          type: "Point",
-          coordinates: [Number(lng), Number(lat)]
-        }));
+        data.append(
+          "location",
+          JSON.stringify({
+            type: "Point",
+            coordinates: [Number(lng), Number(lat)],
+          }),
+        );
       }
 
       if (editingMission) {
-        await api.patch(`/local-missions/update-local-mission/${editingMission._id}`, data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        await api.patch(
+          `/local-missions/update-local-mission/${editingMission._id}`,
+          data,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          },
+        );
       } else {
         await api.post("/local-missions/create-local-mission", data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { "Content-Type": "multipart/form-data" },
         });
       }
       setIsModalOpen(false);
-      toast.success(editingMission ? "Mission updated successfully" : "Mission created successfully");
+      toast.success(
+        editingMission
+          ? "Mission updated successfully"
+          : "Mission created successfully",
+      );
       fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || "Operation failed.");
@@ -144,7 +165,9 @@ export default function MissionsPage() {
     setConfirmModal({
       isOpen: true,
       title: t.deleteMissionTitle || "Delete Mission",
-      message: t.confirmDeleteMission || "Are you sure you want to delete this mission?",
+      message:
+        t.confirmDeleteMission ||
+        "Are you sure you want to delete this mission?",
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
@@ -155,20 +178,45 @@ export default function MissionsPage() {
           toast.error(err.response?.data?.message || "Delete failed.");
         } finally {
           setConfirmLoading(false);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         }
-      }
+      },
     });
   };
 
   const missionFields = [
     { name: "title", label: t.titleLabel || "Title", required: true },
-    { name: "description", label: t.descriptionLabel || "Description", type: "textarea", required: true },
-    { name: "createdAt", label: t.dateLabel || "Date", type: "date", required: true },
+    {
+      name: "description",
+      label: t.descriptionLabel || "Description",
+      type: "textarea",
+      required: true,
+    },
+    {
+      name: "createdAt",
+      label: t.dateLabel || "Date",
+      type: "date",
+      required: true,
+    },
     { name: "address", label: t.address || "Address", required: true },
-    { name: "latitude", label: t.latitude || "Latitude", type: "number", required: true },
-    { name: "longitude", label: t.longitude || "Longitude", type: "number", required: true },
-    { name: "points", label: t.points || "Points Reward", type: "number", required: true },
+    {
+      name: "latitude",
+      label: t.latitude || "Latitude",
+      type: "number",
+      required: true,
+    },
+    {
+      name: "longitude",
+      label: t.longitude || "Longitude",
+      type: "number",
+      required: true,
+    },
+    {
+      name: "points",
+      label: t.points || "Points Reward",
+      type: "number",
+      required: true,
+    },
     { name: "duration", label: t.durationLabel || "Duration", required: true },
     { name: "image", label: t.missionPhoto || "Mission Photo", type: "file" },
   ];
@@ -180,47 +228,63 @@ export default function MissionsPage() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-[#f5f0e8] flex items-center justify-center text-xl overflow-hidden shrink-0 border border-[#e8ddd0]">
             {m.photo?.secure_url ? (
-              <img src={m.photo.secure_url} alt={m.title} className="w-full h-full object-cover" />
+              <img
+                src={m.photo.secure_url}
+                alt={m.title}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <Target className="w-5 h-5 text-[#8B6914]" />
             )}
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-[#3a2a1a] truncate max-w-[150px]">{m.title || "N/A"}</span>
-            <span className="text-[10px] text-[#9a8a7a] truncate max-w-[150px]">{m.address || t.noAddress}</span>
+            <span className="font-bold text-[#3a2a1a] truncate max-w-[150px]">
+              {m.title || "N/A"}
+            </span>
+            <span className="text-[10px] text-[#9a8a7a] truncate max-w-[150px]">
+              {m.address || t.noAddress}
+            </span>
           </div>
         </div>
-      )
+      ),
     },
     {
       header: t.partnerRole || "PARTNER",
       cell: (m) => (
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
-            {(m.partner?.company?.[0] || m.partner?.firstName?.[0] || 'P').toUpperCase()}
+            {(
+              m.partner?.company?.[0] ||
+              m.partner?.firstName?.[0] ||
+              "P"
+            ).toUpperCase()}
           </div>
           <span className="text-xs text-[#3a2a1a] font-medium truncate max-w-[100px]">
-            {m.partner?.company || m.partner?.firstName || 'N/A'}
+            {m.partner?.company || m.partner?.firstName || "N/A"}
           </span>
         </div>
-      )
+      ),
     },
     {
       header: t.dateLabel || "DATE",
-      cell: (m) => new Date(m.createdAt).toLocaleDateString()
+      cell: (m) => new Date(m.createdAt).toLocaleDateString(),
     },
     {
       header: t.points || "POINTS",
-      cell: (m) => <span className="font-bold text-orange-600">+{m.points} pts</span>
+      cell: (m) => (
+        <span className="font-bold text-orange-600">+{m.points} pts</span>
+      ),
     },
     {
       header: t.participants || "PARTICIPANTS",
       align: "center",
-      cell: (m) => <span className="font-bold">{m.participantsCount || 0}</span>
+      cell: (m) => (
+        <span className="font-bold">{m.participantsCount || 0}</span>
+      ),
     },
     {
       header: t.statusLabel || "STATUT",
-      cell: (m) => <StatusBadge status={m.status} />
+      cell: (m) => <StatusBadge status={m.status} />,
     },
     {
       header: t.actionsLabel || "ACTIONS",
@@ -246,25 +310,71 @@ export default function MissionsPage() {
             {t.cancelBtn}
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard loading={loading} label={t.inProgressLabel} value={{ text: stats?.inProgress?.toLocaleString() || "0", color: "text-[#3a2a1a]" }} color="bg-orange-500" />
-        <StatCard loading={loading} label={t.toComeLabel || "To Come"} value={{ text: stats?.toCome?.toLocaleString() || "0", color: "text-[#3a2a1a]" }} color="bg-blue-500" />
-        <StatCard loading={loading} label={t.finishedLabel} value={{ text: stats?.finished?.toLocaleString() || "0", color: "text-[#3a2a1a]" }} color="bg-green-500" />
-        <StatCard loading={loading} label={t.pointsAttributed} value={{ text: stats?.pointsAttributed?.toLocaleString() || "0", color: "text-orange-500" }} color="bg-[#8B6914]" />
+        <StatCard
+          loading={loading}
+          label={t.inProgressLabel}
+          value={{
+            text: stats?.inProgress?.toLocaleString() || "0",
+            color: "text-[#3a2a1a]",
+          }}
+          color="bg-orange-500"
+        />
+        <StatCard
+          loading={loading}
+          label={t.toComeLabel || "To Come"}
+          value={{
+            text: stats?.toCome?.toLocaleString() || "0",
+            color: "text-[#3a2a1a]",
+          }}
+          color="bg-blue-500"
+        />
+        <StatCard
+          loading={loading}
+          label={t.finishedLabel}
+          value={{
+            text: stats?.finished?.toLocaleString() || "0",
+            color: "text-[#3a2a1a]",
+          }}
+          color="bg-green-500"
+        />
+        <StatCard
+          loading={loading}
+          label={t.pointsAttributed}
+          value={{
+            text: stats?.pointsAttributed?.toLocaleString() || "0",
+            color: "text-orange-500",
+          }}
+          color="bg-[#8B6914]"
+        />
       </div>
 
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden flex flex-col shadow-sm">
         <FilterBar
-          onSearch={(val) => setQueryParams(p => p.search === val ? p : { ...p, search: val, page: 1 })}
-          onFilterChange={(name, val) => setQueryParams(p => p[name] === val ? p : { ...p, [name]: val, page: 1 })}
-          onSortChange={(sortBy, sort) => setQueryParams(p => p.sortBy === sortBy && p.sort === sort ? p : { ...p, sortBy, sort, page: 1 })}
+          onSearch={(val) =>
+            setQueryParams((p) =>
+              p.search === val ? p : { ...p, search: val, page: 1 },
+            )
+          }
+          onFilterChange={(name, val) =>
+            setQueryParams((p) =>
+              p[name] === val ? p : { ...p, [name]: val, page: 1 },
+            )
+          }
+          onSortChange={(sortBy, sort) =>
+            setQueryParams((p) =>
+              p.sortBy === sortBy && p.sort === sort
+                ? p
+                : { ...p, sortBy, sort, page: 1 },
+            )
+          }
           related={true}
           filters={[
             {
@@ -272,15 +382,18 @@ export default function MissionsPage() {
               label: t.allStatuses || "All statuses",
               options: [
                 { label: "Active", value: "active" },
-                { label: "Inactive", value: "inactive" }
-              ]
-            }
+                { label: "Inactive", value: "inactive" },
+              ],
+            },
           ]}
           sortOptions={[
             { label: t.dateDesc || "Date (Newest)", value: "date:descending" },
             { label: t.dateAsc || "Date (Oldest)", value: "date:ascending" },
             { label: t.nameAsc || "Name (A-Z)", value: "name:ascending" },
-            { label: t.ptsDesc || "Points (Highest)", value: "points:descending" }
+            {
+              label: t.ptsDesc || "Points (Highest)",
+              value: "points:descending",
+            },
           ]}
           actionButton={
             <button
@@ -302,7 +415,7 @@ export default function MissionsPage() {
         <div className="bg-[#fcfaf7]">
           <Pagination
             meta={meta}
-            onPageChange={(page) => setQueryParams(p => ({ ...p, page }))}
+            onPageChange={(page) => setQueryParams((p) => ({ ...p, page }))}
           />
         </div>
       </div>
@@ -322,9 +435,13 @@ export default function MissionsPage() {
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center sticky top-0 bg-white z-10">
               <h2 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
-                <Target className="w-5 h-5 text-[#8B6914]" /> {t.viewBtn}: {selectedMission.title}
+                <Target className="w-5 h-5 text-[#8B6914]" /> {t.viewBtn}:{" "}
+                {selectedMission.title}
               </h2>
-              <button onClick={() => setIsViewModalOpen(false)} className="text-[#9a8a7a] hover:text-[#3a2a1a] transition-colors p-1">
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className="text-[#9a8a7a] hover:text-[#3a2a1a] transition-colors p-1"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -332,59 +449,120 @@ export default function MissionsPage() {
             <div className="p-6 flex flex-col gap-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-4">
-                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2">Informations Générales</h3>
+                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
+                    Informations Générales
+                  </h3>
                   <div className="grid grid-cols-2 gap-y-2 text-sm">
-                    <span className="text-[#9a8a7a]">Titre:</span><span className="font-medium text-[#3a2a1a]">{selectedMission.title}</span>
-                    <span className="text-[#9a8a7a]">{t.statusLabel || "Status"}:</span>
-                    <span className="font-bold uppercase text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full w-fit">{selectedMission.status}</span>
-                    <span className="text-[#9a8a7a]">Adresse:</span><span className="font-medium text-[#3a2a1a] truncate" title={selectedMission.address}>{selectedMission.address}</span>
-                    <span className="text-[#9a8a7a]">Durée:</span><span className="font-medium text-[#3a2a1a]">{selectedMission.duration || "N/A"}</span>
-                    <span className="text-[#9a8a7a]">Points:</span><span className="font-bold text-orange-600">+{selectedMission.points} pts</span>
-                    <span className="text-[#9a8a7a]">Date:</span><span className="font-medium text-[#3a2a1a]">{new Date(selectedMission.createdAt).toLocaleDateString()}</span>
+                    <span className="text-[#9a8a7a]">Titre:</span>
+                    <span className="font-medium text-[#3a2a1a]">
+                      {selectedMission.title}
+                    </span>
+                    <span className="text-[#9a8a7a]">
+                      {t.statusLabel || "Status"}:
+                    </span>
+                    <span className="font-bold uppercase text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full w-fit">
+                      {selectedMission.status}
+                    </span>
+                    <span className="text-[#9a8a7a]">Adresse:</span>
+                    <span
+                      className="font-medium text-[#3a2a1a] truncate"
+                      title={selectedMission.address}
+                    >
+                      {selectedMission.address}
+                    </span>
+                    <span className="text-[#9a8a7a]">Durée:</span>
+                    <span className="font-medium text-[#3a2a1a]">
+                      {selectedMission.duration || "N/A"}
+                    </span>
+                    <span className="text-[#9a8a7a]">Points:</span>
+                    <span className="font-bold text-orange-600">
+                      +{selectedMission.points} pts
+                    </span>
+                    <span className="text-[#9a8a7a]">Date:</span>
+                    <span className="font-medium text-[#3a2a1a]">
+                      {new Date(selectedMission.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-4">
-                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2">Partenaire</h3>
+                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
+                    Partenaire
+                  </h3>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 rounded-full bg-[#8B6914] text-white flex items-center justify-center font-bold overflow-hidden border border-[#e8ddd0]">
-                      {(selectedMission.partner?.company?.[0] || selectedMission.partner?.firstName?.[0] || 'P').toUpperCase()}
+                      {(
+                        selectedMission.partner?.company?.[0] ||
+                        selectedMission.partner?.firstName?.[0] ||
+                        "P"
+                      ).toUpperCase()}
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm text-[#3a2a1a]">{selectedMission.partner?.company || selectedMission.partner?.firstName}</span>
-                      <span className="text-xs text-[#9a8a7a]">{selectedMission.partner?.email}</span>
+                      <span className="font-bold text-sm text-[#3a2a1a]">
+                        {selectedMission.partner?.company ||
+                          selectedMission.partner?.firstName}
+                      </span>
+                      <span className="text-xs text-[#9a8a7a]">
+                        {selectedMission.partner?.email}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col gap-2 bg-[#f5f0e8] p-4 rounded-xl">
-                <h3 className="font-bold text-[#3a2a1a] text-sm">Description</h3>
-                <p className="text-sm text-[#5a4a3a] leading-relaxed whitespace-pre-wrap">{selectedMission.description || t.noDescription}</p>
+                <h3 className="font-bold text-[#3a2a1a] text-sm">
+                  Description
+                </h3>
+                <p className="text-sm text-[#5a4a3a] leading-relaxed whitespace-pre-wrap">
+                  {selectedMission.description || t.noDescription}
+                </p>
               </div>
 
-              {selectedMission.location?.coordinates && selectedMission.location.coordinates.length === 2 && (
-                <div className="flex flex-col gap-3">
-                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#8B6914]"/> Location
-                  </h3>
-                  <div className="h-64 rounded-xl overflow-hidden shadow-inner border border-[#e8ddd0]">
-                    <MapContainer
-                      center={[selectedMission.location.coordinates[1], selectedMission.location.coordinates[0]]}
-                      zoom={14}
-                      className="w-full h-full"
-                    >
-                      <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                      <Marker position={[selectedMission.location.coordinates[1], selectedMission.location.coordinates[0]]} />
-                    </MapContainer>
+              {selectedMission.location?.coordinates &&
+                selectedMission.location.coordinates.length === 2 && (
+                  <div className="flex flex-col gap-3">
+                    <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#8B6914]" /> Location
+                    </h3>
+                    <div className="h-64 rounded-xl overflow-hidden shadow-inner border border-[#e8ddd0]">
+                      {!isLoaded ? (
+                        <div className="w-full h-full bg-[#f5f0e8] animate-pulse" />
+                      ) : (
+                        <GoogleMap
+                          mapContainerStyle={mapContainerStyle}
+                          center={{
+                            lat: selectedMission.location.coordinates[1],
+                            lng: selectedMission.location.coordinates[0],
+                          }}
+                          zoom={14}
+                          options={{
+                            disableDefaultUI: true,
+                            zoomControl: true,
+                          }}
+                        >
+                          <Marker
+                            position={{
+                              lat: selectedMission.location.coordinates[1],
+                              lng: selectedMission.location.coordinates[0],
+                            }}
+                          />
+                        </GoogleMap>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {selectedMission.photo?.secure_url && (
                 <div className="flex flex-col gap-3">
-                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2">Photo de la mission</h3>
-                  <img src={selectedMission.photo.secure_url} alt="Mission" className="w-full max-h-64 object-cover rounded-lg border border-[#e8ddd0] shadow-sm" />
+                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
+                    Photo de la mission
+                  </h3>
+                  <img
+                    src={selectedMission.photo.secure_url}
+                    alt="Mission"
+                    className="w-full max-h-64 object-cover rounded-lg border border-[#e8ddd0] shadow-sm"
+                  />
                 </div>
               )}
             </div>
@@ -396,7 +574,10 @@ export default function MissionsPage() {
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
         message={confirmModal.message}
-        onClose={() => !confirmLoading && setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onClose={() =>
+          !confirmLoading &&
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }))
+        }
         onConfirm={confirmModal.onConfirm}
         loading={confirmLoading}
       />

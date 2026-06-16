@@ -18,7 +18,7 @@ const formatInputToISO = (inputValue) => {
   return new Date(inputValue).toISOString();
 };
 
-const ScaleItem = React.memo(({ icon, label, points, onChange, t, loading }) => (
+const ScaleItem = React.memo(({ icon, label, points, onChange, t, loading, isVariable, variableText, subtitleText }) => (
   <div className="flex items-center justify-between p-4 border-b border-[#f0e8d8] last:border-0 hover:bg-[#fcfaf7] transition-all rounded-lg group">
     <div className="flex items-center gap-4">
       <div className="w-10 h-10 rounded-full bg-[#f5f0e8] flex items-center justify-center text-xl shadow-inner group-hover:bg-white transition-colors">
@@ -26,19 +26,25 @@ const ScaleItem = React.memo(({ icon, label, points, onChange, t, loading }) => 
       </div>
       <div className="flex flex-col">
         <span className="text-[11px] font-bold text-[#3a2a1a] uppercase tracking-wider">{label}</span>
-        <span className="text-[9px] text-[#9a8a7a] italic">{t.currentValuePerAction || "Current value per action"}</span>
+        <span className="text-[9px] text-[#9a8a7a] italic">{subtitleText || t.currentValuePerAction || "Current value per action"}</span>
       </div>
     </div>
     <div className="flex items-center gap-3">
-      <div className="relative">
-        <input
-          type="number"
-          value={points}
-          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
-          className="bg-white border border-[#e8ddd0] rounded-xl px-4 py-2 text-sm font-bold text-[#3a2a1a] w-24 text-center outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all"
-        />
-        <div className="absolute -top-2 -right-2 bg-[#8B6914] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">PTS</div>
-      </div>
+      {isVariable ? (
+        <div className="bg-[#f5f0e8] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs font-bold text-[#8B6914] text-center">
+          {variableText || "Variable Points"}
+        </div>
+      ) : (
+        <div className="relative">
+          <input
+            type="number"
+            value={points}
+            onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+            className="bg-white border border-[#e8ddd0] rounded-xl px-4 py-2 text-sm font-bold text-[#3a2a1a] w-24 text-center outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all"
+          />
+          <div className="absolute -top-2 -right-2 bg-[#8B6914] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">PTS</div>
+        </div>
+      )}
     </div>
   </div>
 ));
@@ -112,9 +118,9 @@ export default function PointsPage() {
   };
 
   const scale = [
-    { key: "pointsPerReport", icon: <MapPin className="w-5 h-5 text-[#8B6914]" />, label: t.animalReports || "SIGNALEMENT ANIMAUX", points: config?.pointsPerReport || 0 },
-    { key: "pointsPerMission", icon: <Target className="w-5 h-5 text-[#8B6914]" />, label: t.localMissionsLabel || "MISSIONS LOCALES", points: config?.pointsPerMission || 0 },
-    { key: "pointsPerDonation", icon: <Package className="w-5 h-5 text-[#8B6914]" />, label: t.donationDeposits || "DÉPÔT DE DONS", points: config?.pointsPerDonation || 0 },
+    { key: "pointsPerReport", icon: <MapPin className="w-5 h-5 text-[#8B6914]" />, label: t.animalReports || "ANIMAL REPORTS", points: config?.pointsPerReport || 0 },
+    { key: "pointsPerMission", icon: <Target className="w-5 h-5 text-[#8B6914]" />, label: t.localMissionsLabel || "LOCAL MISSIONS", isVariable: true, variableText: t.variable || "Variable", subtitleText: t.dependsOnMission || "Depends on specific mission" },
+    { key: "pointsPerDonation", icon: <Package className="w-5 h-5 text-[#8B6914]" />, label: t.donationDeposits || "DONATION DEPOSITS", points: config?.pointsPerDonation || 0 },
   ];
 
   const rules = [
