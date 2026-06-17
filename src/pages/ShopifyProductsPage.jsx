@@ -23,7 +23,7 @@ const ShopifyProductCard = ({ product, t }) => {
   const mainImage = product.image?.src || product.images?.[0]?.src;
   const price = product.variants?.[0]?.price;
 
-  // Helper to optimize Shopify images
+  // Helper to optimize Shopify images for better performance and load time
   const getOptimizedImageUrl = (url, width = 200) => {
     if (!url) return url;
     try {
