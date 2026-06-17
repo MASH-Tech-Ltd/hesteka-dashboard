@@ -130,6 +130,8 @@ const translations = {
     discardBtn: "Discard",
     saveChanges: "Save Changes",
     createBtn: "Create",
+    clearFilters: "Clear all filters",
+    totalCount: "Total",
     selectOption: "Select...",
     titleAsc: "Title (A-Z)",
     titleDesc: "Title (Z-A)",
@@ -357,6 +359,7 @@ const translations = {
     pointsAttributed: "POINTS ATTRIBUTED",
     allMissions: "All Missions",
     createMission: "Create Mission",
+    addMission: "Add Mission",
     cancelBtn: "Cancel",
     // Points de collecte Page
     collectionPointsTitle: "Collection Points",
@@ -636,6 +639,8 @@ const translations = {
     discardBtn: "Annuler",
     saveChanges: "Enregistrer les modifications",
     createBtn: "Cr\u00E9er",
+    clearFilters: "Effacer les filtres",
+    totalCount: "Total",
     selectOption: "S\u00E9lectionner...",
     titleAsc: "Titre (A-Z)",
     titleDesc: "Titre (Z-A)",
@@ -855,6 +860,7 @@ const translations = {
     pointsAttributed: "PTS ATTRIBU\u00C9S",
     allMissions: "Toutes les missions",
     createMission: "Cr\u00E9er une mission",
+    addMission: "Ajouter une mission",
     cancelBtn: "Annuler",
     // Points de collecte Page
     collectionPointsTitle: "Points de collecte",

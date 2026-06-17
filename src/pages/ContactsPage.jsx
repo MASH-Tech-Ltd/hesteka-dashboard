@@ -263,10 +263,10 @@ export default function ContactsPage() {
   return (
     <div className="px-6 py-4 flex flex-col gap-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard loading={loading} label="ALL CONTACTS" value={{ text: (stats.all || 0).toLocaleString(), color: "text-[#3a2a1a]" }} />
-        <StatCard loading={loading} label="ACTIVE" value={{ text: (stats.active || 0).toLocaleString(), color: "text-green-600" }} />
-        <StatCard loading={loading} label="SHELTER" value={{ text: (stats.shelter || 0).toLocaleString(), color: "text-blue-600" }} />
-        <StatCard loading={loading} label="VET" value={{ text: (stats.vet || 0).toLocaleString(), color: "text-orange-600" }} />
+        <StatCard loading={loading} label={t.allContacts?.toUpperCase() || "ALL CONTACTS"} value={{ text: (stats.all || 0).toLocaleString(), color: "text-[#3a2a1a]" }} />
+        <StatCard loading={loading} label={t.activeLabel || "ACTIVE"} value={{ text: (stats.active || 0).toLocaleString(), color: "text-green-600" }} />
+        <StatCard loading={loading} label={t.shelter?.toUpperCase() || "SHELTER"} value={{ text: (stats.shelter || 0).toLocaleString(), color: "text-blue-600" }} />
+        <StatCard loading={loading} label={t.vet?.toUpperCase() || "VET"} value={{ text: (stats.vet || 0).toLocaleString(), color: "text-orange-600" }} />
       </div>
 
       <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm overflow-hidden flex flex-col">
@@ -274,17 +274,17 @@ export default function ContactsPage() {
         <div className="bg-white border-b border-[#e8ddd0] p-3 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase">Location:</span>
+              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase">{t.location || "LOCATION"}:</span>
               <input
                 type="text"
-                placeholder="City..."
+                placeholder={t.cityLabel || "City..."}
                 value={queryParams.city}
                 onChange={(e) => setQueryParams(p => ({ ...p, city: e.target.value, page: 1 }))}
                 className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-1.5 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] w-28 transition-all"
               />
               <input
                 type="text"
-                placeholder="Country..."
+                placeholder={t.countryLabel || "Country..."}
                 value={queryParams.country}
                 onChange={(e) => setQueryParams(p => ({ ...p, country: e.target.value, page: 1 }))}
                 className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-1.5 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] w-28 transition-all"
@@ -292,14 +292,14 @@ export default function ContactsPage() {
             </div>
 
             <div className="flex items-center gap-2 border-l border-[#e8ddd0] pl-3">
-              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase">Dates:</span>
+              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase">{t.dateLabel || "DATE"}:</span>
               <input
                 type="date"
                 value={queryParams.from}
                 onChange={(e) => setQueryParams(p => ({ ...p, from: e.target.value, page: 1 }))}
                 className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-2 py-1 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all"
               />
-              <span className="text-[#9a8a7a] text-[10px]">to</span>
+              <span className="text-[#9a8a7a] text-[10px]">{t.to || "to"}</span>
               <input
                 type="date"
                 value={queryParams.to}
@@ -314,7 +314,7 @@ export default function ContactsPage() {
               onClick={() => setQueryParams({ ...queryParams, city: "", country: "", from: "", to: "", search: "", type: "all", status: "active", page: 1 })}
               className="text-[10px] font-bold text-[#8B6914] hover:underline"
             >
-              Clear all filters
+              {t.clearFilters || "Clear all filters"}
             </button>
             <button
               onClick={() => {
@@ -339,17 +339,17 @@ export default function ContactsPage() {
               name: "type",
               label: t.allTypes,
               options: [
-                { label: "Shelter", value: "shelter" },
-                { label: "Veterinarian", value: "veterinarian" },
-                { label: "Partner", value: "partner" },
+                { label: t.shelter || "Shelter", value: "shelter" },
+                { label: t.veterinarian || "Veterinarian", value: "veterinarian" },
+                { label: t.partnerRole || "Partner", value: "partner" },
               ],
             },
             {
               name: "status",
               label: t.allStatuses,
               options: [
-                { label: "Active", value: "active" },
-                { label: "Inactive", value: "inactive" },
+                { label: t.active || "Active", value: "active" },
+                { label: t.inactive || "Inactive", value: "inactive" },
               ],
             },
           ]}

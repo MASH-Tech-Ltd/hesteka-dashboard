@@ -381,8 +381,8 @@ export default function MissionsPage() {
               name: "status",
               label: t.allStatuses || "All statuses",
               options: [
-                { label: "Active", value: "active" },
-                { label: "Inactive", value: "inactive" },
+                { label: t.active || "Active", value: "active" },
+                { label: t.inactive || "Inactive", value: "inactive" },
               ],
             },
           ]}
@@ -400,7 +400,7 @@ export default function MissionsPage() {
               onClick={handleOpenAdd}
               className="bg-[#8B6914] text-white text-[11px] font-bold px-4 py-2 rounded-xl hover:bg-[#6a5010] transition-colors flex items-center gap-2"
             >
-              <Plus className="w-4 h-4" /> {t.addMission}
+              <Plus className="w-4 h-4" /> {t.addMission || "Add Mission"}
             </button>
           }
         />
@@ -450,10 +450,10 @@ export default function MissionsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-4">
                   <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
-                    Informations Générales
+                    {t.generalInfo || "General Information"}
                   </h3>
                   <div className="grid grid-cols-2 gap-y-2 text-sm">
-                    <span className="text-[#9a8a7a]">Titre:</span>
+                    <span className="text-[#9a8a7a]">{t.titleLabel || "Title"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedMission.title}
                     </span>
@@ -463,22 +463,22 @@ export default function MissionsPage() {
                     <span className="font-bold uppercase text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full w-fit">
                       {selectedMission.status}
                     </span>
-                    <span className="text-[#9a8a7a]">Adresse:</span>
+                    <span className="text-[#9a8a7a]">{t.address || "Address"}:</span>
                     <span
                       className="font-medium text-[#3a2a1a] truncate"
                       title={selectedMission.address}
                     >
                       {selectedMission.address}
                     </span>
-                    <span className="text-[#9a8a7a]">Durée:</span>
+                    <span className="text-[#9a8a7a]">{t.durationLabel || "Duration"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedMission.duration || "N/A"}
                     </span>
-                    <span className="text-[#9a8a7a]">Points:</span>
+                    <span className="text-[#9a8a7a]">{t.points || "Points"}:</span>
                     <span className="font-bold text-orange-600">
                       +{selectedMission.points} pts
                     </span>
-                    <span className="text-[#9a8a7a]">Date:</span>
+                    <span className="text-[#9a8a7a]">{t.dateLabel || "Date"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
                       {new Date(selectedMission.createdAt).toLocaleDateString()}
                     </span>
@@ -487,7 +487,7 @@ export default function MissionsPage() {
 
                 <div className="flex flex-col gap-4">
                   <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
-                    Partenaire
+                    {t.partner || "Partner"}
                   </h3>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 rounded-full bg-[#8B6914] text-white flex items-center justify-center font-bold overflow-hidden border border-[#e8ddd0]">
@@ -512,7 +512,7 @@ export default function MissionsPage() {
 
               <div className="flex flex-col gap-2 bg-[#f5f0e8] p-4 rounded-xl">
                 <h3 className="font-bold text-[#3a2a1a] text-sm">
-                  Description
+                  {t.descriptionLabel || "Description"}
                 </h3>
                 <p className="text-sm text-[#5a4a3a] leading-relaxed whitespace-pre-wrap">
                   {selectedMission.description || t.noDescription}
@@ -523,7 +523,7 @@ export default function MissionsPage() {
                 selectedMission.location.coordinates.length === 2 && (
                   <div className="flex flex-col gap-3">
                     <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[#8B6914]" /> Location
+                      <MapPin className="w-4 h-4 text-[#8B6914]" /> {t.localisationLabel || "Location"}
                     </h3>
                     <div className="h-64 rounded-xl overflow-hidden shadow-inner border border-[#e8ddd0]">
                       {!isLoaded ? (
@@ -556,7 +556,7 @@ export default function MissionsPage() {
               {selectedMission.photo?.secure_url && (
                 <div className="flex flex-col gap-3">
                   <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
-                    Photo de la mission
+                    {t.missionPhoto || "Mission Photo"}
                   </h3>
                   <img
                     src={selectedMission.photo.secure_url}

@@ -417,7 +417,7 @@ const CollectionPointsPage = React.memo(() => {
                 {t.pointsList}
               </h3>
               <span className="text-[10px] font-bold text-[#9a8a7a]">
-                {meta?.total || 0} Total
+                {meta?.total || 0} {t.totalCount || "Total"}
               </span>
             </div>
 
@@ -445,8 +445,8 @@ const CollectionPointsPage = React.memo(() => {
                   name: "status",
                   label: t.allStatuses || "All statuses",
                   options: [
-                    { label: "Active", value: "active" },
-                    { label: "Inactive", value: "inactive" },
+                    { label: t.active || "Active", value: "active" },
+                    { label: t.inactive || "Inactive", value: "inactive" },
                   ],
                 },
               ]}
@@ -534,18 +534,18 @@ const CollectionPointsPage = React.memo(() => {
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedPoint.title}
                     </span>
-                    <span className="text-[#9a8a7a]">Statut:</span>
+                    <span className="text-[#9a8a7a]">{t.statusLabel || "Status"}:</span>
                     <span className="font-bold uppercase text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full w-fit">
                       {selectedPoint.status}
                     </span>
-                    <span className="text-[#9a8a7a]">Adresse:</span>
+                    <span className="text-[#9a8a7a]">{t.address || "Address"}:</span>
                     <span
                       className="font-medium text-[#3a2a1a] truncate"
                       title={selectedPoint.address}
                     >
                       {selectedPoint.address}
                     </span>
-                    <span className="text-[#9a8a7a]">Date:</span>
+                    <span className="text-[#9a8a7a]">{t.dateLabel || "Date"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
                       {new Date(selectedPoint.createdAt).toLocaleDateString()}
                     </span>
@@ -554,7 +554,7 @@ const CollectionPointsPage = React.memo(() => {
 
                 <div className="flex flex-col gap-4">
                   <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
-                    Partenaire
+                    {t.partner || "Partner"}
                   </h3>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 rounded-full bg-[#8B6914] text-white flex items-center justify-center font-bold overflow-hidden border border-[#e8ddd0]">
