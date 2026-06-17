@@ -155,10 +155,8 @@ export default function ReportsPage() {
         return <Cat className="w-5 h-5 text-[#8B6914]" />;
       case "bird":
         return <Bird className="w-5 h-5 text-[#8B6914]" />;
-      case "other":
-        return <HelpCircle className="w-5 h-5 text-[#8B6914]" />;
       default:
-        return <PawPrint className="w-5 h-5 text-[#8B6914]" />;
+        return <HelpCircle className="w-5 h-5 text-[#8B6914]" />;
     }
   };
 
@@ -184,6 +182,14 @@ export default function ReportsPage() {
           addressStr = formData[key];
         } else if (key === "eventDate" && formData[key]) {
           data.append(key, new Date(formData[key]).toISOString());
+        } else if (key === "species") {
+          if (formData.species === "Other" && formData.customSpecies) {
+            data.append("species", formData.customSpecies);
+          } else {
+            data.append("species", formData[key]);
+          }
+        } else if (key === "customSpecies") {
+          // Handled above
         } else if (formData[key] !== undefined) {
           data.append(key, formData[key]);
         }
@@ -263,8 +269,18 @@ export default function ReportsPage() {
       console.warn("Invalid event date:", report.eventDate);
     }
 
+    const standardSpecies = ["Dog", "Cat", "Bird"];
+    let speciesVal = report.species;
+    let customSpeciesVal = "";
+    if (report.species && !standardSpecies.includes(report.species)) {
+      speciesVal = "Other";
+      customSpeciesVal = report.species;
+    }
+
     setEditingReport({
       ...report,
+      species: speciesVal,
+      customSpecies: customSpeciesVal,
       address: report.location?.address || "",
       latitude: report.location?.coordinates?.[1] ?? undefined,
       longitude: report.location?.coordinates?.[0] ?? undefined,
@@ -290,6 +306,12 @@ export default function ReportsPage() {
         { label: t.bird || "Bird", value: "Bird" },
         { label: t.otherSpecies || "Other", value: "Other" },
       ],
+    },
+    {
+      name: "customSpecies",
+      label: t.customSpecies || "Please specify species",
+      required: true,
+      dependsOn: { field: "species", value: "Other" },
     },
     { name: "breed", label: t.breed || "Breed", required: true },
     {
@@ -549,7 +571,7 @@ export default function ReportsPage() {
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
       {/* Stats */}
       <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <StatCard
             loading={loading}
             label={t.totalActive}
@@ -576,6 +598,15 @@ export default function ReportsPage() {
               color: "text-orange-500",
             }}
             color="bg-orange-500"
+          />
+          <StatCard
+            loading={loading}
+            label={t.sighted || "SIGHTED"}
+            value={{
+              text: (stats?.sighted || 0).toLocaleString(),
+              color: "text-blue-500",
+            }}
+            color="bg-blue-500"
           />
           <StatCard
             loading={loading}

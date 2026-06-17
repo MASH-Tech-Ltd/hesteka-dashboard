@@ -549,6 +549,11 @@ const CRUDModal = ({
               )
                 return null;
 
+              if (field.dependsOn) {
+                const { field: depField, value: depValue } = field.dependsOn;
+                if (formData[depField] !== depValue) return null;
+              }
+
               const hasError = !!fieldErrors[field.name];
               return (
                 <div

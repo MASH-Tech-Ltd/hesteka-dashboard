@@ -34,7 +34,7 @@ export default function ContactsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [stats, setStats] = useState({ all: 0, active: 0, shelter: 0, vet: 0 });
+  const [stats, setStats] = useState({ all: 0, active: 0, shelter: 0, vet: 0, csrf: 0, partner: 0 });
   const [editingContact, setEditingContact] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -234,6 +234,7 @@ export default function ContactsPage() {
       options: [
         { label: t.shelter || "Shelter", value: "shelter" },
         { label: t.veterinarian || "Veterinarian", value: "veterinarian" },
+        { label: "CSRF", value: "CSRF" },
         { label: t.partnerRole || "Partner", value: "partner" },
       ],
     },
@@ -262,11 +263,13 @@ export default function ContactsPage() {
 
   return (
     <div className="px-6 py-4 flex flex-col gap-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <StatCard loading={loading} label={t.allContacts?.toUpperCase() || "ALL CONTACTS"} value={{ text: (stats.all || 0).toLocaleString(), color: "text-[#3a2a1a]" }} />
         <StatCard loading={loading} label={t.activeLabel || "ACTIVE"} value={{ text: (stats.active || 0).toLocaleString(), color: "text-green-600" }} />
         <StatCard loading={loading} label={t.shelter?.toUpperCase() || "SHELTER"} value={{ text: (stats.shelter || 0).toLocaleString(), color: "text-blue-600" }} />
         <StatCard loading={loading} label={t.vet?.toUpperCase() || "VET"} value={{ text: (stats.vet || 0).toLocaleString(), color: "text-orange-600" }} />
+        <StatCard loading={loading} label={"CSRF"} value={{ text: (stats.csrf || 0).toLocaleString(), color: "text-purple-600" }} />
+        <StatCard loading={loading} label={t.partnerRole?.toUpperCase() || "PARTNER"} value={{ text: (stats.partner || 0).toLocaleString(), color: "text-teal-600" }} />
       </div>
 
       <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm overflow-hidden flex flex-col">
@@ -341,6 +344,7 @@ export default function ContactsPage() {
               options: [
                 { label: t.shelter || "Shelter", value: "shelter" },
                 { label: t.veterinarian || "Veterinarian", value: "veterinarian" },
+                { label: "CSRF", value: "CSRF" },
                 { label: t.partnerRole || "Partner", value: "partner" },
               ],
             },

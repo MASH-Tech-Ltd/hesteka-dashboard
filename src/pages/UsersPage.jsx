@@ -267,11 +267,12 @@ export default function UsersPage() {
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatCard loading={loading} label={t.totalRegistered} value={{ text: (stats?.total || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-purple-500" />
         <StatCard loading={loading} label={t.activeLabel} value={{ text: (stats?.active || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-green-500" />
         <StatCard loading={loading} label={t.suspendedLabel} value={{ text: (stats?.suspended || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-red-500" />
         <StatCard loading={loading} label={t.newThisMonth} value={{ text: (stats?.newThisMonth || 0).toLocaleString(), color: "text-blue-600" }} color="bg-blue-500" />
+        <StatCard loading={loading} label={t.pendingPartners || "PENDING PARTNERS"} value={{ text: (stats?.pendingPartners || 0).toLocaleString(), color: "text-orange-600" }} color="bg-orange-500" />
       </div>
 
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden flex flex-col shadow-sm">
