@@ -7,11 +7,14 @@ import { toast } from "react-toastify";
 import { ShoppingBag, RefreshCw, Search } from "lucide-react";
 
 const ProductSkeleton = () => (
-  <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 animate-pulse h-[290px]">
-    <div className="bg-[#f5f0e8] rounded-lg h-32 w-full"></div>
-    <div className="flex flex-col gap-2">
+  <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 animate-pulse h-full">
+    <div className="bg-[#f5f0e8] rounded-lg aspect-[4/3] w-full"></div>
+    <div className="flex flex-col gap-2 mt-1">
       <div className="h-4 bg-[#f5f0e8] rounded w-full"></div>
       <div className="h-3 bg-[#f5f0e8] rounded w-1/4"></div>
+      <div className="h-2 bg-[#f5f0e8] rounded w-1/2 mt-1"></div>
+      <div className="h-2 bg-[#f5f0e8] rounded w-1/3"></div>
+      <div className="h-2 bg-[#f5f0e8] rounded w-1/4"></div>
     </div>
     <div className="mt-auto pt-2">
       <div className="h-8 bg-[#f5f0e8] rounded w-full"></div>
@@ -39,8 +42,8 @@ const ShopifyProductCard = ({ product, t }) => {
   const optimizedImage = getOptimizedImageUrl(mainImage, 300);
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 hover:shadow-md transition-shadow relative h-[290px] overflow-hidden">
-      <div className="bg-[#fcfaf7] rounded-lg h-32 flex items-center justify-center relative overflow-hidden group">
+    <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 hover:shadow-md transition-shadow relative h-full overflow-hidden">
+      <div className="bg-[#fcfaf7] rounded-lg aspect-[4/3] w-full flex items-center justify-center relative overflow-hidden group">
         {mainImage ? (
           <img
             src={optimizedImage}
@@ -63,6 +66,17 @@ const ShopifyProductCard = ({ product, t }) => {
           {product.title}
         </h4>
         <p className="text-[12px] font-black text-[#8B6914]">{price} €</p>
+
+        <div className="flex flex-col gap-0.5 mt-1">
+          <p className="text-[9px] text-[#9a8a7a]"><span className="font-semibold">Vendor:</span> {product.vendor}</p>
+          <p className="text-[9px] text-[#9a8a7a]"><span className="font-semibold">Variants:</span> {product.variants?.length || 0}</p>
+          <p className="text-[9px] text-[#9a8a7a] flex items-center gap-1">
+            <span className="font-semibold">Status:</span> 
+            <span className={`px-1.5 py-0.5 rounded-full text-[8px] uppercase ${product.status === 'active' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
+              {product.status}
+            </span>
+          </p>
+        </div>
       </div>
 
       <div className="mt-auto pt-1">

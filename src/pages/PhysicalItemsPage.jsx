@@ -10,8 +10,10 @@ import ConfirmModal from "../components/common/ConfirmModal";
 import { Gift, Trash2, Plus, Mail } from "lucide-react";
 
 const ItemSkeleton = () => (
-  <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 animate-pulse h-[210px]">
-    <div className="bg-[#f5f0e8] rounded-lg h-24 w-full"></div>
+  <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 animate-pulse h-full">
+    <div className="w-full flex justify-center">
+      <div className="bg-[#f5f0e8] rounded-lg aspect-[4/3] w-full"></div>
+    </div>
     <div className="flex flex-col gap-2">
       <div className="h-3 bg-[#f5f0e8] rounded w-full"></div>
       <div className="h-3 bg-[#f5f0e8] rounded w-1/3"></div>
@@ -25,20 +27,22 @@ const ItemSkeleton = () => (
 );
 
 const ItemCard = React.memo(({ item, onEdit, onDelete, t }) => (
-  <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 hover:shadow-md transition-shadow relative overflow-hidden">
-    <div className="bg-[#fcfaf7] rounded-lg h-24 flex items-center justify-center text-3xl relative overflow-hidden">
-      {item.photo?.secure_url ? (
+  <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 hover:shadow-md transition-shadow relative overflow-hidden h-full">
+    <div className="w-full flex justify-center">
+      <div className="bg-[#fcfaf7] rounded-lg aspect-[4/3] w-full flex items-center justify-center text-3xl relative overflow-hidden">
+        {item.photo?.secure_url ? (
         <img src={item.photo.secure_url} alt={item.title} className="w-full h-full object-cover" />
-      ) : (
-        <Gift className="w-10 h-10 text-[#8B6914] opacity-20" />
-      )}
-      {item.stock === 0 && (
-        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
-          <span className="bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-            {t.outOfStock}
-          </span>
-        </div>
-      )}
+        ) : (
+          <Gift className="w-10 h-10 text-[#8B6914] opacity-20" />
+        )}
+        {item.stock === 0 && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+            <span className="bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+              {t.outOfStock}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
     <div className="flex flex-col gap-0.5">
       <h4 className="text-[11px] font-bold text-[#3a2a1a] truncate">{item.title}</h4>
