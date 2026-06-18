@@ -93,7 +93,11 @@ const ReceiptModal = ({ donation, isOpen, onClose, t, isFiscal }) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#9a8a7a] text-xs font-medium">Payment Method</span>
-                  <span className="text-[#3a2a1a] font-bold text-[11px] uppercase bg-[#fcfaf7] px-2 py-0.5 rounded border border-[#e8ddd0]">{donation.method}</span>
+                  <span className="text-[#3a2a1a] font-bold text-[11px] uppercase bg-[#fcfaf7] px-2 py-0.5 rounded border border-[#e8ddd0]">
+                    {donation.method === 'collection_point' && donation.collectionPoint?.title 
+                      ? donation.collectionPoint.title 
+                      : donation.method}
+                  </span>
                 </div>
               </div>
             </div>
@@ -211,7 +215,11 @@ const DonationDetailModal = ({ donation, isOpen, onClose, t }) => {
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">PROVIDER</span>
-              <span className="text-sm font-bold text-[#3a2a1a] uppercase">{donation.method || donation.payment?.provider}</span>
+              <span className="text-sm font-bold text-[#3a2a1a] uppercase">
+                {donation.method === 'collection_point' && donation.collectionPoint?.title 
+                  ? donation.collectionPoint.title 
+                  : (donation.method || donation.payment?.provider)}
+              </span>
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">DATE</span>
@@ -231,10 +239,28 @@ const DonationDetailModal = ({ donation, isOpen, onClose, t }) => {
             </div>
           )}
 
+          {/* Collection Point Info */}
+          {donation.method === 'collection_point' && donation.collectionPoint && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">COLLECTION POINT</span>
+              <div className="bg-green-50 rounded-lg p-3 border border-green-100 text-[12px] text-green-800">
+                <p><strong>Name:</strong> {donation.collectionPoint.title}</p>
+                {donation.collectionPoint.address && <p><strong>Address:</strong> {donation.collectionPoint.address}</p>}
+              </div>
+            </div>
+          )}
+          
+          {donation.association && !donation.collectionPoint && (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">{t.association || "ASSOCIATION"}</span>
+              <span className="text-sm font-bold text-[#3a2a1a]">{donation.association}</span>
+            </div>
+          )}
+
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">TRANSACTION ID</span>
             <span className="text-[11px] font-mono bg-gray-100 p-1.5 rounded border border-gray-200 break-all">
-              {donation.payment?.providerTransactionId}
+              {donation.payment?.providerTransactionId || donation.transactionId || "Not generated automatically"}
             </span>
           </div>
         </div>

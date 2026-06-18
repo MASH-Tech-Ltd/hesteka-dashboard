@@ -1,6 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLang } from '../../context/LanguageContext';
-import { Search } from 'lucide-react';
+import { Search, ChevronDown, Check } from 'lucide-react';
+
+const CustomSelect = ({ onChange, options, defaultLabel, defaultValue = 'all', hideAllOption = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [value, setValue] = useState(defaultValue);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (val) => {
+    setValue(val);
+    onChange({ target: { value: val } });
+    setIsOpen(false);
+  };
+
+  const selectedOption = options.find(opt => String(opt.value) === String(value)) || (!hideAllOption ? { label: defaultLabel, value: 'all' } : options[0]);
+
+  return (
+    <div className="relative min-w-[180px] text-left" ref={containerRef}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-4 py-2.5 text-xs text-[#3a2a1a] cursor-pointer shadow-sm flex items-center justify-between hover:border-[#8B6914] hover:bg-white transition-all select-none"
+      >
+        <span className="truncate pr-2 font-medium">{selectedOption?.label}</span>
+        <ChevronDown className={`w-4 h-4 text-[#9a8a7a] transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1.5 w-full min-w-[200px] max-h-64 overflow-y-auto bg-white border border-[#e8ddd0] rounded-xl shadow-lg z-50 py-1.5 select-none custom-scrollbar">
+          {!hideAllOption && (
+            <div 
+              onClick={() => handleSelect('all')}
+              className={`px-4 py-2.5 text-xs cursor-pointer flex items-center justify-between transition-colors ${value === 'all' || !value ? 'bg-[#f5f0e8] text-[#8B6914] font-medium' : 'text-[#3a2a1a] hover:bg-[#fcfaf7]'}`}
+            >
+              <span className="truncate pr-2">{defaultLabel}</span>
+              {(value === 'all' || !value) && <Check className="w-3.5 h-3.5 text-[#8B6914] flex-shrink-0" />}
+            </div>
+          )}
+          {options.map((opt) => (
+            <div 
+              key={opt.value}
+              onClick={() => handleSelect(opt.value)}
+              className={`px-4 py-2.5 text-xs cursor-pointer flex items-center justify-between transition-colors ${String(value) === String(opt.value) ? 'bg-[#f5f0e8] text-[#8B6914] font-medium' : 'text-[#3a2a1a] hover:bg-[#fcfaf7]'}`}
+            >
+              <span className="truncate pr-2">{opt.label}</span>
+              {String(value) === String(opt.value) && <Check className="w-3.5 h-3.5 text-[#8B6914] flex-shrink-0" />}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const FilterBar = ({
   onSearch,
@@ -45,16 +105,12 @@ const FilterBar = ({
 
         {/* Dynamic Filters */}
         {filters.map((filter) => (
-          <select
+          <CustomSelect
             key={filter.name}
+            defaultLabel={filter.label}
+            options={filter.options}
             onChange={(e) => onFilterChange(filter.name, e.target.value)}
-            className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-4 py-2.5 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all cursor-pointer min-w-[150px] shadow-sm appearance-none"
-          >
-            <option value="all">{filter.label}</option>
-            {filter.options.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          />
         ))}
       </div>
 
@@ -63,17 +119,16 @@ const FilterBar = ({
         {sortOptions.length > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">{t.sortBy || "Sort by:"}</span>
-            <select
+            <CustomSelect
+              defaultValue={sortOptions[0]?.value}
+              defaultLabel={sortOptions[0]?.label}
+              options={sortOptions}
               onChange={(e) => {
                 const [sortBy, sort] = e.target.value.split(':');
                 onSortChange(sortBy, sort);
               }}
-              className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-4 py-2.5 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all cursor-pointer shadow-sm appearance-none"
-            >
-              {sortOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              hideAllOption={true}
+            />
           </div>
         )}
 

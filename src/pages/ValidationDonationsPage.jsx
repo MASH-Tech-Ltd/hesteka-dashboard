@@ -9,7 +9,7 @@ import { Package, MapPin, Search, Trophy, BarChart3, AlertTriangle, X } from "lu
 import CRUDModal from "../components/common/CRUDModal";
 import { toast } from "react-toastify";
 
-const PendingDonation = React.memo(({ item, onAction, onEnlarge, t }) => (
+const PendingDonation = React.memo(({ item, onAction, onEnlarge, pointsPerDonation, t }) => (
   <div className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all">
     <div className="flex items-center justify-between">
        <div className="flex items-center gap-3">
@@ -47,7 +47,7 @@ const PendingDonation = React.memo(({ item, onAction, onEnlarge, t }) => (
          onClick={() => onAction(item._id, 'validate')}
          className="flex-1 bg-green-100 text-green-600 text-[10px] font-bold py-2 rounded-xl hover:bg-green-200 transition-colors"
        >
-          {t.validatePts}
+          {t.validateBtn} +{pointsPerDonation || 15} pts
        </button>
        <button 
          onClick={() => onAction(item._id, 'reject')}
@@ -233,6 +233,7 @@ export default function ValidationDonationsPage() {
                    item={item} 
                    onAction={handleAction} 
                    onEnlarge={(url) => setImageModal({ isOpen: true, url })}
+                   pointsPerDonation={acceptedValues.pointsPerDonation}
                    t={t} 
                  />
                ))}
@@ -302,7 +303,7 @@ export default function ValidationDonationsPage() {
         onClose={() => setActionModal({ isOpen: false, type: null, proofId: null })}
         title={actionModal.type === 'validate' ? t.validateDonationTitle : t.rejectDonationTitle}
         fields={actionModal.type === 'validate' ? validateFields : rejectFields}
-        initialData={actionModal.type === 'validate' ? { pointsAwarded: 15 } : {}}
+        initialData={actionModal.type === 'validate' ? { pointsAwarded: acceptedValues.pointsPerDonation || 15 } : {}}
         onSubmit={handleActionSubmit}
         loading={modalLoading}
       />
