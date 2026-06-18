@@ -35,6 +35,8 @@ export default function UsersPage() {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
   const [confirmLoading, setConfirmLoading] = useState(false);
 
+  const [formErrors, setFormErrors] = useState([]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -87,6 +89,7 @@ export default function UsersPage() {
 
   const handleSubmit = async (formData) => {
     setModalLoading(true);
+    setFormErrors([]);
     try {
       if (editingUser) {
         // Collect updated fields for the admin update API
@@ -117,15 +120,57 @@ export default function UsersPage() {
         toast.success("User updated successfully");
         fetchData();
       } else {
-        const endpoint = formData.role === "partners" ? "/auth/register-partner" : "/auth/register-user";
-        const res = await api.post(endpoint, formData);
-        if (res.data.status === "ok" || res.status === 201) {
-          setIsModalOpen(false);
-          toast.success("User created successfully");
-          fetchData();
+        const payloadData = { ...formData };
+        
+        if (payloadData.role === "partners") {
+          const endpoint = "/auth/register-partner";
+          delete payloadData.role; // Omitted in registerPartnerSchema
+          
+          const partnerFormData = new FormData();
+          Object.keys(payloadData).forEach(key => {
+            if (payloadData[key] !== undefined && payloadData[key] !== null && payloadData[key] !== "") {
+              if (key === "profileImage") {
+                partnerFormData.append("logo", payloadData[key]);
+              } else {
+                partnerFormData.append(key, payloadData[key]);
+              }
+            }
+          });
+          
+          const res = await api.post(endpoint, partnerFormData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          
+          if (res.data?.status === "ok" || res.status === 201) {
+            setIsModalOpen(false);
+            toast.success("Partner created successfully");
+            fetchData();
+          }
+        } else {
+          const endpoint = "/auth/register-user";
+          
+          // Delete fields not accepted by registerUserSchema (strict schema)
+          delete payloadData.postalCode;
+          delete payloadData.city;
+          delete payloadData.profileImage;
+          delete payloadData.partnerImage;
+          delete payloadData.logo;
+          delete payloadData.latitude;
+          delete payloadData.longitude;
+          
+          const res = await api.post(endpoint, payloadData);
+          
+          if (res.data?.status === "ok" || res.status === 201) {
+            setIsModalOpen(false);
+            toast.success("User created successfully");
+            fetchData();
+          }
         }
       }
     } catch (err) {
+      if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
+        setFormErrors(err.response.data.data);
+      }
       toast.error(err.response?.data?.message || "Failed to save user");
     } finally {
       setModalLoading(false);
@@ -137,6 +182,7 @@ export default function UsersPage() {
       const res = await api.get(`/user/get-single-user/${userId}`);
       if (res.data.status === "ok") {
         setEditingUser(res.data.data);
+        setFormErrors([]);
         setIsModalOpen(true);
       }
     } catch (err) {
@@ -229,15 +275,15 @@ export default function UsersPage() {
   const getUserFields = (isEditing) => [
     { name: "profileImage", label: "Profile Image / Logo", type: "file" },
     { name: "partnerImage", label: "Cover Image", type: "file" },
-    { name: "firstName", label: t.firstName || "First Name", required: true },
-    { name: "lastName", label: t.lastName || "Last Name", required: true },
-    { name: "email", label: t.emailLabel || "Email", type: "email", required: true, disabled: isEditing },
+    { name: "firstName", label: t.firstName || "First Name", required: !isEditing },
+    { name: "lastName", label: t.lastName || "Last Name", required: !isEditing },
+    { name: "email", label: t.emailLabel || "Email", type: "email", required: !isEditing, disabled: isEditing },
     ...(!isEditing ? [{ name: "password", label: t.passwordLabel || "Password", type: "password", required: true }] : []),
-    { name: "phone", label: t.phone || "Phone", required: true },
-    { name: "address", label: t.address || "Address", required: true },
-    { name: "postalCode", label: t.postalCode || "Postal Code" },
-    { name: "city", label: t.city || "City" },
-    { name: "company", label: t.company || "Company" },
+    { name: "phone", label: t.phone || "Phone", required: !isEditing },
+    { name: "address", label: t.address || "Address", required: !isEditing },
+    { name: "postalCode", label: t.postalCode || "Postal Code", required: !isEditing },
+    { name: "city", label: t.city || "City", required: !isEditing },
+    { name: "company", label: t.company || "Company", required: !isEditing },
     { 
       name: "role", 
       label: t.role || "Role", 
@@ -334,12 +380,14 @@ export default function UsersPage() {
         onClose={() => {
           setIsModalOpen(false);
           setEditingUser(null);
+          setFormErrors([]);
         }}
         title={editingUser ? "User Details" : "Add New User"}
         fields={getUserFields(!!editingUser)}
         initialData={editingUser}
         onSubmit={handleSubmit}
         loading={modalLoading}
+        fieldErrors={formErrors}
       />
 
       <ConfirmModal
