@@ -29,6 +29,8 @@ export default function ContactsPage() {
     country: "",
     from: "",
     to: "",
+    region: "",
+    department: "",
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,6 +45,15 @@ export default function ContactsPage() {
     onConfirm: null,
   });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [locations, setLocations] = useState({ departments: [], regions: [] });
+
+  useEffect(() => {
+    api.get("/contacts/locations").then(res => {
+      if (res.data?.data) {
+        setLocations(res.data.data);
+      }
+    }).catch(err => console.error("Failed to load locations", err));
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -54,6 +65,8 @@ export default function ContactsPage() {
       if (!params.country) delete params.country;
       if (!params.from) delete params.from;
       if (!params.to) delete params.to;
+      if (!params.region || params.region === 'all') delete params.region;
+      if (!params.department || params.department === 'all') delete params.department;
 
       const queryString = new URLSearchParams(params).toString();
       const [res, statsRes] = await Promise.all([
@@ -244,6 +257,22 @@ export default function ContactsPage() {
     { name: "address", label: t.address || "Address", required: !editingContact, disabled: isViewOnly },
     { name: "city", label: t.cityLabel || "City", required: !editingContact, disabled: isViewOnly },
     { name: "country", label: t.countryLabel || "Country", required: !editingContact, disabled: isViewOnly },
+    { 
+      name: "region", 
+      label: t.regionLabel || "Region", 
+      type: "select", 
+      required: !editingContact, 
+      disabled: isViewOnly,
+      options: locations.regions.map(r => ({ label: r, value: r })) 
+    },
+    { 
+      name: "department", 
+      label: t.departmentLabel || "Department", 
+      type: "select", 
+      required: !editingContact, 
+      disabled: isViewOnly,
+      options: locations.departments.map(d => ({ label: d, value: d })) 
+    },
     { name: "description", label: t.descriptionLabel || "Description", type: "textarea", disabled: isViewOnly },
     { name: "latitude", label: t.latitudeLabel || "Latitude", type: "number", disabled: isViewOnly },
     { name: "longitude", label: t.longitudeLabel || "Longitude", type: "number", disabled: isViewOnly },
@@ -283,14 +312,14 @@ export default function ContactsPage() {
                 placeholder={t.cityLabel || "City..."}
                 value={queryParams.city}
                 onChange={(e) => setQueryParams(p => ({ ...p, city: e.target.value, page: 1 }))}
-                className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-1.5 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] w-28 transition-all"
+                className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-1.5 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] w-24 transition-all"
               />
               <input
                 type="text"
                 placeholder={t.countryLabel || "Country..."}
                 value={queryParams.country}
                 onChange={(e) => setQueryParams(p => ({ ...p, country: e.target.value, page: 1 }))}
-                className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-1.5 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] w-28 transition-all"
+                className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-1.5 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] w-24 transition-all"
               />
             </div>
 
@@ -314,7 +343,7 @@ export default function ContactsPage() {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setQueryParams({ ...queryParams, city: "", country: "", from: "", to: "", search: "", type: "all", status: "active", page: 1 })}
+              onClick={() => setQueryParams({ city: "", country: "", from: "", to: "", search: "", type: "all", status: "active", region: "all", department: "all", page: 1 })}
               className="text-[10px] font-bold text-[#8B6914] hover:underline"
             >
               {t.clearFilters || "Clear all filters"}
@@ -341,6 +370,7 @@ export default function ContactsPage() {
             {
               name: "type",
               label: t.allTypes,
+              value: queryParams.type || 'all',
               options: [
                 { label: t.shelter || "Shelter", value: "shelter" },
                 { label: t.veterinarian || "Veterinarian", value: "veterinarian" },
@@ -351,10 +381,23 @@ export default function ContactsPage() {
             {
               name: "status",
               label: t.allStatuses,
+              value: queryParams.status || 'all',
               options: [
                 { label: t.active || "Active", value: "active" },
                 { label: t.inactive || "Inactive", value: "inactive" },
               ],
+            },
+            {
+              name: "region",
+              label: t.regionLabel || "Region...",
+              value: queryParams.region || 'all',
+              options: locations.regions.map(r => ({ label: r, value: r })),
+            },
+            {
+              name: "department",
+              label: t.departmentLabel || "Dept...",
+              value: queryParams.department || 'all',
+              options: locations.departments.map(d => ({ label: d, value: d })),
             },
           ]}
           sortOptions={[

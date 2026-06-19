@@ -84,6 +84,7 @@ export default function PartnersPage() {
   const [modalLoading, setModalLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [locations, setLocations] = useState({ departments: [], regions: [] });
 
   const [queryParams, setQueryParams] = useState({
     page: 1,
@@ -98,7 +99,10 @@ export default function PartnersPage() {
   const fetchActivePartners = useCallback(async () => {
     setLoading(true);
     try {
-      const queryString = new URLSearchParams(queryParams).toString();
+      const cleanParams = { ...queryParams };
+      if (!cleanParams.region || cleanParams.region === 'all') delete cleanParams.region;
+      if (!cleanParams.department || cleanParams.department === 'all') delete cleanParams.department;
+      const queryString = new URLSearchParams(cleanParams).toString();
       const res = await api.get(`/user/get-all-user?${queryString}`);
       if (res.data.status === "ok") {
         setActivePartners(res.data.data || []);
@@ -137,6 +141,12 @@ export default function PartnersPage() {
     fetchActivePartners();
     fetchPendingPartners();
     fetchStats();
+    
+    api.get("/contacts/locations").then(res => {
+      if (res.data?.data) {
+        setLocations(res.data.data);
+      }
+    }).catch(err => console.error("Failed to load locations", err));
   }, [fetchActivePartners, fetchPendingPartners, fetchStats]);
 
   const handleApprove = (id) => {
@@ -313,7 +323,7 @@ export default function PartnersPage() {
     }
   };
 
-  const partnerFields = [
+  const getPartnerFields = () => [
     { name: "firstName", label: t.firstName || "First Name", required: true },
     { name: "lastName", label: t.lastName || "Last Name", required: true },
     { name: "email", label: t.emailLabel || "Email", type: "email", required: true },
@@ -324,6 +334,18 @@ export default function PartnersPage() {
     { name: "city", label: t.cityLabel || "City", required: true },
     { name: "postalCode", label: "Postal Code (5 digits)", type: "number", required: true },
     { name: "country", label: "Country" },
+    {
+      name: "region",
+      label: t.regionLabel || "Region",
+      type: "select",
+      options: locations.regions.map(r => ({ label: r, value: r })),
+    },
+    {
+      name: "department",
+      label: t.departmentLabel || "Department",
+      type: "select",
+      options: locations.departments.map(d => ({ label: d, value: d })),
+    },
     { name: "logo", label: "Logo (Required)", type: "file", required: true },
     { name: "partnerImage", label: "Partner Image", type: "file" },
     { name: "description", label: "Description", type: "textarea" },
@@ -334,7 +356,7 @@ export default function PartnersPage() {
     { name: "linkedin", label: "LinkedIn URL", type: "url" },
   ];
 
-  const editFields = [
+  const getEditFields = () => [
     { name: "firstName", label: t.firstName || "First Name", disabled: true },
     { name: "lastName", label: t.lastName || "Last Name", disabled: true },
     { name: "company", label: t.companyName || "Company Name" },
@@ -352,6 +374,18 @@ export default function PartnersPage() {
     { name: "postalCode", label: "Postal Code (5 digits)", type: "number" },
     { name: "country", label: "Country" },
     {
+      name: "region",
+      label: t.regionLabel || "Region",
+      type: "select",
+      options: locations.regions.map(r => ({ label: r, value: r })),
+    },
+    {
+      name: "department",
+      label: t.departmentLabel || "Department",
+      type: "select",
+      options: locations.departments.map(d => ({ label: d, value: d })),
+    },
+    {
       name: "status",
       label: t.statusLabel || "Status",
       type: "select",
@@ -367,7 +401,7 @@ export default function PartnersPage() {
     }
   ];
 
-  const viewFields = [
+  const getViewFields = () => [
     { name: "firstName", label: t.firstName || "First Name", disabled: true },
     { name: "lastName", label: t.lastName || "Last Name", disabled: true },
     { name: "email", label: t.emailLabel || "Email", disabled: true },
@@ -385,6 +419,8 @@ export default function PartnersPage() {
     { name: "city", label: t.cityLabel || "City", disabled: true },
     { name: "postalCode", label: "Postal Code", disabled: true },
     { name: "country", label: "Country", disabled: true },
+    { name: "region", label: t.regionLabel || "Region", disabled: true },
+    { name: "department", label: t.departmentLabel || "Department", disabled: true },
     { name: "status", label: t.statusLabel || "Status", disabled: true },
     { name: "createdAt", label: t.joinedDate || "Joined Date", disabled: true, type: "date" },
   ];
@@ -470,6 +506,18 @@ export default function PartnersPage() {
                     { label: t.rejected, value: "rejected" },
                     { label: t.banned || "Banned", value: "banned" }
                   ]
+                },
+                {
+                  name: "region",
+                  label: t.regionLabel || "Region...",
+                  value: queryParams.region || 'all',
+                  options: locations.regions.map(r => ({ label: r, value: r }))
+                },
+                {
+                  name: "department",
+                  label: t.departmentLabel || "Dept...",
+                  value: queryParams.department || 'all',
+                  options: locations.departments.map(d => ({ label: d, value: d }))
                 }
               ]}
               sortOptions={[
@@ -558,7 +606,7 @@ export default function PartnersPage() {
         isOpen={isAddModalOpen}
         onClose={() => { setIsAddModalOpen(false); setAddFieldErrors([]); }}
         title={t.addPartner || "Add Partner"}
-        fields={partnerFields}
+        fields={getPartnerFields()}
         onSubmit={handleAddPartner}
         loading={modalLoading}
         fieldErrors={addFieldErrors}
@@ -572,7 +620,7 @@ export default function PartnersPage() {
           setEditFieldErrors([]);
         }}
         title={t.updateStatusTitle || "Update Status"}
-        fields={editFields}
+        fields={getEditFields()}
         initialData={editingUser}
         onSubmit={handleEditPartner}
         loading={modalLoading}
@@ -586,7 +634,7 @@ export default function PartnersPage() {
           setEditingUser(null);
         }}
         title="Partner Details"
-        fields={viewFields}
+        fields={getViewFields()}
         initialData={editingUser}
         onSubmit={() => setIsViewModalOpen(false)}
         loading={false}

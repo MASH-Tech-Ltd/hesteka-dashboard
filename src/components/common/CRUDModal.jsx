@@ -159,6 +159,7 @@ const CustomSelectField = ({
   required,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -171,10 +172,21 @@ const CustomSelectField = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Reset search term when dropdown opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setSearchTerm("");
+    }
+  }, [isOpen]);
+
   const selectedOption = options.find((opt) => opt.value === value) || {
     label: t.selectOption || "Select...",
     value: "",
   };
+
+  const filteredOptions = options.filter(opt => 
+    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
@@ -199,32 +211,52 @@ const CustomSelectField = ({
       </div>
 
       {isOpen && (
-        <div className="absolute top-[100%] left-0 w-full mt-1 bg-white border border-[#e8ddd0] rounded-xl shadow-xl z-[500] max-h-60 overflow-y-auto custom-scrollbar">
-          {!required && (
-            <div
-              onClick={() => {
-                onChange({ target: { name, value: "", type: "select" } });
-                setIsOpen(false);
-              }}
-              className={`px-4 py-2.5 text-xs cursor-pointer transition-colors ${value === "" ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
-            >
-              {t.selectOption || "Select..."}
+        <div className="absolute top-[100%] left-0 w-full mt-1 bg-white border border-[#e8ddd0] rounded-xl shadow-xl z-[500] max-h-60 flex flex-col overflow-hidden">
+          {options.length > 5 && (
+            <div className="p-2 border-b border-[#e8ddd0] shrink-0 sticky top-0 bg-white z-10">
+              <input
+                type="text"
+                placeholder={t.searchPlaceholder || "Search..."}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full bg-[#fcfaf7] border border-[#e8ddd0] rounded-lg px-3 py-1.5 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all"
+              />
             </div>
           )}
-          {options.map((opt, idx) => (
-            <div
-              key={idx}
-              onClick={() => {
-                onChange({
-                  target: { name, value: opt.value, type: "select" },
-                });
-                setIsOpen(false);
-              }}
-              className={`px-4 py-2.5 text-xs cursor-pointer transition-colors ${value === opt.value ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
-            >
-              {opt.label}
-            </div>
-          ))}
+          <div className="overflow-y-auto custom-scrollbar flex-1">
+            {!required && !searchTerm && (
+              <div
+                onClick={() => {
+                  onChange({ target: { name, value: "", type: "select" } });
+                  setIsOpen(false);
+                }}
+                className={`px-4 py-2.5 text-xs cursor-pointer transition-colors ${value === "" ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
+              >
+                {t.selectOption || "Select..."}
+              </div>
+            )}
+            {filteredOptions.length === 0 ? (
+              <div className="px-4 py-2.5 text-xs text-[#9a8a7a] text-center">
+                {t.noDataFound || "No options found"}
+              </div>
+            ) : (
+              filteredOptions.map((opt, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    onChange({
+                      target: { name, value: opt.value, type: "select" },
+                    });
+                    setIsOpen(false);
+                  }}
+                  className={`px-4 py-2.5 text-xs cursor-pointer transition-colors ${value === opt.value ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
+                >
+                  {opt.label}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
