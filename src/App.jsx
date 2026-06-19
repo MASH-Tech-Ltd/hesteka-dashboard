@@ -31,6 +31,7 @@ const ValidationDonationsPage = lazy(() => import("./pages/ValidationDonationsPa
 const ShopifyProductsPage = lazy(() => import("./pages/ShopifyProductsPage"));
 const ContactsPage = lazy(() => import("./pages/ContactsPage"));
 const FAQPage = lazy(() => import("./pages/FAQPage"));
+const SupportMessagesPage = lazy(() => import("./pages/SupportMessagesPage"));
 
 // Helper: is admin logged in?
 const isAdmin = () => {
@@ -116,6 +117,7 @@ const App = () => {
             <Route path="validation-donations" element={<ValidationDonationsPage />} />
             <Route path="shopify-products" element={<ShopifyProductsPage />} />
             <Route path="contacts" element={<ContactsPage />} />
+            <Route path="support-messages" element={<SupportMessagesPage />} />
             <Route path="crowdfunding" element={<CrowdfundingPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />

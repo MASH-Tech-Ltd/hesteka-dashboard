@@ -199,7 +199,7 @@ export default function MapCard({ data, total }) {
         
         {/* Custom Map Type Toggle */}
         <button
-          onClick={() => setMapType(prev => prev === 'roadmap' ? 'satellite' : 'roadmap')}
+          onClick={() => setMapType(prev => prev === 'roadmap' ? 'hybrid' : 'roadmap')}
           className="absolute bottom-6 left-2 z-[10] w-9 h-9 bg-white rounded-lg shadow-md border border-[#e8ddd0] flex flex-col items-center justify-center overflow-hidden hover:border-[#8B6914] transition-all group"
           title={mapType === 'roadmap' ? 'Switch to Satellite' : 'Switch to Map'}
         >
@@ -230,7 +230,7 @@ export default function MapCard({ data, total }) {
               position: window.google?.maps?.ControlPosition?.RIGHT_BOTTOM
             },
             mapTypeControl: false,
-            scrollwheel: false,
+            scrollwheel: true,
           }}
         >
           {validReports.map((p, idx) => {

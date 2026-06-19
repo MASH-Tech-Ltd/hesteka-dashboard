@@ -20,6 +20,7 @@ import {
   BarChart,
   Bell,
   HelpCircle,
+  MessageSquare,
   Settings,
   LogOut,
   X
@@ -123,6 +124,7 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
       items: [
         { icon: BarChart, key: "analytics", path: "/analytics", badge: null },
         { icon: Bell, key: "notifications", path: "/notifications", badge: null },
+        { icon: MessageSquare, key: "supportMessages", path: "/support-messages", badge: null },
         { icon: HelpCircle, key: "faq", path: "/faq", badge: null },
         { icon: Settings, key: "settings", path: "/settings", badge: null },
       ],
