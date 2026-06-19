@@ -15,7 +15,7 @@ const PartnerCard = React.memo(({ partner, isPending, onApprove, onReject, onVie
     <div className="flex items-center gap-3">
       <div className="w-10 h-10 rounded-lg bg-[#8B6914] flex items-center justify-center text-white text-lg font-bold shrink-0 overflow-hidden">
         {partner.logo?.secure_url || partner.profileImage?.secure_url ? (
-          <img src={partner.logo?.secure_url || partner.profileImage?.secure_url} alt="Logo" className="w-full h-full object-cover" />
+          <img src={partner.logo?.secure_url || partner.profileImage?.secure_url} alt="Logo" className="w-full h-full object-contain" />
         ) : (
           (partner.company || partner.firstName || 'P').charAt(0).toUpperCase()
         )}
@@ -544,7 +544,7 @@ export default function PartnersPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded bg-[#8B6914] flex items-center justify-center text-white font-bold text-[10px] overflow-hidden">
                         {p.logo?.secure_url || p.profileImage?.secure_url ? (
-                          <img src={p.logo?.secure_url || p.profileImage?.secure_url} alt="Logo" className="w-full h-full object-cover" />
+                          <img src={p.logo?.secure_url || p.profileImage?.secure_url} alt="Logo" className="w-full h-full object-contain" />
                         ) : (
                           (p.company || p.firstName || 'P').charAt(0).toUpperCase()
                         )}

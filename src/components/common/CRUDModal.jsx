@@ -439,11 +439,13 @@ const CRUDModal = ({
   }
 
   const entityName =
+    formData.company ||
     formData.name ||
     formData.title ||
     (formData.firstName
       ? `${formData.firstName} ${formData.lastName || ""}`.trim()
       : null) ||
+    initialData?.company ||
     initialData?.name ||
     initialData?.title ||
     (initialData?.firstName
@@ -515,7 +517,7 @@ const CRUDModal = ({
                       <img
                         src={logoImageUrl}
                         alt="Logo"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
                       <div className="w-full h-full bg-[#fcfaf7] flex items-center justify-center text-2xl font-black text-[#8B6914]">

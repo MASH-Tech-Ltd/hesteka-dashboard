@@ -155,6 +155,10 @@ export default function ContactsPage() {
   };
 
   const openEditModal = (contact) => {
+    if (contact.type?.toLowerCase() === "partner") {
+      toast.info(t.updatePartnerInfoMsg || "To update partner info, please go to the Partners page.");
+      return;
+    }
     setEditingContact(contact);
     setIsViewOnly(false);
     setIsModalOpen(true);
