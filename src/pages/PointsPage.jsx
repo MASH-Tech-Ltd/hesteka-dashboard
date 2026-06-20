@@ -161,9 +161,9 @@ export default function PointsPage() {
         />
         <StatCard 
           loading={loading} 
-          label={t.pendingLabel || "PENDING"} 
+          label={t.availablePointsLabel || "AVAILABLE"} 
           value={{ text: stats?.pending?.toLocaleString() || "0", color: "text-orange-500" }} 
-          sub={t.pendingLabel || "PENDING"} 
+          sub={t.usablePointsSub || "Currently usable"} 
           subType="wait" 
           color="bg-orange-500"
         />
@@ -242,14 +242,14 @@ export default function PointsPage() {
           {/* Point Multiplier Promotion */}
           <div className="bg-linear-to-br from-[#3a2a1a] to-[#2a1a0a] rounded-2xl p-6 text-white shadow-xl flex flex-col gap-3 relative overflow-hidden group">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
-             <div className="bg-[#8B6914] text-[8px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-widest border border-white/20">Promotion</div>
+             <div className="bg-[#8B6914] text-[8px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-widest border border-white/20">{t.promotion || "Promotion"}</div>
              <h4 className="text-lg font-black leading-tight tracking-tight">{t.boosterTitle || "Boost donations this weekend?"}</h4>
              <p className="text-[10px] text-white/60 font-bold leading-relaxed">{t.boosterDesc || "Enable a x2 multiplier on all physical donation deposits to encourage the SPA."}</p>
              
              {/* Promotion Time Inputs */}
              <div className="flex flex-col gap-2 mt-2 bg-white/10 p-3 rounded-xl">
                <div className="flex flex-col gap-1">
-                 <label className="text-[9px] font-bold text-white/80">Start Time</label>
+                 <label className="text-[9px] font-bold text-white/80">{t.startTime || "Start Time"}</label>
                  <input
                    type="datetime-local"
                    value={formatDateForInput(config.promotionStartTime)}
@@ -258,7 +258,7 @@ export default function PointsPage() {
                  />
                </div>
                <div className="flex flex-col gap-1">
-                 <label className="text-[9px] font-bold text-white/80">End Time</label>
+                 <label className="text-[9px] font-bold text-white/80">{t.endTime || "End Time"}</label>
                  <input
                    type="datetime-local"
                    value={formatDateForInput(config.promotionEndTime)}
@@ -271,10 +271,10 @@ export default function PointsPage() {
              {/* Show Promotion Status */}
              {config.isDoublePointsActive && (
                <div className="bg-green-500/20 border border-green-400 text-green-200 text-[9px] font-bold p-2 rounded-lg">
-                 ✓ 2x Multiplier Active
+                 ✓ {t.multiplierActive || "2x Multiplier Active"}
                  {config.promotionEndTime && (
                    <div className="text-[8px] mt-1">
-                     Until: {new Date(config.promotionEndTime).toLocaleString()}
+                     {t.until || "Until:"} {new Date(config.promotionEndTime).toLocaleString()}
                    </div>
                  )}
                </div>
@@ -300,7 +300,7 @@ export default function PointsPage() {
                   }))}
                   className="flex-1 mt-2 bg-red-600/80 text-white text-[10px] font-black py-3 rounded-xl hover:bg-red-600 transition-all active:scale-95 shadow-lg uppercase tracking-wider"
                  >
-                    STOP NOW
+                    {t.stopNow || "STOP NOW"}
                  </button>
                )}
              </div>

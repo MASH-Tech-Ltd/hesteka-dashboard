@@ -47,6 +47,19 @@ export default function FAQPage() {
     "SECURITY"
   ];
 
+  const getCategoryLabel = (cat) => {
+    switch (cat) {
+      case "GENERAL": return t.faqCatGENERAL || cat;
+      case "REPORT": return t.faqCatREPORT || cat;
+      case "LOCAL MISSIONS": return t.faqCatLOCAL_MISSIONS || cat;
+      case "MY ACCOUNT": return t.faqCatMY_ACCOUNT || cat;
+      case "MESSAGING": return t.faqCatMESSAGING || cat;
+      case "DONATIONS AND HELP": return t.faqCatDONATIONS_AND_HELP || cat;
+      case "SECURITY": return t.faqCatSECURITY || cat;
+      default: return cat;
+    }
+  };
+
   const fetchFaqs = useCallback(async () => {
     setLoading(true);
     try {
@@ -185,7 +198,7 @@ export default function FAQPage() {
       header: t.categoryLabel || "CATEGORY", 
       cell: (r) => (
         <span className="px-2 py-1 rounded-full bg-[#f5f0e8] text-[#8B6914] text-[10px] font-bold uppercase">
-          {r.category}
+          {getCategoryLabel(r.category)}
         </span>
       ) 
     },
@@ -236,7 +249,7 @@ export default function FAQPage() {
             { 
               name: "category", 
               label: t.allCategories || "All categories", 
-              options: categories.map(c => ({ label: c, value: c }))
+              options: categories.map(c => ({ label: getCategoryLabel(c), value: c }))
             }
           ]}
           sortOptions={[
@@ -292,7 +305,7 @@ export default function FAQPage() {
                       className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914]"
                       required
                     >
-                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      {categories.map(c => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -453,7 +466,7 @@ export default function FAQPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">{t.categoryLabel || "Category"}</span>
-                  <span className="text-sm font-bold text-[#3a2a1a]">{faqToView.category}</span>
+                  <span className="text-sm font-bold text-[#3a2a1a]">{getCategoryLabel(faqToView.category)}</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">{t.groupOrder || "Group Order"}</span>

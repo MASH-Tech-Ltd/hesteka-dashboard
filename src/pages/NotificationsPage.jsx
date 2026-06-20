@@ -275,13 +275,13 @@ export default function NotificationsPage() {
                 onClick={() => setViewMode("my")}
                 className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${viewMode === "my" ? "bg-[#8B6914] text-white shadow-sm" : "text-[#9a8a7a] hover:text-[#3a2a1a]"}`}
               >
-                My Alerts
+                {t.myAlertsLabel || "My Alerts"}
               </button>
               <button
                 onClick={() => setViewMode("all")}
                 className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${viewMode === "all" ? "bg-[#8B6914] text-white shadow-sm" : "text-[#9a8a7a] hover:text-[#3a2a1a]"}`}
               >
-                All System
+                {t.allSystemLabel || "All System"}
               </button>
             </div>
           </div>
