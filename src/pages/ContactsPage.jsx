@@ -9,6 +9,7 @@ import FilterBar from "../components/common/FilterBar";
 import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
+import BulkUploadModal from "../components/common/BulkUploadModal";
 
 export default function ContactsPage() {
   const { t } = useLang();
@@ -31,7 +32,12 @@ export default function ContactsPage() {
     to: "",
     region: "",
     department: "",
+    creationMethod: "all",
   });
+
+  const [bulkUploadLoading, setBulkUploadLoading] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkUploadResults, setBulkUploadResults] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
@@ -67,6 +73,7 @@ export default function ContactsPage() {
       if (!params.to) delete params.to;
       if (!params.region || params.region === 'all') delete params.region;
       if (!params.department || params.department === 'all') delete params.department;
+      if (!params.creationMethod || params.creationMethod === 'all') delete params.creationMethod;
 
       const queryString = new URLSearchParams(params).toString();
       const [res, statsRes] = await Promise.all([
@@ -151,6 +158,28 @@ export default function ContactsPage() {
       toast.error(err.response?.data?.message || "Failed to save contact");
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleBulkUpload = async (file) => {
+    if (!file) return;
+
+    setBulkUploadLoading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await api.post("/contacts/bulk-upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data.status === "ok" || res.status === 201) {
+        setBulkUploadResults(res.data.data);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to process bulk upload");
+    } finally {
+      setBulkUploadLoading(false);
     }
   };
 
@@ -292,6 +321,12 @@ export default function ContactsPage() {
       ],
     },
     { name: "image", label: "Photo", type: "file", disabled: isViewOnly },
+    ...(isViewOnly ? [{
+      name: "creationMethod",
+      label: "Creation Method",
+      type: "text",
+      disabled: true,
+    }] : [])
   ];
 
   return (
@@ -347,10 +382,20 @@ export default function ContactsPage() {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setQueryParams({ city: "", country: "", from: "", to: "", search: "", type: "all", status: "active", region: "all", department: "all", page: 1 })}
+              onClick={() => setQueryParams({ city: "", country: "", from: "", to: "", search: "", type: "all", status: "active", region: "all", department: "all", creationMethod: "all", page: 1 })}
               className="text-[10px] font-bold text-[#8B6914] hover:underline"
             >
               {t.clearFilters || "Clear all filters"}
+            </button>
+            <button
+              onClick={() => {
+                setIsBulkModalOpen(true);
+                setBulkUploadResults(null);
+              }}
+              disabled={bulkUploadLoading}
+              className="bg-blue-600 text-white text-[11px] font-black px-4 py-2.5 rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50"
+            >
+              {bulkUploadLoading ? "Uploading..." : "Bulk Upload"}
             </button>
             <button
               onClick={() => {
@@ -403,6 +448,15 @@ export default function ContactsPage() {
               value: queryParams.department || 'all',
               options: locations.departments.map(d => ({ label: d, value: d })),
             },
+            {
+              name: "creationMethod",
+              label: "Creation Method",
+              value: queryParams.creationMethod || 'all',
+              options: [
+                { label: "Manual", value: "manual" },
+                { label: "Bulk", value: "bulk" },
+              ]
+            }
           ]}
           sortOptions={[
             { label: t.nameAsc || "Name (A-Z)", value: "name:ascending" },
@@ -427,6 +481,17 @@ export default function ContactsPage() {
           />
         </div>
       </div>
+
+      <BulkUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => {
+          setIsBulkModalOpen(false);
+          setBulkUploadResults(null);
+        }}
+        onUpload={handleBulkUpload}
+        loading={bulkUploadLoading}
+        results={bulkUploadResults}
+      />
 
       <CRUDModal
         isOpen={isModalOpen}
