@@ -1,6 +1,8 @@
-# EmmaFVE Admin Dashboard
+# HESTEKA Admin Dashboard
 
-EmmaFVE Admin Dashboard is a comprehensive and modern administrative interface built with React, Vite, and Tailwind CSS. It is designed to manage various aspects of the EmmaFVE platform, providing features for user management, analytics, content administration, and real-time operations.
+Developed by **MASH TECH**
+
+HESTEKA Admin Dashboard is a comprehensive and modern administrative interface built with React, Vite, and Tailwind CSS. It is designed to manage various aspects of the HESTEKA platform, providing features for user management, analytics, content administration, and real-time operations.
 
 ## 🚀 Technologies Used
 
@@ -21,19 +23,23 @@ EmmaFVE Admin Dashboard is a comprehensive and modern administrative interface b
 The project follows a modular and scalable architecture:
 
 ```text
-emmafveAdminDashboard/
+hestekaDashboard/
 ├── public/                 # Static assets
 └── src/
     ├── components/         # Reusable React components
     │   ├── common/         # Generic UI components (Modals, Tables, Pagination, etc.)
     │   ├── dashboard/      # Dashboard-specific components (Cards, Sidebar, Topbar)
-    │   └── ...             # Chat and layout-specific components
+    │   └── ...             # Layout-specific components
     ├── context/            # React Context providers (Language, API Cache, Socket)
     ├── layouts/            # Application layout wrappers (e.g., DashboardLayout)
     ├── pages/              # Application screens and routes
-    │   ├── AnalyticsPage, DashboardPage, UsersPage,
-    │   ├── ContactsPage, CrowdfundingPage, DonationsPage,
-    │   └── ... (and more modular pages)
+    │   ├── AdminLoginPage, AnalyticsPage, CollectionPointsPage,
+    │   ├── ContactsPage, CrowdfundingPage, DashboardPage,
+    │   ├── DonationsPage, FAQPage, ForgotPasswordPage,
+    │   ├── MissionsPage, NotificationsPage, PartnersPage,
+    │   ├── PhysicalItemsPage, PointsPage, ReportsPage,
+    │   ├── SettingsPage, ShopifyProductsPage, SupportMessagesPage,
+    │   └── UsersPage, ValidationDonationsPage
     ├── utils/              # Utility functions and API configuration (e.g., api.js)
     ├── App.jsx             # Main application component & routing setup
     ├── main.jsx            # React application entry point
@@ -52,6 +58,19 @@ emmafveAdminDashboard/
 - **Multi-language Support:** Built-in context for language localization.
 - **Interactive Maps:** Collection points and activity tracking using interactive mapping tools.
 
+## 🔒 Security & Performance
+
+**Security:**
+- **Route Protection:** Strict client-side route guards ensuring only authenticated users with specific roles (Admin vs. Partner) can access respective dashboard modules.
+- **XSS & CSRF Mitigation:** React's built-in DOM sanitization combined with secure Axios interceptors that attach HttpOnly tokens securely without exposing them to XSS risks.
+- **Data Validation:** Form submissions and inputs are strictly validated on the client side before any network requests are dispatched, reducing malicious payload risks.
+
+**Performance:**
+- **Optimized Rendering:** Built on **Vite**, offering near-instant Hot Module Replacement (HMR) during development and highly optimized rollup bundles for production.
+- **State Management & Caching:** Global API responses are aggressively cached using custom Context APIs to prevent redundant network calls across paginated tables and maps.
+- **Lazy Loading & Code Splitting:** Large components, dynamic routes, and heavy dependencies (like Maps and Charts) are lazily loaded to drastically reduce initial time-to-interactive.
+- **Asset Optimization:** Integrated Cloudinary for serving perfectly scaled images instead of loading full-resolution assets, speeding up DataTable rendering.
+
 ## 📦 Getting Started
 
 ### Prerequisites
@@ -63,7 +82,7 @@ emmafveAdminDashboard/
 
 1. Clone the repository and navigate to the project folder:
    ```bash
-   cd emmafveAdminDashboard
+   cd hestekaDashboard
    ```
 
 2. Install dependencies:
