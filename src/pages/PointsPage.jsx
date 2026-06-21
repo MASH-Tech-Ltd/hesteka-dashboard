@@ -3,7 +3,7 @@ import { useLang } from "../context/LanguageContext";
 import StatCard from "../components/dashboard/StatCard";
 import api from "../utils/api";
 import { toast } from "react-toastify";
-import { MapPin, Target, Package, Ruler, Lightbulb, Settings, Save } from "lucide-react";
+import { MapPin, Target, Package, Ruler, Lightbulb, Settings, Save, Search, User } from "lucide-react";
 
 // Helper to format ISO date to datetime-local input format
 const formatDateForInput = (isoDate) => {
@@ -67,6 +67,68 @@ export default function PointsPage() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Custom points state
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [customPoints, setCustomPoints] = useState("");
+  const [customPointsNote, setCustomPointsNote] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Auto-search users
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (userSearchQuery.trim().length >= 2 && !selectedUser) {
+        setIsSearching(true);
+        try {
+          const res = await api.get(`/user/get-all-user?search=${userSearchQuery}&limit=5`);
+          if (res.data.status === "ok") {
+            setSearchResults(res.data.data);
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [userSearchQuery, selectedUser]);
+
+  const handleAssignCustomPoints = async () => {
+    if (!selectedUser || !customPoints || parseInt(customPoints) <= 0) {
+      toast.error(t.fillAllFields || "Please fill all fields properly");
+      return;
+    }
+    setIsAssigning(true);
+    try {
+      const res = await api.post("/points/admin/assign-custom-points", {
+        userId: selectedUser._id,
+        points: parseInt(customPoints),
+        note: customPointsNote || undefined
+      });
+      if (res.data.status === "ok" || res.data.success) {
+        toast.success(t.pointsAssignedSuccess || "Points successfully assigned!");
+        setSelectedUser(null);
+        setUserSearchQuery("");
+        setCustomPoints("");
+        setCustomPointsNote("");
+        const statsRes = await api.get("/points/admin/stats");
+        if (statsRes.data.status === "ok" || statsRes.data.success) {
+          setStats(statsRes.data.data);
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || t.pointsAssignedError || "Failed to assign points");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -239,71 +301,94 @@ export default function PointsPage() {
             </p>
           </div>
 
-          {/* Point Multiplier Promotion */}
+          {/* Assign Custom Points Card */}
           <div className="bg-linear-to-br from-[#3a2a1a] to-[#2a1a0a] rounded-2xl p-6 text-white shadow-xl flex flex-col gap-3 relative overflow-hidden group">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
-             <div className="bg-[#8B6914] text-[8px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-widest border border-white/20">{t.promotion || "Promotion"}</div>
-             <h4 className="text-lg font-black leading-tight tracking-tight">{t.boosterTitle || "Boost donations this weekend?"}</h4>
-             <p className="text-[10px] text-white/60 font-bold leading-relaxed">{t.boosterDesc || "Enable a x2 multiplier on all physical donation deposits to encourage the SPA."}</p>
+             <div className="bg-[#8B6914] text-[8px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-widest border border-white/20">{t.customPoints || "Custom Points"}</div>
+             <h4 className="text-lg font-black leading-tight tracking-tight">{t.giveCustomPointsTitle || "Assign Custom Points"}</h4>
+             <p className="text-[10px] text-white/60 font-bold leading-relaxed">{t.giveCustomPointsDesc || "Search for a user and directly assign points to their balance."}</p>
              
-             {/* Promotion Time Inputs */}
-             <div className="flex flex-col gap-2 mt-2 bg-white/10 p-3 rounded-xl">
-               <div className="flex flex-col gap-1">
-                 <label className="text-[9px] font-bold text-white/80">{t.startTime || "Start Time"}</label>
-                 <input
-                   type="datetime-local"
-                   value={formatDateForInput(config.promotionStartTime)}
-                   onChange={(e) => setConfig(prev => ({ ...prev, promotionStartTime: formatInputToISO(e.target.value) }))}
-                   className="bg-white/20 border border-white/30 rounded-lg px-2 py-1.5 text-[10px] text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#8B6914] focus:border-transparent"
-                 />
-               </div>
-               <div className="flex flex-col gap-1">
-                 <label className="text-[9px] font-bold text-white/80">{t.endTime || "End Time"}</label>
-                 <input
-                   type="datetime-local"
-                   value={formatDateForInput(config.promotionEndTime)}
-                   onChange={(e) => setConfig(prev => ({ ...prev, promotionEndTime: formatInputToISO(e.target.value) }))}
-                   className="bg-white/20 border border-white/30 rounded-lg px-2 py-1.5 text-[10px] text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#8B6914] focus:border-transparent"
-                 />
-               </div>
-             </div>
+             <div className="flex flex-col gap-2 mt-2 bg-white/10 p-3 rounded-xl relative z-10">
+               {/* User Search */}
+               <div className="flex flex-col gap-1 relative">
+                 <label className="text-[9px] font-bold text-white/80">{t.searchUser || "Search User"}</label>
+                 <div className="relative">
+                   <input
+                     type="text"
+                     value={selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName} (${selectedUser.email})` : userSearchQuery}
+                     onChange={(e) => {
+                       if (selectedUser) setSelectedUser(null);
+                       setUserSearchQuery(e.target.value);
+                     }}
+                     placeholder={t.searchUserPlaceholder || "Type name or email..."}
+                     className="w-full bg-white/20 border border-white/30 rounded-lg pl-8 pr-2 py-2 text-xs text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#8B6914] focus:border-transparent transition-all"
+                   />
+                   <Search className="w-4 h-4 text-white/50 absolute left-2 top-2.5" />
+                 </div>
 
-             {/* Show Promotion Status */}
-             {config.isDoublePointsActive && (
-               <div className="bg-green-500/20 border border-green-400 text-green-200 text-[9px] font-bold p-2 rounded-lg">
-                 ✓ {t.multiplierActive || "2x Multiplier Active"}
-                 {config.promotionEndTime && (
-                   <div className="text-[8px] mt-1">
-                     {t.until || "Until:"} {new Date(config.promotionEndTime).toLocaleString()}
+                 {/* Search Results Dropdown */}
+                 {!selectedUser && searchResults.length > 0 && (
+                   <div className="absolute top-full left-0 w-full mt-1 bg-white rounded-lg shadow-xl border border-[#e8ddd0] max-h-40 overflow-y-auto z-50">
+                     {searchResults.map((user) => (
+                       <div 
+                         key={user._id} 
+                         onClick={() => {
+                           setSelectedUser(user);
+                           setSearchResults([]);
+                           setUserSearchQuery("");
+                         }}
+                         className="px-3 py-2 border-b border-[#f0e8d8] last:border-0 hover:bg-[#fcfaf7] cursor-pointer flex items-center gap-2"
+                       >
+                         <div className="w-6 h-6 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                           {user.firstName?.charAt(0).toUpperCase()}
+                         </div>
+                         <div className="flex flex-col overflow-hidden">
+                           <span className="text-xs font-bold text-[#3a2a1a] truncate">{user.firstName} {user.lastName}</span>
+                           <span className="text-[10px] text-[#9a8a7a] truncate">{user.email}</span>
+                         </div>
+                       </div>
+                     ))}
                    </div>
                  )}
                </div>
-             )}
-             
-             <div className="flex gap-2">
-               <button 
-                onClick={() => setConfig(prev => ({ 
-                  ...prev, 
-                  isDoublePointsActive: true,
-                  promotionStartTime: new Date().toISOString()
-                }))}
-                className="flex-1 mt-2 bg-white text-[#3a2a1a] text-[10px] font-black py-3 rounded-xl hover:bg-[#8B6914] hover:text-white transition-all active:scale-95 shadow-lg uppercase tracking-wider"
-               >
-                  {t.activateNow || "ACTIVATE NOW"}
-               </button>
-               {config.isDoublePointsActive && (
-                 <button 
-                  onClick={() => setConfig(prev => ({ 
-                    ...prev, 
-                    isDoublePointsActive: false,
-                    promotionEndTime: new Date().toISOString()
-                  }))}
-                  className="flex-1 mt-2 bg-red-600/80 text-white text-[10px] font-black py-3 rounded-xl hover:bg-red-600 transition-all active:scale-95 shadow-lg uppercase tracking-wider"
-                 >
-                    {t.stopNow || "STOP NOW"}
-                 </button>
-               )}
+
+               {/* Points & Note */}
+               <div className="flex gap-2 mt-1">
+                 <div className="flex flex-col gap-1 w-1/3">
+                   <label className="text-[9px] font-bold text-white/80">{t.points || "Points"}</label>
+                   <input
+                     type="number"
+                     value={customPoints}
+                     onChange={(e) => setCustomPoints(e.target.value)}
+                     placeholder="e.g. 100"
+                     className="bg-white/20 border border-white/30 rounded-lg px-2 py-2 text-xs text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#8B6914] focus:border-transparent"
+                   />
+                 </div>
+                 <div className="flex flex-col gap-1 flex-1">
+                   <label className="text-[9px] font-bold text-white/80">{t.note || "Note (Optional)"}</label>
+                   <input
+                     type="text"
+                     value={customPointsNote}
+                     onChange={(e) => setCustomPointsNote(e.target.value)}
+                     placeholder={t.notePlaceholder || "Reason for points..."}
+                     className="bg-white/20 border border-white/30 rounded-lg px-2 py-2 text-xs text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#8B6914] focus:border-transparent"
+                   />
+                 </div>
+               </div>
              </div>
+
+             <button 
+              onClick={handleAssignCustomPoints}
+              disabled={isAssigning || !selectedUser || !customPoints}
+              className="mt-2 bg-[#8B6914] text-white text-[10px] font-black py-3 rounded-xl hover:bg-[#6a5010] transition-all active:scale-95 shadow-lg uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+             >
+                {isAssigning ? (
+                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <User className="w-3 h-3" />
+                )}
+                {t.assignPoints || "ASSIGN POINTS"}
+             </button>
           </div>
         </div>
       </div>

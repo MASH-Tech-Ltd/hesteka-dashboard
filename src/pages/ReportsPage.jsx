@@ -21,6 +21,7 @@ import {
   Bird,
   HelpCircle,
   ThumbsUp,
+  MessageCircle,
 } from "lucide-react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
@@ -110,9 +111,8 @@ export default function ReportsPage() {
   const handleApprovePoints = (reportId) => {
     setConfirmModal({
       isOpen: true,
-      title: "Approuver les points",
-      message:
-        "Voulez-vous vraiment approuver les points pour ce signalement ?",
+      title: t.approvePointsTitle || "Approuver les points",
+      message: t.approvePointsConfirm || "Voulez-vous vraiment approuver les points pour ce signalement ?",
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
@@ -120,12 +120,12 @@ export default function ReportsPage() {
             `/admin/approve-report-points/${reportId}`,
           );
           if (res.data.status === "ok") {
-            toast.success("Points approuvés avec succès");
+            toast.success(t.pointsApprovedSuccess || "Points approuvés avec succès");
             fetchData();
           }
         } catch (err) {
           toast.error(
-            err.response?.data?.message || "Erreur lors de l'approbation",
+            err.response?.data?.message || t.approvePointsError || "Erreur lors de l'approbation",
           );
         } finally {
           setConfirmLoading(false);
@@ -433,7 +433,7 @@ export default function ReportsPage() {
               {r.animalName || r.title || "N/A"}
             </span>
             <span className="text-[10px] text-[#9a8a7a]">
-              {r.breed || "Inconnu"}
+              {r.breed || t.unknown || "Inconnu"}
             </span>
           </div>
         </div>
@@ -704,8 +704,7 @@ export default function ReportsPage() {
           <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center sticky top-0 bg-white z-10">
               <h2 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
-                <PawPrint className="w-6 h-6 text-[#8B6914]" /> Détails du
-                signalement: {selectedReport.title}
+                <PawPrint className="w-6 h-6 text-[#8B6914]" /> {t.reportDetails || "Détails du signalement"}: {selectedReport.title}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -744,27 +743,26 @@ export default function ReportsPage() {
 
                 <div className="flex flex-col gap-4">
                   <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#8B6914]" /> Infos
-                    Signalement
+                    <FileText className="w-4 h-4 text-[#8B6914]" /> {t.reportInfo || "Infos Signalement"}
                   </h3>
                   <div className="grid grid-cols-2 gap-y-3 text-sm">
-                    <span className="text-[#9a8a7a]">Espèce:</span>
+                    <span className="text-[#9a8a7a]">{t.animalSpecies || "Espèce"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedReport.species}
                     </span>
-                    <span className="text-[#9a8a7a]">Race:</span>
+                    <span className="text-[#9a8a7a]">{t.breed || "Race"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
-                      {selectedReport.breed || "Inconnue"}
+                      {selectedReport.breed || t.unknown || "Inconnue"}
                     </span>
-                    <span className="text-[#9a8a7a]">Nom Animal:</span>
+                    <span className="text-[#9a8a7a]">{t.animalName || "Nom Animal"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedReport.animalName || "N/A"}
                     </span>
-                    <span className="text-[#9a8a7a]">Statut:</span>
+                    <span className="text-[#9a8a7a]">{t.statusLabel || "Statut"}:</span>
                     <span className="font-bold uppercase text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full w-fit">
-                      {selectedReport.status}
+                      {t[selectedReport.status] || selectedReport.status}
                     </span>
-                    <span className="text-[#9a8a7a]">Date:</span>
+                    <span className="text-[#9a8a7a]">{t.dateLabel || "Date"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
                       {new Date(selectedReport.createdAt).toLocaleDateString()}
                     </span>
@@ -774,10 +772,10 @@ export default function ReportsPage() {
 
               <div className="flex flex-col gap-2 bg-[#fcfaf7] p-4 rounded-xl border border-[#e8ddd0]">
                 <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#8B6914]" /> Localisation
+                  <MapPin className="w-4 h-4 text-[#8B6914]" /> {t.location || "Localisation"}
                 </h3>
                 <p className="text-sm text-[#5a4a3a] leading-relaxed mb-2">
-                  {selectedReport.location?.address || "Adresse non fournie"}
+                  {selectedReport.location?.address || t.addressNotProvided || "Adresse non fournie"}
                 </p>
                 {selectedReport.location?.coordinates?.length === 2 && (
                   <div className="h-48 w-full rounded-xl overflow-hidden border border-[#e8ddd0] z-0 relative">
@@ -807,7 +805,7 @@ export default function ReportsPage() {
 
               <div className="flex flex-col gap-2 bg-[#f5f0e8] p-4 rounded-xl">
                 <h3 className="font-bold text-[#3a2a1a] text-sm">
-                  Description
+                  {t.descriptionLabel || "Description"}
                 </h3>
                 <p className="text-sm text-[#5a4a3a] leading-relaxed whitespace-pre-wrap">
                   {selectedReport.description ||
@@ -818,7 +816,7 @@ export default function ReportsPage() {
 
               <div className="flex flex-col gap-4">
                 <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
-                  <User className="w-4 h-4 text-[#8B6914]" /> Signalé par
+                  <User className="w-4 h-4 text-[#8B6914]" /> {t.reportedBy || "Signalé par"}
                 </h3>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-lg font-bold overflow-hidden border-2 border-white shadow-sm">
@@ -845,6 +843,76 @@ export default function ReportsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Comments Section */}
+              {selectedReport.comments && selectedReport.comments.length > 0 && (
+                <div className="flex flex-col gap-4 mt-2">
+                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4 text-[#8B6914]" /> {t.commentsLabel || "Comments"} ({selectedReport.comments.length})
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                    {selectedReport.comments.map((comment) => (
+                      <div key={comment._id} className="bg-[#fcfaf7] p-3 rounded-xl border border-[#e8ddd0] flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-xs font-bold overflow-hidden border border-[#e8ddd0] shrink-0">
+                            {comment.author?.profileImage?.secure_url ? (
+                              <img
+                                src={comment.author.profileImage.secure_url}
+                                alt="Comment Author"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              (comment.author?.firstName?.[0] || "U").toUpperCase()
+                            )}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-[#3a2a1a] text-xs">
+                              {comment.author?.firstName} {comment.author?.lastName}
+                            </span>
+                            <span className="text-[10px] text-[#9a8a7a]">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-[#5a4a3a] leading-relaxed">
+                          {comment.content}
+                        </p>
+                        {/* Display replies if any */}
+                        {comment.replies && comment.replies.length > 0 && (
+                          <div className="ml-6 mt-2 flex flex-col gap-2 border-l-2 border-[#f0e8d8] pl-3">
+                            {comment.replies.map((reply) => (
+                              <div key={reply._id} className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-[#9a8a7a] text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
+                                    {reply.author?.profileImage?.secure_url ? (
+                                      <img
+                                        src={reply.author.profileImage.secure_url}
+                                        alt="Reply Author"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      (reply.author?.firstName?.[0] || "U").toUpperCase()
+                                    )}
+                                  </div>
+                                  <span className="font-bold text-[#3a2a1a] text-[11px]">
+                                    {reply.author?.firstName} {reply.author?.lastName}
+                                  </span>
+                                  <span className="text-[9px] text-[#9a8a7a]">
+                                    {new Date(reply.createdAt).toLocaleString()}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-[#5a4a3a] pl-8">
+                                  {reply.content}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

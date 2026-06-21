@@ -231,7 +231,7 @@ export default function NotificationsPage() {
               options={[
                 { label: t.allFrance || "Toute la France", value: "all_france" },
                 { label: t.pacaRegion || "Provence-Alpes-Côte d'Azur", value: "paca" },
-                { label: "CSRF", value: "CSRF" },
+                { label: "CSFS", value: "CSFS" },
                 ...uniqueCities.map(city => ({ label: city, value: city }))
               ]}
             />
