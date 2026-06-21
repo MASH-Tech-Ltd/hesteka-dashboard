@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useLang } from "../context/LanguageContext";
 import StatCard from "../components/dashboard/StatCard";
+import DataTable from "../components/common/DataTable";
+import FilterBar from "../components/common/FilterBar";
+import Pagination from "../components/common/Pagination";
 import api from "../utils/api";
 import { toast } from "react-toastify";
-import { MapPin, Target, Package, Ruler, Lightbulb, Settings, Save, Search, User } from "lucide-react";
+import { MapPin, Target, Package, Ruler, Lightbulb, Settings, Save, Search, User, History } from "lucide-react";
 
 // Helper to format ISO date to datetime-local input format
 const formatDateForInput = (isoDate) => {
@@ -77,6 +80,34 @@ export default function PointsPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
+  // History state
+  const [historyParams, setHistoryParams] = useState({ 
+    page: 1, limit: 10, search: "", type: "all", source: "all", sort: "descending", sortBy: "date", from: "", to: "" 
+  });
+  const [historyData, setHistoryData] = useState([]);
+  const [historyMeta, setHistoryMeta] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await api.get("/points/admin/history", { params: historyParams });
+      if (res.data.status === "ok" || res.data.success) {
+        setHistoryData(res.data.data.transactions);
+        setHistoryMeta(res.data.data.meta);
+      }
+    } catch (err) {
+      console.error("Failed to fetch history", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyParams]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
   // Auto-search users
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -122,6 +153,7 @@ export default function PointsPage() {
         if (statsRes.data.status === "ok" || statsRes.data.success) {
           setStats(statsRes.data.data);
         }
+        fetchHistory(); // Refresh history table
       }
     } catch (err) {
       toast.error(err.response?.data?.message || t.pointsAssignedError || "Failed to assign points");
@@ -208,6 +240,78 @@ export default function PointsPage() {
     setConfig(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const historyColumns = [
+    {
+      header: t.userLabel || "USER",
+      accessor: "user",
+      cell: (tx) => {
+        const user = tx.user;
+        if (!user) return <span className="text-[#9a8a7a]">N/A</span>;
+        return (
+          <div className="flex items-center gap-3">
+             <div className="w-8 h-8 rounded-full bg-[#f5f0e8] flex items-center justify-center text-[#8B6914] font-bold text-xs shrink-0 border border-[#e8ddd0] overflow-hidden">
+               {user.profileImage?.secure_url ? (
+                 <img src={user.profileImage.secure_url} alt="" className="w-full h-full object-cover" />
+               ) : (
+                 user.firstName?.charAt(0).toUpperCase() || "U"
+               )}
+             </div>
+             <div className="flex flex-col">
+               <span className="font-bold text-[#3a2a1a] text-xs">{user.firstName} {user.lastName}</span>
+               <span className="text-[10px] text-[#9a8a7a] truncate max-w-[150px]">{user.email}</span>
+             </div>
+          </div>
+        );
+      }
+    },
+    {
+      header: t.points || "POINTS",
+      accessor: "points",
+      cell: (tx) => (
+        <span className={`font-black text-sm ${tx.points > 0 ? "text-green-600" : "text-red-600"}`}>
+          {tx.points > 0 ? `+${tx.points}` : tx.points}
+        </span>
+      )
+    },
+    {
+      header: t.type || "TYPE",
+      accessor: "type",
+      cell: (tx) => (
+        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${tx.type === 'EARN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {t[tx.type] || tx.type}
+        </span>
+      )
+    },
+    {
+      header: t.source || "SOURCE",
+      accessor: "source",
+      cell: (tx) => {
+         // Convert ADMIN_CUSTOM to srcAdminCustom
+         const translationKey = `src${tx.source.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('')}`;
+         return (
+           <span className="text-xs font-bold text-[#3a2a1a] uppercase tracking-wide">
+             {t[translationKey] || tx.source.replace(/_/g, " ")}
+           </span>
+         );
+      }
+    },
+    {
+      header: t.note || "NOTE",
+      accessor: "note",
+      cell: (tx) => <span className="text-xs text-[#5a4a3a] max-w-[200px] truncate block" title={tx.note}>{tx.note || "—"}</span>
+    },
+    {
+      header: t.dateLabel || "DATE",
+      accessor: "createdAt",
+      cell: (tx) => (
+        <div className="flex flex-col">
+          <span className="text-xs font-bold text-[#3a2a1a]">{new Date(tx.createdAt).toLocaleDateString()}</span>
+          <span className="text-[9px] text-[#9a8a7a] font-medium">{new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+      )
+    }
+  ];
+
   return (
     <div className="px-6 py-4 flex flex-col gap-4">
 
@@ -249,7 +353,7 @@ export default function PointsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Scale Card */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8ddd0] flex flex-col overflow-hidden shadow-sm">
+        <div className="bg-white rounded-2xl border border-[#e8ddd0] flex flex-col overflow-hidden shadow-sm h-full">
           <div className="p-5 border-b border-[#e8ddd0] bg-[#fcfaf7] flex items-center justify-between">
             <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2 uppercase tracking-tight">
               <Ruler className="w-4 h-4 text-[#8B6914]" /> {t.pointsScale || "POINTS SCALE"}
@@ -267,19 +371,31 @@ export default function PointsPage() {
               />
             ))}
           </div>
-          <div className="p-6 mt-auto bg-[#fcfaf7] border-t border-[#e8ddd0]">
-             <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex gap-3 items-start">
+          <div className="p-6 mt-auto bg-[#fcfaf7] border-t border-[#e8ddd0] flex flex-row gap-4 items-stretch">
+             <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl flex gap-3 items-center flex-1">
               <Lightbulb className="w-5 h-5 text-orange-600 shrink-0" />
-              <p className="text-[10px] text-orange-800 font-bold leading-relaxed">
+              <p className="text-[10px] text-orange-800 font-bold leading-relaxed m-0">
                  {t.configUpdateMsg || "Changes to the scale will be applied immediately for all future user actions. Existing points will not be affected."}
               </p>
              </div>
+             
+             <button 
+               onClick={handleUpdateConfig}
+               disabled={saving || loading}
+               className="bg-[#3a2a1a] text-white text-[11px] font-black px-8 py-0 rounded-xl hover:bg-[#2a1a0a] transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 shadow-md shrink-0 whitespace-nowrap"
+             >
+               {saving ? (
+                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+               ) : (
+                 <Save className="w-4 h-4" />
+               )}
+               {t.saveBtn || "Save Configuration"}
+             </button>
           </div>
         </div>
 
-        <div className="flex flex-col gap-6">
-          {/* Usage Rules Card */}
-          <div className="bg-white rounded-2xl border border-[#e8ddd0] flex flex-col p-6 gap-6 shadow-sm">
+        {/* Usage Rules Card */}
+        <div className="bg-white rounded-2xl border border-[#e8ddd0] flex flex-col p-6 gap-6 shadow-sm h-full">
             <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2 uppercase tracking-tight">
               <Settings className="w-4 h-4 text-[#8B6914]" /> {t.usageRules || "USAGE RULES"}
             </h3>
@@ -301,8 +417,8 @@ export default function PointsPage() {
             </p>
           </div>
 
-          {/* Assign Custom Points Card */}
-          <div className="bg-linear-to-br from-[#3a2a1a] to-[#2a1a0a] rounded-2xl p-6 text-white shadow-xl flex flex-col gap-3 relative overflow-hidden group">
+        {/* Assign Custom Points Card */}
+        <div className="bg-linear-to-br from-[#3a2a1a] to-[#2a1a0a] rounded-2xl p-6 text-white shadow-xl flex flex-col gap-3 relative overflow-hidden group h-full">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
              <div className="bg-[#8B6914] text-[8px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-widest border border-white/20">{t.customPoints || "Custom Points"}</div>
              <h4 className="text-lg font-black leading-tight tracking-tight">{t.giveCustomPointsTitle || "Assign Custom Points"}</h4>
@@ -315,6 +431,9 @@ export default function PointsPage() {
                  <div className="relative">
                    <input
                      type="text"
+                     name={`search_user_${Math.random()}`}
+                     autoComplete="new-password"
+                     spellCheck="false"
                      value={selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName} (${selectedUser.email})` : userSearchQuery}
                      onChange={(e) => {
                        if (selectedUser) setSelectedUser(null);
@@ -389,24 +508,68 @@ export default function PointsPage() {
                 )}
                 {t.assignPoints || "ASSIGN POINTS"}
              </button>
-          </div>
         </div>
       </div>
-       {/* Save button */}
-      <div className="flex justify-center">
-        <button 
-          onClick={handleUpdateConfig}
-          disabled={saving || loading}
-          className="bg-[#3a2a1a] text-white text-[11px] font-black px-6 py-2.5 rounded-xl hover:bg-[#2a1a0a] transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
-        >
-          {saving ? (
-            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          {t.saveBtn || "Save"}
-        </button>
+
+      {/* Points History Section */}
+      <div className="bg-white rounded-2xl border border-[#e8ddd0] flex flex-col overflow-hidden shadow-sm mt-4">
+        <div className="p-5 border-b border-[#e8ddd0] bg-[#fcfaf7] flex items-center justify-between">
+          <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2 uppercase tracking-tight">
+            <History className="w-4 h-4 text-[#8B6914]" /> {t.pointsHistory || "POINTS HISTORY"}
+          </h3>
+        </div>
+
+        <FilterBar
+          onSearch={(val) => setHistoryParams((p) => (p.search === val ? p : { ...p, search: val, page: 1 }))}
+          onFilterChange={(name, val) => setHistoryParams((p) => (p[name] === val ? p : { ...p, [name]: val, page: 1 }))}
+          onSortChange={(sortBy, sort) => setHistoryParams((p) => (p.sortBy === sortBy && p.sort === sort ? p : { ...p, sortBy, sort, page: 1 }))}
+          related={true}
+          filters={[
+            {
+              name: "type",
+              label: t.allTypes || "All Types",
+              value: historyParams.type || 'all',
+              options: [
+                { label: t.earn || "Earned", value: "EARN" },
+                { label: t.redeem || "Redeemed", value: "REDEEM" },
+              ]
+            },
+            {
+              name: "source",
+              label: t.allSources || "All Sources",
+              value: historyParams.source || 'all',
+              options: [
+                { label: t.srcAdminCustom || "Admin Custom", value: "ADMIN_CUSTOM" },
+                { label: t.srcOnlineDonation || "Online Donation", value: "ONLINE_DONATION" },
+                { label: t.srcPhysicalDonation || "Physical Donation", value: "PHYSICAL_DONATION" },
+                { label: t.srcLocalMission || "Local Mission", value: "LOCAL_MISSION" },
+                { label: t.srcAnimalReport || "Animal Report", value: "ANIMAL_REPORT" },
+                { label: t.srcRedeem || "Redeem", value: "REDEEM" },
+              ]
+            }
+          ]}
+          sortOptions={[
+            { label: t.dateDesc || "Date (Newest)", value: "date:descending" },
+            { label: t.dateAsc || "Date (Oldest)", value: "date:ascending" },
+            { label: t.pointsDesc || "Points (High-Low)", value: "points:descending" },
+            { label: t.pointsAsc || "Points (Low-High)", value: "points:ascending" },
+          ]}
+        />
+
+        <DataTable
+          columns={historyColumns}
+          data={historyData}
+          loading={historyLoading}
+        />
+
+        <div className="bg-[#fcfaf7] border-t border-[#e8ddd0]">
+          <Pagination
+            meta={historyMeta}
+            onPageChange={(page) => setHistoryParams((prev) => ({ ...prev, page }))}
+          />
+        </div>
       </div>
+
     </div>
   );
 }

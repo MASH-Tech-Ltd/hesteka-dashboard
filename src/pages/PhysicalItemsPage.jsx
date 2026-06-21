@@ -7,7 +7,18 @@ import Pagination from "../components/common/Pagination";
 import FilterBar from "../components/common/FilterBar";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
-import { Gift, Trash2, Plus, Mail } from "lucide-react";
+import {
+  Gift,
+  Trash2,
+  Plus,
+  Mail,
+  X,
+  User,
+  Phone,
+  MapPin,
+  Calendar,
+  Tag,
+} from "lucide-react";
 
 const ItemSkeleton = () => (
   <div className="bg-white rounded-xl border border-[#e8ddd0] p-3 flex flex-col gap-2 animate-pulse h-full">
@@ -31,7 +42,11 @@ const ItemCard = React.memo(({ item, onEdit, onDelete, t }) => (
     <div className="w-full flex justify-center">
       <div className="bg-[#fcfaf7] rounded-lg aspect-[4/3] w-full flex items-center justify-center text-3xl relative overflow-hidden">
         {item.photo?.secure_url ? (
-        <img src={item.photo.secure_url} alt={item.title} className="w-full h-full object-cover" />
+          <img
+            src={item.photo.secure_url}
+            alt={item.title}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <Gift className="w-10 h-10 text-[#8B6914] opacity-20" />
         )}
@@ -45,9 +60,13 @@ const ItemCard = React.memo(({ item, onEdit, onDelete, t }) => (
       </div>
     </div>
     <div className="flex flex-col gap-0.5">
-      <h4 className="text-[11px] font-bold text-[#3a2a1a] truncate">{item.title}</h4>
+      <h4 className="text-[11px] font-bold text-[#3a2a1a] truncate">
+        {item.title}
+      </h4>
       <p className="text-[11px] font-bold text-orange-600">{item.points} pts</p>
-      <p className="text-[9px] text-[#9a8a7a]">Stock: {item.stock} — {item.category}</p>
+      <p className="text-[9px] text-[#9a8a7a]">
+        Stock: {item.stock} — {item.category}
+      </p>
     </div>
     <div className="flex gap-1 mt-1">
       <button
@@ -82,7 +101,7 @@ export default function PhysicalItemsPage() {
     limit: 6,
     search: "",
     category: "all",
-    type: "all"
+    type: "all",
   });
 
   // Redemptions Query State
@@ -92,14 +111,23 @@ export default function PhysicalItemsPage() {
     status: "all",
     search: "",
     sortBy: "date",
-    sort: "descending"
+    sort: "descending",
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [viewRequestModal, setViewRequestModal] = useState({
+    isOpen: false,
+    data: null,
+  });
 
   const fetchItems = useCallback(async () => {
     setLoadingItems(true);
@@ -134,7 +162,9 @@ export default function PhysicalItemsPage() {
       const q = { ...requestsQuery };
       if (q.status === "all") delete q.status;
       const queryString = new URLSearchParams(q).toString();
-      const res = await api.get(`/rewards/admin/get-all-redemptions?${queryString}`);
+      const res = await api.get(
+        `/rewards/admin/get-all-redemptions?${queryString}`,
+      );
       if (res.data.status === "ok") {
         setRequests(res.data.data || []);
         setRequestsMeta(res.data.meta);
@@ -168,27 +198,41 @@ export default function PhysicalItemsPage() {
     setModalLoading(true);
     try {
       const data = new FormData();
-      Object.keys(formData).forEach(key => {
+      Object.keys(formData).forEach((key) => {
         if (formData[key] !== undefined) {
           data.append(key, formData[key]);
         }
       });
 
       if (editingItem) {
-        await api.patch(`/rewards/admin/update-reward/${editingItem._id}`, data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        await api.patch(
+          `/rewards/admin/update-reward/${editingItem._id}`,
+          data,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          },
+        );
       } else {
         await api.post("/rewards/admin/create-reward", data, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { "Content-Type": "multipart/form-data" },
         });
       }
       setIsModalOpen(false);
-      toast.success(editingItem ? "Reward updated successfully" : "Reward created successfully");
+      toast.success(
+        editingItem
+          ? "Reward updated successfully"
+          : "Reward created successfully",
+      );
       if (editingItem) {
         fetchItems();
       } else {
-        setItemsQuery(prev => ({ ...prev, page: 1, search: '', category: 'all', type: 'all' }));
+        setItemsQuery((prev) => ({
+          ...prev,
+          page: 1,
+          search: "",
+          category: "all",
+          type: "all",
+        }));
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Operation failed");
@@ -212,15 +256,17 @@ export default function PhysicalItemsPage() {
           toast.error(err.response?.data?.message || "Delete failed");
         } finally {
           setConfirmLoading(false);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         }
-      }
+      },
     });
   };
 
   const handleUpdateRedemptionStatus = async (id, status) => {
     try {
-      await api.patch(`/rewards/admin/update-redemption-status/${id}`, { status });
+      await api.patch(`/rewards/admin/update-redemption-status/${id}`, {
+        status,
+      });
       toast.success("Status updated successfully");
       fetchRequests();
     } catch (err) {
@@ -235,46 +281,89 @@ export default function PhysicalItemsPage() {
         <div className="font-bold text-[#3a2a1a]">
           {req.user?.firstName} {req.user?.lastName}
         </div>
-      )
+      ),
     },
     { header: t.article, cell: (req) => req.rewardItem?.title },
-    { header: t.points || "POINTS", cell: (req) => <span className="font-bold text-orange-600">{req.pointsAtRedemption} pts</span> },
-    { header: t.dateLabel || "DATE", cell: (req) => new Date(req.createdAt).toLocaleDateString() },
-    { header: t.address, cell: (req) => <div className="max-w-[150px] truncate">{req.user?.address || "No address"}</div> },
+    {
+      header: t.points || "POINTS",
+      cell: (req) => (
+        <span className="font-bold text-orange-600">
+          {req.pointsAtRedemption} pts
+        </span>
+      ),
+    },
+    {
+      header: t.dateLabel || "DATE",
+      cell: (req) => new Date(req.createdAt).toLocaleDateString(),
+    },
+    {
+      header: t.address,
+      cell: (req) => (
+        <div className="max-w-[150px] truncate">
+          {req.user?.address || t.notSet || "No address"}
+        </div>
+      ),
+    },
     {
       header: t.statusLabel || "STATUS",
       cell: (req) => (
-        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${req.status === 'completed' ? 'bg-green-100 text-green-600' :
-            req.status === 'pending' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'
-          }`}>
+        <span
+          className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+            req.status === "completed"
+              ? "bg-green-100 text-green-600"
+              : req.status === "pending"
+                ? "bg-orange-100 text-orange-600"
+                : "bg-gray-100 text-gray-600"
+          }`}
+        >
           {t[req.status] || req.status}
         </span>
-      )
+      ),
     },
     {
       header: t.actionsLabel || "ACTIONS",
       align: "right",
       cell: (req) => (
         <div className="flex gap-1 justify-end">
-          {req.status === 'pending' && (
+          {req.status === "pending" && (
             <button
-              onClick={() => handleUpdateRedemptionStatus(req._id, 'completed')}
+              onClick={() => handleUpdateRedemptionStatus(req._id, "completed")}
               className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1 rounded-xl hover:bg-green-200 transition-colors"
             >
               {t.completeBtn || "Completed"}
             </button>
           )}
-          <button className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-xl hover:bg-blue-200 transition-colors">{t.detailsBtn}</button>
+          <button
+            onClick={() => setViewRequestModal({ isOpen: true, data: req })}
+            className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-xl hover:bg-blue-200 transition-colors"
+          >
+            {t.detailsBtn || "Details"}
+          </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   const rewardFields = [
     { name: "title", label: t.titleLabel || "Title", required: true },
-    { name: "description", label: t.descriptionLabel || "Description", type: "textarea", required: true },
-    { name: "points", label: t.pointsRequired || "Points Required", type: "number", required: true },
-    { name: "stock", label: t.stockLabel || "Stock", type: "number", required: true },
+    {
+      name: "description",
+      label: t.descriptionLabel || "Description",
+      type: "textarea",
+      required: true,
+    },
+    {
+      name: "points",
+      label: t.pointsRequired || "Points Required",
+      type: "number",
+      required: true,
+    },
+    {
+      name: "stock",
+      label: t.stockLabel || "Stock",
+      type: "number",
+      required: true,
+    },
     {
       name: "type",
       label: t.type || "Type",
@@ -283,7 +372,7 @@ export default function PhysicalItemsPage() {
       options: [
         { label: t.productType || "Product", value: "product" },
         { label: t.giftCardType || "Gift Card", value: "giftcard" },
-      ]
+      ],
     },
     {
       name: "category",
@@ -294,7 +383,7 @@ export default function PhysicalItemsPage() {
         { label: "Limited", value: "limited" },
         { label: "Featured", value: "featured" },
         { label: "Solidarity", value: "solidarity" },
-      ]
+      ],
     },
     { name: "image", label: t.itemImage || "Item Image", type: "file" },
   ];
@@ -304,8 +393,16 @@ export default function PhysicalItemsPage() {
       {/* Catalog Table */}
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden flex flex-col shadow-sm">
         <FilterBar
-          onSearch={(val) => setItemsQuery(p => p.search === val ? p : { ...p, search: val, page: 1 })}
-          onFilterChange={(name, val) => setItemsQuery(p => p[name] === val ? p : { ...p, [name]: val, page: 1 })}
+          onSearch={(val) =>
+            setItemsQuery((p) =>
+              p.search === val ? p : { ...p, search: val, page: 1 },
+            )
+          }
+          onFilterChange={(name, val) =>
+            setItemsQuery((p) =>
+              p[name] === val ? p : { ...p, [name]: val, page: 1 },
+            )
+          }
           related={true}
           filters={[
             {
@@ -314,17 +411,17 @@ export default function PhysicalItemsPage() {
               options: [
                 { label: "Limited", value: "limited" },
                 { label: "Featured", value: "featured" },
-                { label: "Solidarity", value: "solidarity" }
-              ]
+                { label: "Solidarity", value: "solidarity" },
+              ],
             },
             {
               name: "type",
               label: t.allTypes || "All types",
               options: [
                 { label: "Product", value: "product" },
-                { label: "Gift Card", value: "giftcard" }
-              ]
-            }
+                { label: "Gift Card", value: "giftcard" },
+              ],
+            },
           ]}
           actionButton={
             <button
@@ -339,7 +436,9 @@ export default function PhysicalItemsPage() {
         <div className="p-4 flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
             {loadingItems && !timedOut ? (
-              Array(6).fill(0).map((_, i) => <ItemSkeleton key={i} />)
+              Array(6)
+                .fill(0)
+                .map((_, i) => <ItemSkeleton key={i} />)
             ) : items.length > 0 ? (
               items.map((item) => (
                 <ItemCard
@@ -359,7 +458,7 @@ export default function PhysicalItemsPage() {
           <div className="bg-[#fcfaf7] px-4 py-1">
             <Pagination
               meta={itemsMeta}
-              onPageChange={(page) => setItemsQuery(p => ({ ...p, page }))}
+              onPageChange={(page) => setItemsQuery((p) => ({ ...p, page }))}
               loading={loadingItems && !timedOut}
             />
           </div>
@@ -374,9 +473,23 @@ export default function PhysicalItemsPage() {
         </div>
 
         <FilterBar
-          onSearch={(val) => setRequestsQuery(p => p.search === val ? p : { ...p, search: val, page: 1 })}
-          onFilterChange={(name, val) => setRequestsQuery(p => p[name] === val ? p : { ...p, [name]: val, page: 1 })}
-          onSortChange={(sortBy, sort) => setRequestsQuery(p => p.sortBy === sortBy && p.sort === sort ? p : { ...p, sortBy, sort, page: 1 })}
+          onSearch={(val) =>
+            setRequestsQuery((p) =>
+              p.search === val ? p : { ...p, search: val, page: 1 },
+            )
+          }
+          onFilterChange={(name, val) =>
+            setRequestsQuery((p) =>
+              p[name] === val ? p : { ...p, [name]: val, page: 1 },
+            )
+          }
+          onSortChange={(sortBy, sort) =>
+            setRequestsQuery((p) =>
+              p.sortBy === sortBy && p.sort === sort
+                ? p
+                : { ...p, sortBy, sort, page: 1 },
+            )
+          }
           related={true}
           filters={[
             {
@@ -385,15 +498,18 @@ export default function PhysicalItemsPage() {
               options: [
                 { label: "Pending", value: "pending" },
                 { label: "Completed", value: "completed" },
-                { label: "Cancelled", value: "cancelled" }
-              ]
-            }
+                { label: "Cancelled", value: "cancelled" },
+              ],
+            },
           ]}
           sortOptions={[
             { label: t.dateDesc || "Date (Newest)", value: "date:descending" },
             { label: t.dateAsc || "Date (Oldest)", value: "date:ascending" },
-            { label: t.ptsDesc || "Points (Highest)", value: "points:descending" },
-            { label: t.ptsAsc || "Points (Lowest)", value: "points:ascending" }
+            {
+              label: t.ptsDesc || "Points (Highest)",
+              value: "points:descending",
+            },
+            { label: t.ptsAsc || "Points (Lowest)", value: "points:ascending" },
           ]}
         />
 
@@ -408,7 +524,7 @@ export default function PhysicalItemsPage() {
         <div className="bg-[#fcfaf7] px-4 py-1">
           <Pagination
             meta={requestsMeta}
-            onPageChange={(page) => setRequestsQuery(p => ({ ...p, page }))}
+            onPageChange={(page) => setRequestsQuery((p) => ({ ...p, page }))}
             loading={loadingRequests}
           />
         </div>
@@ -428,10 +544,167 @@ export default function PhysicalItemsPage() {
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
         message={confirmModal.message}
-        onClose={() => !confirmLoading && setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onClose={() =>
+          !confirmLoading &&
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }))
+        }
         onConfirm={confirmModal.onConfirm}
         loading={confirmLoading}
       />
+
+      {/* View Request Modal */}
+      {viewRequestModal.isOpen && viewRequestModal.data && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
+                <Gift className="w-6 h-6 text-[#8B6914]" />{" "}
+                {t.requestDetails || "Request Details"}
+              </h2>
+              <button
+                onClick={() =>
+                  setViewRequestModal({ isOpen: false, data: null })
+                }
+                className="p-2 text-[#9a8a7a] hover:text-[#3a2a1a] hover:bg-[#f5f0e8] rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 flex flex-col gap-6">
+              {/* Header Info */}
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[#9a8a7a] text-xs font-bold uppercase tracking-wider">
+                    {t.statusLabel || "STATUS"}
+                  </span>
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full uppercase w-fit ${
+                      viewRequestModal.data.status === "completed"
+                        ? "bg-green-100 text-green-600"
+                        : viewRequestModal.data.status === "pending"
+                          ? "bg-orange-100 text-orange-600"
+                          : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {t[viewRequestModal.data.status] ||
+                      viewRequestModal.data.status}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1 items-end">
+                  <span className="text-[#9a8a7a] text-xs font-bold uppercase tracking-wider">
+                    {t.dateLabel || "DATE"}
+                  </span>
+                  <span className="font-medium text-[#3a2a1a] flex items-center gap-1">
+                    <Calendar className="w-4 h-4 text-[#8B6914]" />
+                    {new Date(
+                      viewRequestModal.data.createdAt,
+                    ).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* User Info */}
+                <div className="flex flex-col gap-4 bg-[#fcfaf7] p-4 rounded-xl border border-[#e8ddd0]">
+                  <h3 className="font-bold text-[#3a2a1a] border-b border-[#e8ddd0] pb-2 flex items-center gap-2">
+                    <User className="w-4 h-4 text-[#8B6914]" />{" "}
+                    {t.userInfo || "User Information"}
+                  </h3>
+                  <div className="flex flex-col gap-3 text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-[#9a8a7a] text-xs">
+                        {t.nameLabel || "Name"}
+                      </span>
+                      <span className="font-medium text-[#3a2a1a]">
+                        {viewRequestModal.data.user?.firstName}{" "}
+                        {viewRequestModal.data.user?.lastName}
+                      </span>
+                    </div>
+                    {viewRequestModal.data.user?.provider === 'local' && (
+                      <div className="flex flex-col">
+                        <span className="text-[#9a8a7a] text-xs flex items-center gap-1">
+                          <Mail className="w-3 h-3" /> {t.emailLabel || "Email"}
+                        </span>
+                        <span className="font-medium text-[#3a2a1a] break-all">
+                          {viewRequestModal.data.user?.email || t.notSet || "Not Set"}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="text-[#9a8a7a] text-xs flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> {t.phoneLabel || "Phone"}
+                      </span>
+                      <span className="font-medium text-[#3a2a1a] break-all">
+                        {viewRequestModal.data.user?.phone?.startsWith("apple-") || viewRequestModal.data.user?.phone?.startsWith("google-") || viewRequestModal.data.user?.phone?.startsWith("Not Set")
+                          ? (t.notSet || "Not Set")
+                          : (viewRequestModal.data.user?.phone || t.notSet || "Not Set")}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[#9a8a7a] text-xs flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {t.address || "Address"}
+                      </span>
+                      <span className="font-medium text-[#3a2a1a]">
+                        {viewRequestModal.data.user?.address ||
+                          t.noAddress ||
+                          "No address provided"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reward Info */}
+                <div className="flex flex-col gap-4 bg-[#fcfaf7] p-4 rounded-xl border border-[#e8ddd0]">
+                  <h3 className="font-bold text-[#3a2a1a] border-b border-[#e8ddd0] pb-2 flex items-center gap-2">
+                    <Gift className="w-4 h-4 text-[#8B6914]" />{" "}
+                    {t.rewardInfo || "Reward Information"}
+                  </h3>
+
+                  {viewRequestModal.data.rewardItem?.photo?.secure_url && (
+                    <div className="w-full h-32 rounded-lg overflow-hidden bg-white flex items-center justify-center border border-[#e8ddd0]">
+                      <img
+                        src={viewRequestModal.data.rewardItem.photo.secure_url}
+                        alt={viewRequestModal.data.rewardItem.title}
+                        className="w-full h-full object-contain p-2"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-3 text-sm mt-2">
+                    <div className="flex flex-col">
+                      <span className="text-[#9a8a7a] text-xs">
+                        {t.titleLabel || "Title"}
+                      </span>
+                      <span className="font-medium text-[#3a2a1a]">
+                        {viewRequestModal.data.rewardItem?.title || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[#9a8a7a] text-xs flex items-center gap-1">
+                          <Tag className="w-3 h-3" /> {t.type || "Type"}
+                        </span>
+                        <span className="font-medium text-[#3a2a1a] capitalize">
+                          {viewRequestModal.data.rewardItem?.type || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex flex-col text-right">
+                        <span className="text-[#9a8a7a] text-xs">
+                          {t.points || "Points"}
+                        </span>
+                        <span className="font-bold text-orange-600">
+                          {viewRequestModal.data.pointsAtRedemption} pts
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

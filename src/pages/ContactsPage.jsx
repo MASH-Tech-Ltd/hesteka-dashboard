@@ -42,7 +42,14 @@ export default function ContactsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [stats, setStats] = useState({ all: 0, active: 0, shelter: 0, vet: 0, csfs: 0, partner: 0 });
+  const [stats, setStats] = useState({
+    all: 0,
+    active: 0,
+    shelter: 0,
+    vet: 0,
+    csfs: 0,
+    partner: 0,
+  });
   const [editingContact, setEditingContact] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -54,11 +61,14 @@ export default function ContactsPage() {
   const [locations, setLocations] = useState({ departments: [], regions: [] });
 
   useEffect(() => {
-    api.get("/contacts/locations").then(res => {
-      if (res.data?.data) {
-        setLocations(res.data.data);
-      }
-    }).catch(err => console.error("Failed to load locations", err));
+    api
+      .get("/contacts/locations")
+      .then((res) => {
+        if (res.data?.data) {
+          setLocations(res.data.data);
+        }
+      })
+      .catch((err) => console.error("Failed to load locations", err));
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -71,14 +81,16 @@ export default function ContactsPage() {
       if (!params.country) delete params.country;
       if (!params.from) delete params.from;
       if (!params.to) delete params.to;
-      if (!params.region || params.region === 'all') delete params.region;
-      if (!params.department || params.department === 'all') delete params.department;
-      if (!params.creationMethod || params.creationMethod === 'all') delete params.creationMethod;
+      if (!params.region || params.region === "all") delete params.region;
+      if (!params.department || params.department === "all")
+        delete params.department;
+      if (!params.creationMethod || params.creationMethod === "all")
+        delete params.creationMethod;
 
       const queryString = new URLSearchParams(params).toString();
       const [res, statsRes] = await Promise.all([
         api.get(`/contacts/get-all-contacts?${queryString}`),
-        api.get("/contacts/stats")
+        api.get("/contacts/stats"),
       ]);
 
       if (res.data.status === "ok" || res.data.contacts) {
@@ -106,7 +118,8 @@ export default function ContactsPage() {
     setConfirmModal({
       isOpen: true,
       title: "Delete Contact",
-      message: "Are you sure you want to delete this contact? This action cannot be undone.",
+      message:
+        "Are you sure you want to delete this contact? This action cannot be undone.",
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
@@ -116,7 +129,9 @@ export default function ContactsPage() {
             fetchData();
           }
         } catch (err) {
-          toast.error(err.response?.data?.message || "Failed to delete contact");
+          toast.error(
+            err.response?.data?.message || "Failed to delete contact",
+          );
         } finally {
           setConfirmLoading(false);
           setConfirmModal((prev) => ({ ...prev, isOpen: false }));
@@ -136,9 +151,13 @@ export default function ContactsPage() {
       });
 
       if (editingContact) {
-        const res = await api.patch(`/contacts/update-contact/${editingContact._id}`, data, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        const res = await api.patch(
+          `/contacts/update-contact/${editingContact._id}`,
+          data,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          },
+        );
         if (res.data.status === "ok" || res.status === 200) {
           toast.success("Contact updated successfully");
           setIsModalOpen(false);
@@ -177,7 +196,9 @@ export default function ContactsPage() {
         fetchData();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to process bulk upload");
+      toast.error(
+        err.response?.data?.message || "Failed to process bulk upload",
+      );
     } finally {
       setBulkUploadLoading(false);
     }
@@ -185,7 +206,10 @@ export default function ContactsPage() {
 
   const openEditModal = (contact) => {
     if (contact.type?.toLowerCase() === "partner") {
-      toast.info(t.updatePartnerInfoMsg || "To update partner info, please go to the Partners page.");
+      toast.info(
+        t.updatePartnerInfoMsg ||
+          "To update partner info, please go to the Partners page.",
+      );
       return;
     }
     setEditingContact(contact);
@@ -206,14 +230,22 @@ export default function ContactsPage() {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-[#8B6914] flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden border border-[#e8ddd0]">
             {contact.photo?.secure_url ? (
-              <img src={contact.photo.secure_url} alt="" className="w-full h-full object-cover" />
+              <img
+                src={contact.photo.secure_url}
+                alt=""
+                className="w-full h-full object-cover"
+              />
             ) : (
               contact.name?.charAt(0).toUpperCase() || "C"
             )}
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-[#3a2a1a] truncate max-w-[150px]">{contact.name}</span>
-            <span className="text-[9px] text-[#9a8a7a] uppercase tracking-widest font-bold">{t[contact.type] || contact.type}</span>
+            <span className="font-bold text-[#3a2a1a] truncate max-w-[150px]">
+              {contact.name}
+            </span>
+            <span className="text-[9px] text-[#9a8a7a] uppercase tracking-widest font-bold">
+              {t[contact.type] || contact.type}
+            </span>
           </div>
         </div>
       ),
@@ -222,20 +254,35 @@ export default function ContactsPage() {
       header: t.address || "ADDRESS",
       cell: (contact) => (
         <div className="max-w-[200px]">
-          <p className="text-sm text-[#3a2a1a] truncate" title={contact.address}>{contact.address || "N/A"}</p>
-          <p className="text-[10px] text-[#9a8a7a] font-medium">{contact.city}, {contact.country}</p>
+          <p
+            className="text-sm text-[#3a2a1a] truncate"
+            title={contact.address}
+          >
+            {contact.address || "N/A"}
+          </p>
+          <p className="text-[10px] text-[#9a8a7a] font-medium">
+            {contact.city}, {contact.country}
+          </p>
         </div>
       ),
     },
     {
       header: t.phone || "PHONE",
       accessor: "phone",
-      cell: (contact) => <span className="text-sm font-medium text-[#5a4a3a]">{contact.phone || "N/A"}</span>
+      cell: (contact) => (
+        <span className="text-sm font-medium text-[#5a4a3a]">
+          {contact.phone || "N/A"}
+        </span>
+      ),
     },
     {
       header: t.emailLabel || "EMAIL",
       accessor: "email",
-      cell: (contact) => <span className="text-sm truncate max-w-[150px] inline-block text-[#5a4a3a]">{contact.email || "N/A"}</span>
+      cell: (contact) => (
+        <span className="text-sm truncate max-w-[150px] inline-block text-[#5a4a3a]">
+          {contact.email || "N/A"}
+        </span>
+      ),
     },
     {
       header: t.status,
@@ -270,7 +317,12 @@ export default function ContactsPage() {
   ];
 
   const getContactFields = () => [
-    { name: "name", label: t.nameLabel || "Name", required: !editingContact, disabled: isViewOnly },
+    {
+      name: "name",
+      label: t.nameLabel || "Name",
+      required: !editingContact,
+      disabled: isViewOnly,
+    },
     {
       name: "type",
       label: t.type || "Type",
@@ -284,31 +336,70 @@ export default function ContactsPage() {
         { label: t.partnerRole || "Partner", value: "partner" },
       ],
     },
-    { name: "email", label: t.emailLabel || "Email", type: "email", disabled: isViewOnly },
+    {
+      name: "email",
+      label: t.emailLabel || "Email",
+      type: "email",
+      disabled: isViewOnly,
+    },
     { name: "phone", label: t.phone || "Phone", disabled: isViewOnly },
-    { name: "website", label: t.websiteLabel || "Website", disabled: isViewOnly },
-    { name: "address", label: t.address || "Address", required: !editingContact, disabled: isViewOnly },
-    { name: "city", label: t.cityLabel || "City", required: !editingContact, disabled: isViewOnly },
-    { name: "country", label: t.countryLabel || "Country", required: !editingContact, disabled: isViewOnly },
-    { 
-      name: "region", 
-      label: t.regionLabel || "Region", 
-      type: "select", 
-      required: !editingContact, 
+    {
+      name: "website",
+      label: t.websiteLabel || "Website",
       disabled: isViewOnly,
-      options: locations.regions.map(r => ({ label: r, value: r })) 
     },
-    { 
-      name: "department", 
-      label: t.departmentLabel || "Department", 
-      type: "select", 
-      required: !editingContact, 
+    {
+      name: "address",
+      label: t.address || "Address",
+      required: !editingContact,
       disabled: isViewOnly,
-      options: locations.departments.map(d => ({ label: d, value: d })) 
     },
-    { name: "description", label: t.descriptionLabel || "Description", type: "textarea", disabled: isViewOnly },
-    { name: "latitude", label: t.latitudeLabel || "Latitude", type: "number", disabled: isViewOnly },
-    { name: "longitude", label: t.longitudeLabel || "Longitude", type: "number", disabled: isViewOnly },
+    {
+      name: "city",
+      label: t.cityLabel || "City",
+      required: !editingContact,
+      disabled: isViewOnly,
+    },
+    {
+      name: "country",
+      label: t.countryLabel || "Country",
+      required: !editingContact,
+      disabled: isViewOnly,
+    },
+    {
+      name: "region",
+      label: t.regionLabel || "Region",
+      type: "select",
+      required: !editingContact,
+      disabled: isViewOnly,
+      options: locations.regions.map((r) => ({ label: r, value: r })),
+    },
+    {
+      name: "department",
+      label: t.departmentLabel || "Department",
+      type: "select",
+      required: !editingContact,
+      disabled: isViewOnly,
+      options: locations.departments.map((d) => ({ label: d, value: d })),
+    },
+    {
+      name: "description",
+      label: t.descriptionLabel || "Description",
+      type: "textarea",
+      disabled: isViewOnly,
+    },
+    {
+      name: "latitude",
+      label: t.latitudeLabel || "Latitude",
+      type: "number",
+      disabled: isViewOnly,
+    },
+    {
+      name: "longitude",
+      label: t.longitudeLabel || "Longitude",
+      type: "number",
+      disabled: isViewOnly,
+    },
     {
       name: "status",
       label: t.statusLabel || "Status",
@@ -321,23 +412,69 @@ export default function ContactsPage() {
       ],
     },
     { name: "image", label: "Photo", type: "file", disabled: isViewOnly },
-    ...(isViewOnly ? [{
-      name: "creationMethod",
-      label: "Creation Method",
-      type: "text",
-      disabled: true,
-    }] : [])
+    ...(isViewOnly
+      ? [
+          {
+            name: "creationMethod",
+            label: "Creation Method",
+            type: "text",
+            disabled: true,
+          },
+        ]
+      : []),
   ];
 
   return (
     <div className="px-6 py-4 flex flex-col gap-4">
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        <StatCard loading={loading} label={t.allContacts?.toUpperCase() || "ALL CONTACTS"} value={{ text: (stats.all || 0).toLocaleString(), color: "text-[#3a2a1a]" }} />
-        <StatCard loading={loading} label={t.activeLabel || "ACTIVE"} value={{ text: (stats.active || 0).toLocaleString(), color: "text-green-600" }} />
-        <StatCard loading={loading} label={t.shelter?.toUpperCase() || "SHELTER"} value={{ text: (stats.shelter || 0).toLocaleString(), color: "text-blue-600" }} />
-        <StatCard loading={loading} label={t.vet?.toUpperCase() || "VET"} value={{ text: (stats.vet || 0).toLocaleString(), color: "text-orange-600" }} />
-        <StatCard loading={loading} label={"CSFS"} value={{ text: (stats.csfs || 0).toLocaleString(), color: "text-purple-600" }} />
-        <StatCard loading={loading} label={t.partnerRole?.toUpperCase() || "PARTNER"} value={{ text: (stats.partner || 0).toLocaleString(), color: "text-teal-600" }} />
+        <StatCard
+          loading={loading}
+          label={t.allContacts?.toUpperCase() || "ALL CONTACTS"}
+          value={{
+            text: (stats.all || 0).toLocaleString(),
+            color: "text-[#3a2a1a]",
+          }}
+        />
+        <StatCard
+          loading={loading}
+          label={t.activeLabel || "ACTIVE"}
+          value={{
+            text: (stats.active || 0).toLocaleString(),
+            color: "text-green-600",
+          }}
+        />
+        <StatCard
+          loading={loading}
+          label={t.shelter?.toUpperCase() || "SHELTER"}
+          value={{
+            text: (stats.shelter || 0).toLocaleString(),
+            color: "text-blue-600",
+          }}
+        />
+        <StatCard
+          loading={loading}
+          label={t.vet?.toUpperCase() || "VET"}
+          value={{
+            text: (stats.vet || 0).toLocaleString(),
+            color: "text-orange-600",
+          }}
+        />
+        <StatCard
+          loading={loading}
+          label={"CSFS"}
+          value={{
+            text: (stats.csfs || 0).toLocaleString(),
+            color: "text-purple-600",
+          }}
+        />
+        <StatCard
+          loading={loading}
+          label={t.partnerRole?.toUpperCase() || "PARTNER"}
+          value={{
+            text: (stats.partner || 0).toLocaleString(),
+            color: "text-teal-600",
+          }}
+        />
       </div>
 
       <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-sm overflow-hidden flex flex-col">
@@ -345,36 +482,60 @@ export default function ContactsPage() {
         <div className="bg-white border-b border-[#e8ddd0] p-3 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase">{t.location || "LOCATION"}:</span>
+              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase">
+                {t.location || "LOCATION"}:
+              </span>
               <input
                 type="text"
                 placeholder={t.cityLabel || "City..."}
                 value={queryParams.city}
-                onChange={(e) => setQueryParams(p => ({ ...p, city: e.target.value, page: 1 }))}
+                onChange={(e) =>
+                  setQueryParams((p) => ({
+                    ...p,
+                    city: e.target.value,
+                    page: 1,
+                  }))
+                }
                 className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-1.5 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] w-24 transition-all"
               />
               <input
                 type="text"
                 placeholder={t.countryLabel || "Country..."}
                 value={queryParams.country}
-                onChange={(e) => setQueryParams(p => ({ ...p, country: e.target.value, page: 1 }))}
+                onChange={(e) =>
+                  setQueryParams((p) => ({
+                    ...p,
+                    country: e.target.value,
+                    page: 1,
+                  }))
+                }
                 className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-1.5 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] w-24 transition-all"
               />
             </div>
 
             <div className="flex items-center gap-2 border-l border-[#e8ddd0] pl-3">
-              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase">{t.dateLabel || "DATE"}:</span>
+              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase">
+                {t.dateLabel || "DATE"}:
+              </span>
               <input
                 type="date"
                 value={queryParams.from}
-                onChange={(e) => setQueryParams(p => ({ ...p, from: e.target.value, page: 1 }))}
+                onChange={(e) =>
+                  setQueryParams((p) => ({
+                    ...p,
+                    from: e.target.value,
+                    page: 1,
+                  }))
+                }
                 className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-2 py-1 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all"
               />
               <span className="text-[#9a8a7a] text-[10px]">{t.to || "to"}</span>
               <input
                 type="date"
                 value={queryParams.to}
-                onChange={(e) => setQueryParams(p => ({ ...p, to: e.target.value, page: 1 }))}
+                onChange={(e) =>
+                  setQueryParams((p) => ({ ...p, to: e.target.value, page: 1 }))
+                }
                 className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-2 py-1 text-[11px] text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all"
               />
             </div>
@@ -382,7 +543,21 @@ export default function ContactsPage() {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setQueryParams({ city: "", country: "", from: "", to: "", search: "", type: "all", status: "active", region: "all", department: "all", creationMethod: "all", page: 1 })}
+              onClick={() =>
+                setQueryParams({
+                  city: "",
+                  country: "",
+                  from: "",
+                  to: "",
+                  search: "",
+                  type: "all",
+                  status: "active",
+                  region: "all",
+                  department: "all",
+                  creationMethod: "all",
+                  page: 1,
+                })
+              }
               className="text-[10px] font-bold text-[#8B6914] hover:underline"
             >
               {t.clearFilters || "Clear all filters"}
@@ -411,18 +586,35 @@ export default function ContactsPage() {
         </div>
 
         <FilterBar
-          onSearch={(val) => setQueryParams((p) => (p.search === val ? p : { ...p, search: val, page: 1 }))}
-          onFilterChange={(name, val) => setQueryParams((p) => (p[name] === val ? p : { ...p, [name]: val, page: 1 }))}
-          onSortChange={(sortBy, sort) => setQueryParams((p) => (p.sortBy === sortBy && p.sort === sort ? p : { ...p, sortBy, sort, page: 1 }))}
+          onSearch={(val) =>
+            setQueryParams((p) =>
+              p.search === val ? p : { ...p, search: val, page: 1 },
+            )
+          }
+          onFilterChange={(name, val) =>
+            setQueryParams((p) =>
+              p[name] === val ? p : { ...p, [name]: val, page: 1 },
+            )
+          }
+          onSortChange={(sortBy, sort) =>
+            setQueryParams((p) =>
+              p.sortBy === sortBy && p.sort === sort
+                ? p
+                : { ...p, sortBy, sort, page: 1 },
+            )
+          }
           related={true}
           filters={[
             {
               name: "type",
               label: t.allTypes,
-              value: queryParams.type || 'all',
+              value: queryParams.type || "all",
               options: [
                 { label: t.shelter || "Shelter", value: "shelter" },
-                { label: t.veterinarian || "Veterinarian", value: "veterinarian" },
+                {
+                  label: t.veterinarian || "Veterinarian",
+                  value: "veterinarian",
+                },
                 { label: "CSFS", value: "CSFS" },
                 { label: t.partnerRole || "Partner", value: "partner" },
               ],
@@ -430,7 +622,7 @@ export default function ContactsPage() {
             {
               name: "status",
               label: t.allStatuses,
-              value: queryParams.status || 'all',
+              value: queryParams.status || "all",
               options: [
                 { label: t.active || "Active", value: "active" },
                 { label: t.inactive || "Inactive", value: "inactive" },
@@ -439,24 +631,27 @@ export default function ContactsPage() {
             {
               name: "region",
               label: t.regionLabel || "Region...",
-              value: queryParams.region || 'all',
-              options: locations.regions.map(r => ({ label: r, value: r })),
+              value: queryParams.region || "all",
+              options: locations.regions.map((r) => ({ label: r, value: r })),
             },
             {
               name: "department",
               label: t.departmentLabel || "Dept...",
-              value: queryParams.department || 'all',
-              options: locations.departments.map(d => ({ label: d, value: d })),
+              value: queryParams.department || "all",
+              options: locations.departments.map((d) => ({
+                label: d,
+                value: d,
+              })),
             },
             {
               name: "creationMethod",
               label: "Creation Method",
-              value: queryParams.creationMethod || 'all',
+              value: queryParams.creationMethod || "all",
               options: [
                 { label: "Manual", value: "manual" },
                 { label: "Bulk", value: "bulk" },
-              ]
-            }
+              ],
+            },
           ]}
           sortOptions={[
             { label: t.nameAsc || "Name (A-Z)", value: "name:ascending" },
@@ -511,11 +706,13 @@ export default function ContactsPage() {
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
         message={confirmModal.message}
-        onClose={() => !confirmLoading && setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onClose={() =>
+          !confirmLoading &&
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }))
+        }
         onConfirm={confirmModal.onConfirm}
         loading={confirmLoading}
       />
     </div>
   );
 }
-

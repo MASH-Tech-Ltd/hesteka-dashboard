@@ -94,15 +94,20 @@ export default function SupportMessagesPage() {
 
   const columns = [
     { 
-      header: t.date || "DATE", 
-      cell: (r) => <span className="text-[11px] text-[#5a4a3a] font-medium whitespace-nowrap">{new Date(r.createdAt).toLocaleDateString()}</span>
-    },
-    { 
       header: t.sender || "SENDER", 
       cell: (r) => (
-        <div className="flex flex-col">
-          <span className="font-bold text-xs text-[#3a2a1a]">{r.name}</span>
-          <span className="text-[10px] text-[#9a8a7a]">{r.email}</span>
+        <div className="flex items-center gap-3">
+          {r.user?.profileImage?.secure_url ? (
+            <img src={r.user.profileImage.secure_url} alt="profile" className="w-8 h-8 rounded-full object-cover border border-[#e8ddd0]" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[#8B6914] flex items-center justify-center text-xs text-white font-bold shrink-0 border border-[#e8ddd0]">
+               {r.name?.charAt(0)?.toUpperCase()}
+            </div>
+          )}
+          <div className="flex flex-col">
+            <span className="font-bold text-xs text-[#3a2a1a]">{r.name}</span>
+            <span className="text-[10px] text-[#9a8a7a]">{r.email}</span>
+          </div>
         </div>
       ) 
     },
@@ -113,6 +118,10 @@ export default function SupportMessagesPage() {
     {
       header: t.status || "STATUS",
       cell: (r) => <StatusBadge status={r.status} />
+    },
+    { 
+      header: t.date || "DATE", 
+      cell: (r) => <span className="text-[11px] text-[#5a4a3a] font-medium whitespace-nowrap">{new Date(r.createdAt).toLocaleDateString()}</span>
     },
     { 
       header: t.actions || "ACTIONS", 
