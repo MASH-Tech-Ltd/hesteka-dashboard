@@ -459,10 +459,14 @@ export default function PointsPage() {
                          className="px-3 py-2 border-b border-[#f0e8d8] last:border-0 hover:bg-[#fcfaf7] cursor-pointer flex items-center gap-2"
                        >
                          <div className="w-6 h-6 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                           {user.firstName?.charAt(0).toUpperCase()}
+                           {user?.profileImage?.secure_url ? (
+                             <img className="w-full h-full rounded-full object-cover" src={user.profileImage.secure_url} alt="" />
+                           ) : (
+                             user.firstName?.charAt(0).toUpperCase() || "U"
+                           )}
                          </div>
                          <div className="flex flex-col overflow-hidden">
-                           <span className="text-xs font-bold text-[#3a2a1a] truncate">{user.firstName} {user.lastName}</span>
+                           <span className="text-xs font-bold text-[#3a2a1a] truncate"> {user.firstName} {user.lastName}</span>
                            <span className="text-[10px] text-[#9a8a7a] truncate">{user.email}</span>
                          </div>
                        </div>

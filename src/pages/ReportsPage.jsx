@@ -501,7 +501,7 @@ export default function ReportsPage() {
       align: "center",
       cell: (r) => (
         <span className="text-[10px] font-bold bg-[#f5f0e8] text-[#8B6914] px-2 py-1 rounded-lg">
-          {r.comments?.length || 0}
+          {r.comments?.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0) || 0}
         </span>
       ),
     },
@@ -848,7 +848,7 @@ export default function ReportsPage() {
               {selectedReport.comments && selectedReport.comments.length > 0 && (
                 <div className="flex flex-col gap-4 mt-2">
                   <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-[#8B6914]" /> {t.commentsLabel || "Comments"} ({selectedReport.comments.length})
+                    <MessageCircle className="w-4 h-4 text-[#8B6914]" /> {t.commentsLabel || "Comments"} ({selectedReport.comments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0)})
                   </h3>
                   <div className="flex flex-col gap-3">
                     {selectedReport.comments.map((comment) => (

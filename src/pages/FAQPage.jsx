@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLang } from "../context/LanguageContext";
-import { Plus, Edit2, Trash2, X, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Eye, Pencil } from "lucide-react";
 import api from "../utils/api";
 import ConfirmModal from "../components/common/ConfirmModal";
 import DataTable from "../components/common/DataTable";
@@ -9,7 +9,7 @@ import FilterBar from "../components/common/FilterBar";
 import { toast } from "react-toastify";
 
 export default function FAQPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState(null);
@@ -31,23 +31,19 @@ export default function FAQPage() {
   const [faqToView, setFaqToView] = useState(null);
   
   const [formData, setFormData] = useState({
-    category: "GENERAL",
+    category: { english: "", french: "" },
     order: 0,
     isActive: true,
     contentsArray: []
   });
-
-  const categories = [
-    "GENERAL",
-    "REPORT",
-    "LOCAL MISSIONS",
-    "MY ACCOUNT",
-    "MESSAGING",
-    "DONATIONS AND HELP",
-    "SECURITY"
-  ];
+  const [imageFile, setImageFile] = useState(null);
 
   const getCategoryLabel = (cat) => {
+    if (!cat) return "";
+    if (typeof cat === 'object') {
+      return lang === 'en' ? (cat.english || "") : (cat.french || cat.english || "");
+    }
+    // Fallback for old string categories
     switch (cat) {
       case "GENERAL": return t.faqCatGENERAL || cat;
       case "REPORT": return t.faqCatREPORT || cat;
@@ -89,21 +85,22 @@ export default function FAQPage() {
     if (faq) {
       setCurrentFaq(faq);
       setFormData({
-        category: faq.category,
+        category: faq.category || { english: "", french: "" },
         order: faq.order || 0,
         isActive: faq.isActive !== false,
-        contentsArray: faq.contentsArray.map(c => ({
+        contentsArray: faq.contentsArray.map((c, idx) => ({
           question: {
             english: { question: c.question?.english?.question || "", answer: c.question?.english?.answer || "" },
             french: { question: c.question?.french?.question || "", answer: c.question?.french?.answer || "" }
           },
-          order: c.order || 0
+          order: c.order !== undefined && c.order !== null ? c.order : idx
         }))
       });
+      setImageFile(null);
     } else {
       setCurrentFaq(null);
       setFormData({
-        category: "GENERAL",
+        category: { english: "", french: "" },
         order: faqs.length,
         isActive: true,
         contentsArray: [
@@ -116,24 +113,31 @@ export default function FAQPage() {
           }
         ]
       });
+      setImageFile(null);
     }
     setIsModalOpen(true);
   };
 
   const handleAddContent = () => {
-    setFormData(prev => ({
-      ...prev,
-      contentsArray: [
-        ...prev.contentsArray,
-        {
-          question: {
-            english: { question: "", answer: "" },
-            french: { question: "", answer: "" }
-          },
-          order: prev.contentsArray.length
-        }
-      ]
-    }));
+    setFormData(prev => {
+      const maxOrder = prev.contentsArray.length > 0 
+        ? Math.max(...prev.contentsArray.map(c => c.order || 0)) 
+        : -1;
+        
+      return {
+        ...prev,
+        contentsArray: [
+          ...prev.contentsArray,
+          {
+            question: {
+              english: { question: "", answer: "" },
+              french: { question: "", answer: "" }
+            },
+            order: maxOrder + 1
+          }
+        ]
+      };
+    });
   };
 
   const handleRemoveContent = (index) => {
@@ -162,11 +166,20 @@ export default function FAQPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const data = new FormData();
+      data.append("category", JSON.stringify(formData.category));
+      data.append("order", formData.order);
+      data.append("isActive", formData.isActive);
+      data.append("contentsArray", JSON.stringify(formData.contentsArray));
+      if (imageFile) {
+        data.append("image", imageFile);
+      }
+
       if (currentFaq) {
-        await api.patch(`/faq/${currentFaq._id}`, formData);
+        await api.patch(`/faq/${currentFaq._id}`, data, { headers: { "Content-Type": "multipart/form-data" } });
         toast.success("FAQ updated successfully");
       } else {
-        await api.post("/faq", formData);
+        await api.post("/faq", data, { headers: { "Content-Type": "multipart/form-data" } });
         toast.success("New FAQ added successfully");
       }
       setIsModalOpen(false);
@@ -197,9 +210,14 @@ export default function FAQPage() {
     { 
       header: t.categoryLabel || "CATEGORY", 
       cell: (r) => (
-        <span className="px-2 py-1 rounded-full bg-[#f5f0e8] text-[#8B6914] text-[10px] font-bold uppercase">
-          {getCategoryLabel(r.category)}
-        </span>
+        <div className="flex items-center gap-2">
+          {r.image?.secureUrl && (
+            <img src={r.image.secureUrl} alt="" className="w-6 h-6 rounded object-cover border border-[#e8ddd0]" />
+          )}
+          <span className="px-2 py-1 rounded-full bg-[#f5f0e8] text-[#8B6914] text-[10px] font-bold uppercase">
+            {getCategoryLabel(r.category)}
+          </span>
+        </div>
       ) 
     },
     { 
@@ -249,7 +267,10 @@ export default function FAQPage() {
             { 
               name: "category", 
               label: t.allCategories || "All categories", 
-              options: categories.map(c => ({ label: getCategoryLabel(c), value: c }))
+              options: Array.from(new Set(faqs.map(f => typeof f.category === 'object' ? f.category.english : f.category))).map(catStr => {
+                const f = faqs.find(faq => (typeof faq.category === 'object' ? faq.category.english : faq.category) === catStr);
+                return { label: getCategoryLabel(f?.category), value: catStr };
+              })
             }
           ]}
           sortOptions={[
@@ -290,34 +311,57 @@ export default function FAQPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
           <div className="relative bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[80vh]">
-            <div className="bg-[#f5f0e8] px-6 py-4 border-b border-[#e8ddd0] flex justify-between items-center shrink-0">
-              <h3 className="font-bold text-[#3a2a1a] text-sm uppercase tracking-wider">{currentFaq ? t.editFaqGroup || "Edit FAQ Group" : t.addFaqGroup || "Add FAQ Group"}</h3>
+            {/* Visual Preview Header */}
+            <div className="relative w-full h-[140px] sm:h-[180px] bg-gradient-to-r from-[#3a2a1a] to-[#8B6914] shrink-0 border-b border-[#e8ddd0]">
+              {(imageFile ? URL.createObjectURL(imageFile) : currentFaq?.image?.secureUrl) && (
+                <img
+                  src={imageFile ? URL.createObjectURL(imageFile) : currentFaq?.image?.secureUrl}
+                  alt="Banner"
+                  className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-50"
+                />
+              )}
+              
+              <div className="absolute top-4 right-4 z-20">
+                <label className="w-8 h-8 sm:w-10 sm:h-10 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg border border-white/20 transition-all group/edit">
+                  <Pencil className="w-4 h-4" />
+                  <span className="absolute right-full mr-3 whitespace-nowrap bg-black/80 text-white text-xs px-3 py-1.5 rounded shadow-lg opacity-0 pointer-events-none group-hover/edit:opacity-100 transition-opacity">
+                    {t.editCover || "Edit Cover"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setImageFile(e.target.files[0])}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              <div className="absolute bottom-4 left-4 sm:left-6 flex items-end gap-4">
+                <div className="flex flex-col mb-1 sm:mb-2 relative z-10">
+                  <span className="text-[9px] font-black text-white/90 uppercase tracking-[0.2em] mb-1">
+                    {t.visualPreview || "Visual Preview"}
+                  </span>
+                  <span className="text-white font-black text-lg sm:text-2xl tracking-tight leading-none truncate max-w-[280px] drop-shadow-md">
+                    {formData.category.english || formData.category.french || (currentFaq ? (t.editFaqGroup || "Edit FAQ Group") : (t.addFaqGroup || "Add FAQ Group"))}
+                  </span>
+                </div>
+              </div>
             </div>
             
             <div className="overflow-y-auto flex-1 p-6">
               <form id="faq-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">{t.categoryLabel || "Category"}</label>
-                    <select 
-                      value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
-                      className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914]"
-                      required
-                    >
-                      {categories.map(c => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">{t.groupOrder || "Group Order"}</label>
+                    <label className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">Category Name (English)</label>
                     <input 
-                      type="number"
-                      required
-                      value={formData.order}
-                      onChange={(e) => setFormData({...formData, order: Number(e.target.value)})}
+                      value={formData.category.english}
+                      onChange={(e) => setFormData({...formData, category: {...formData.category, english: e.target.value}})}
                       className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914]"
+                      required
+                      placeholder="English category..."
                     />
                   </div>
+
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">{t.statusLabel || "Status"}</label>
                     <select 
@@ -329,6 +373,28 @@ export default function FAQPage() {
                       <option value="true">{t.active || "Active"}</option>
                       <option value="false">{t.inactive || "Inactive"}</option>
                     </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">Category Name (French)</label>
+                    <input 
+                      value={formData.category.french}
+                      onChange={(e) => setFormData({...formData, category: {...formData.category, french: e.target.value}})}
+                      className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914]"
+                      required
+                      placeholder="French category..."
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">{t.groupOrder || "Group Order"}</label>
+                    <input 
+                      type="number"
+                      required
+                      value={formData.order}
+                      onChange={(e) => setFormData({...formData, order: Number(e.target.value)})}
+                      className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914]"
+                    />
                   </div>
                 </div>
 
@@ -466,7 +532,12 @@ export default function FAQPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">{t.categoryLabel || "Category"}</span>
-                  <span className="text-sm font-bold text-[#3a2a1a]">{getCategoryLabel(faqToView.category)}</span>
+                  <div className="flex items-center gap-2">
+                    {faqToView.image?.secureUrl && (
+                      <img src={faqToView.image.secureUrl} alt="" className="w-8 h-8 rounded object-cover border border-[#e8ddd0]" />
+                    )}
+                    <span className="text-sm font-bold text-[#3a2a1a]">{getCategoryLabel(faqToView.category)}</span>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wide">{t.groupOrder || "Group Order"}</span>
