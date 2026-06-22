@@ -177,9 +177,12 @@ const ReceiptModal = ({ donation, isOpen, onClose, t, isFiscal }) => {
 
 
 const DonationDetailModal = ({ donation, isOpen, onClose, t }) => {
+  const [enlargedPhoto, setEnlargedPhoto] = useState(null);
+
   if (!isOpen || !donation) return null;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-[#e8ddd0]">
         <div className="bg-[#fcfaf7] px-6 py-4 border-b border-[#e8ddd0] flex justify-between items-center">
@@ -257,6 +260,35 @@ const DonationDetailModal = ({ donation, isOpen, onClose, t }) => {
             </div>
           )}
 
+          {donation.method === 'collection_point' && donation.proof && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">PROOF DETAILS</span>
+              <div className="bg-[#fcfaf7] rounded-xl p-4 border border-[#e8ddd0] flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">QUANTITY</span>
+                    <span className="text-sm font-bold text-[#3a2a1a]">{donation.proof.quantity ?? donation.proof.amount}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">CATEGORY</span>
+                    <span className="text-sm font-bold text-[#3a2a1a] capitalize">{donation.proof.category}</span>
+                  </div>
+                </div>
+                {donation.proof.photo?.secure_url && (
+                  <div className="flex flex-col gap-1 mt-1">
+                    <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">PHOTO</span>
+                    <button type="button" onClick={() => setEnlargedPhoto(donation.proof.photo.secure_url)} className="relative block w-full overflow-hidden rounded-lg border border-[#e8ddd0] hover:shadow-md transition-all group cursor-pointer text-left">
+                      <img src={donation.proof.photo.secure_url} alt="Proof" className="w-full h-48 object-cover bg-white" />
+                      <div className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-md backdrop-blur-sm transition-colors shadow-sm flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-wider">TRANSACTION ID</span>
             <span className="text-[11px] font-mono bg-gray-100 p-1.5 rounded border border-gray-200 break-all">
@@ -275,6 +307,28 @@ const DonationDetailModal = ({ donation, isOpen, onClose, t }) => {
         </div>
       </div>
     </div>
+
+    {/* Full Screen Image Modal */}
+    {enlargedPhoto && (
+      <div 
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-8 bg-black/90 backdrop-blur-sm" 
+        onClick={() => setEnlargedPhoto(null)}
+      >
+        <button 
+          className="absolute top-6 right-6 z-[10000] text-white hover:text-gray-300 bg-black/50 hover:bg-black/80 p-2 rounded-full transition-all" 
+          onClick={() => setEnlargedPhoto(null)}
+        >
+          <X className="w-6 h-6" />
+        </button>
+        <img 
+          src={enlargedPhoto} 
+          alt="Enlarged proof" 
+          className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" 
+          onClick={e => e.stopPropagation()} 
+        />
+      </div>
+    )}
+    </>
   );
 };
 

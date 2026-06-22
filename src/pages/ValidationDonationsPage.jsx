@@ -32,8 +32,12 @@ const PendingDonation = React.memo(({ item, onAction, onEnlarge, pointsPerDonati
      </div>
     
     <div className="bg-[#f5f0e8] rounded-lg p-3 text-[11px] text-[#5a4a3a] flex flex-col gap-1">
-       <div><span className="font-bold">{t.declaredQuantity}</span> {item.amount}</div>
-       {item.collectionPoint?.address && <div className="text-[10px] italic flex items-center gap-1"><MapPin className="w-3 h-3" /> {item.collectionPoint.address}</div>}
+       <div className="flex justify-between items-center">
+         <div><span className="font-bold">{t.declaredQuantity || "Quantity"}</span> {item.quantity ?? item.amount}</div>
+         <div><span className="font-bold">{t.customAmount || "Amount"}:</span> {item.amount} €</div>
+       </div>
+       <div><span className="font-bold">{t.category || "Category"}:</span> <span className="capitalize">{item.category}</span></div>
+       {item.collectionPoint?.address && <div className="text-[10px] italic flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" /> {item.collectionPoint.address}</div>}
     </div>
 
     <div className="flex gap-2">
@@ -125,6 +129,7 @@ export default function ValidationDonationsPage() {
       if (actionModal.type === 'validate') {
         await api.patch(`/donation-proofs/validate/${actionModal.proofId}`, {
           pointsAwarded: Number(formData.pointsAwarded),
+          amount: Number(formData.amount),
           adminNote: formData.adminNote || ""
         });
       } else {
@@ -163,6 +168,7 @@ export default function ValidationDonationsPage() {
   };
 
   const validateFields = [
+    { name: "amount", label: t.customAmount || "Amount (€)", type: "number", required: true },
     { name: "pointsAwarded", label: t.ptsToAttribute, type: "number", required: true },
     { name: "adminNote", label: t.optionalNote, type: "textarea" },
   ];
@@ -303,7 +309,7 @@ export default function ValidationDonationsPage() {
         onClose={() => setActionModal({ isOpen: false, type: null, proofId: null })}
         title={actionModal.type === 'validate' ? t.validateDonationTitle : t.rejectDonationTitle}
         fields={actionModal.type === 'validate' ? validateFields : rejectFields}
-        initialData={actionModal.type === 'validate' ? { pointsAwarded: acceptedValues.pointsPerDonation || 15 } : {}}
+        initialData={actionModal.type === 'validate' ? { pointsAwarded: acceptedValues.pointsPerDonation || 15, amount: pending.find(p => p._id === actionModal.proofId)?.amount || 0 } : {}}
         onSubmit={handleActionSubmit}
         loading={modalLoading}
       />
