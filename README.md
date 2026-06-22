@@ -51,12 +51,13 @@ hestekaDashboard/
 
 - **Comprehensive Dashboard:** Real-time metrics and activity monitoring with interactive charts.
 - **User Management:** View, manage, and track users across the platform.
-- **Content Administration:** Manage FAQs, Contacts, Missions, Partners, and Physical Items.
+- **Content Administration:** Manage multilingual FAQs with nested content, Contacts, Missions, Partners, and Physical Items.
+- **Partner Management:** Dedicated analytics and local mission management tools customized for partner accounts.
 - **Donation & Crowdfunding:** Track and validate donations and crowdfunding campaigns.
 - **Analytics & Reporting:** Detailed reports and analytics for platform activities.
 - **Real-time Notifications:** Integrated Firebase Cloud Messaging (FCM) and WebSocket events.
-- **Multi-language Support:** Built-in context for language localization.
-- **Interactive Maps:** Collection points and activity tracking using interactive mapping tools.
+- **Multi-language Support:** Built-in context for language localization (English/French).
+- **Interactive Maps:** Collection points and activity tracking using interactive mapping tools with satellite view support.
 
 ## 🔒 Security & Performance
 
