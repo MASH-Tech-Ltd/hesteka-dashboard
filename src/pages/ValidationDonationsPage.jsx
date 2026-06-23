@@ -36,7 +36,7 @@ const PendingDonation = React.memo(({ item, onAction, onEnlarge, pointsPerDonati
     
     <div className="bg-[#f5f0e8] rounded-lg p-3 text-[11px] text-[#5a4a3a] flex flex-col gap-1">
        <div><span className="font-bold">{t.declaredQuantity || "Quantity"}:</span> {item.quantity ?? item.amount}</div>
-       <div><span className="font-bold">{t.category || "Category"}:</span> <span className="capitalize">{item.category}</span></div>
+       <div><span className="font-bold">{t.category || "Category"}:</span> <span className="capitalize">{t[item.category] || item.category}</span></div>
        {item.collectionPoint?.address && <div className="text-[10px] italic flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" /> {item.collectionPoint.address}</div>}
     </div>
 
@@ -249,7 +249,7 @@ export default function ValidationDonationsPage() {
       header: t.quantityLabel || "Quantity",
       cell: (d) => <div className="font-bold text-[#3a2a1a]">{d.quantity ?? d.amount}</div>
     },
-    { header: t.category || "Category", accessor: "category" },
+    { header: t.category || "Category", cell: (d) => <div className="capitalize text-[#3a2a1a]">{t[d.category] || d.category}</div> },
     {
       header: t.association || "Association",
       cell: (d) => <div className="text-[12px]">{d.collectionPoint?.title || "HESTEKA"}</div>
