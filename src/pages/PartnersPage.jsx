@@ -287,6 +287,10 @@ export default function PartnersPage() {
       const serverErrors = err.response?.data?.data;
       if (Array.isArray(serverErrors) && serverErrors.length > 0) {
         setAddFieldErrors(serverErrors);
+        toast.error(err.response?.data?.message || "Validation failed");
+        serverErrors.forEach(error => {
+          if (error.message) toast.error(error.message);
+        });
       } else {
         toast.error(err.response?.data?.message || "Failed to create partner");
       }
@@ -315,6 +319,10 @@ export default function PartnersPage() {
       const serverErrors = err.response?.data?.data;
       if (Array.isArray(serverErrors) && serverErrors.length > 0) {
         setEditFieldErrors(serverErrors);
+        toast.error(err.response?.data?.message || "Validation failed");
+        serverErrors.forEach(error => {
+          if (error.message) toast.error(error.message);
+        });
       } else {
         toast.error(err.response?.data?.message || "Failed to update partner");
       }
