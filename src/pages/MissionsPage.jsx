@@ -9,7 +9,7 @@ import FilterBar from "../components/common/FilterBar";
 import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
-import { Target, Plus, X, MapPin } from "lucide-react";
+import { Target, Plus, X, MapPin, Users, Check } from "lucide-react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 const mapContainerStyle = { width: "100%", height: "100%" };
@@ -43,6 +43,13 @@ export default function MissionsPage() {
     onConfirm: null,
   });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  
+  const [participantsModal, setParticipantsModal] = useState({
+    isOpen: false,
+    loading: false,
+    missionTitle: "",
+    data: [],
+  });
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -101,6 +108,35 @@ export default function MissionsPage() {
       }
     } catch (err) {
       console.error("Failed to load details", err);
+    }
+  };
+
+  const handleOpenParticipants = async (m) => {
+    setParticipantsModal({ isOpen: true, loading: true, missionTitle: m.title, data: [] });
+    try {
+      const res = await api.get(`/local-missions/get-local-mission-participants/${m._id}`);
+      if (res.data.status === "ok") {
+        setParticipantsModal(prev => ({ ...prev, loading: false, data: res.data.data }));
+      }
+    } catch (err) {
+      toast.error(t.errorFetchingParticipants || "Failed to load participants");
+      setParticipantsModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleApproveParticipant = async (participationId) => {
+    try {
+      const res = await api.patch(`/local-missions/approve-local-mission/${participationId}`);
+      if (res.data.status === "ok") {
+        toast.success(t.participantApproved || "Participant approved and points awarded");
+        setParticipantsModal(prev => ({
+          ...prev,
+          data: prev.data.map(p => p._id === participationId ? { ...p, status: "completed" } : p)
+        }));
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to approve participant");
     }
   };
 
@@ -224,6 +260,7 @@ export default function MissionsPage() {
   const columns = [
     {
       header: t.localMissions || "MISSION",
+      width: "30%",
       cell: (m) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-[#f5f0e8] flex items-center justify-center text-xl overflow-hidden shrink-0 border border-[#e8ddd0]">
@@ -250,6 +287,7 @@ export default function MissionsPage() {
     },
     {
       header: t.partnerRole || "PARTNER",
+      width: "15%",
       cell: (m) => (
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
@@ -267,10 +305,12 @@ export default function MissionsPage() {
     },
     {
       header: t.dateLabel || "DATE",
+      width: "10%",
       cell: (m) => new Date(m.createdAt).toLocaleDateString(),
     },
     {
       header: t.points || "POINTS",
+      width: "10%",
       cell: (m) => (
         <span className="font-bold text-orange-600">+{m.points} pts</span>
       ),
@@ -278,19 +318,28 @@ export default function MissionsPage() {
     {
       header: t.participants || "PARTICIPANTS",
       align: "center",
+      width: "10%",
       cell: (m) => (
         <span className="font-bold">{m.participantsCount || 0}</span>
       ),
     },
     {
       header: t.statusLabel || "STATUT",
+      width: "10%",
       cell: (m) => <StatusBadge status={m.status} />,
     },
     {
       header: t.actionsLabel || "ACTIONS",
       align: "right",
+      width: "15%",
       cell: (m) => (
         <div className="flex gap-1 justify-end">
+          <button
+            onClick={() => handleOpenParticipants(m)}
+            className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-green-200 transition-colors"
+          >
+            {t.participantsBtn || "Participants"}
+          </button>
           <button
             onClick={() => handleOpenView(m._id)}
             className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-blue-200 transition-colors"
@@ -581,6 +630,84 @@ export default function MissionsPage() {
         onConfirm={confirmModal.onConfirm}
         loading={confirmLoading}
       />
+
+      {participantsModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl min-h-[500px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center bg-white z-10">
+              <h2 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#8B6914]" /> {t.participantsOf || "Participants:"} {participantsModal.missionTitle}
+              </h2>
+              <button
+                onClick={() => setParticipantsModal(prev => ({ ...prev, isOpen: false }))}
+                className="text-[#9a8a7a] hover:text-[#3a2a1a] transition-colors p-1"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-0 overflow-y-auto custom-scrollbar flex-1 bg-[#fcfaf7]">
+              {participantsModal.loading ? (
+                <div className="p-8 text-center text-[#9a8a7a]">{t.loading || "Loading..."}</div>
+              ) : participantsModal.data.length === 0 ? (
+                <div className="p-8 text-center text-[#9a8a7a]">{t.noParticipants || "No participants found for this mission."}</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-white sticky top-0 border-b border-[#e8ddd0]">
+                      <tr>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">{t.user || "User"}</th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">{t.email || "Email"}</th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">{t.dateLabel || "Date"}</th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">{t.statusLabel || "Status"}</th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider text-right">{t.actionsLabel || "Actions"}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#f0e8d8]">
+                      {participantsModal.data.map(p => (
+                        <tr key={p._id} className="hover:bg-white transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-[#f5f0e8] overflow-hidden flex items-center justify-center shrink-0 border border-[#e8ddd0]">
+                                {p.user?.profileImage?.secure_url ? (
+                                  <img src={p.user.profileImage.secure_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="text-[#8B6914] font-bold text-xs">
+                                    {(p.user?.firstName?.[0] || 'U').toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="font-bold text-[#3a2a1a] text-sm truncate max-w-[150px]">{p.user?.firstName} {p.user?.lastName}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm text-[#5a4a3a] truncate max-w-[150px]" title={p.user?.email}>{p.user?.email}</td>
+                          <td className="p-4 text-sm text-[#5a4a3a] whitespace-nowrap">{new Date(p.createdAt).toLocaleDateString()}</td>
+                          <td className="p-4">
+                            <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase whitespace-nowrap ${p.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                              {p.status === 'completed' ? t.completed || 'Completed' : t.pending || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right">
+                            {p.status === 'pending' ? (
+                              <button
+                                onClick={() => handleApproveParticipant(p._id)}
+                                className="bg-[#8B6914] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#6a5010] transition-colors inline-flex items-center gap-1"
+                              >
+                                <Check className="w-3 h-3" /> {t.approveBtn || "Approve"}
+                              </button>
+                            ) : (
+                              <span className="text-[#9a8a7a] text-[10px] font-medium">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
