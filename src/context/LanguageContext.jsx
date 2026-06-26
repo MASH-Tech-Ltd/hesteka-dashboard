@@ -11,6 +11,7 @@ const translations = {
     users: "Users",
     partners: "Partners",
     community: "COMMUNITY",
+    posts: "Post Temp",
     localMissions: "Local Missions",
     collectionPoints: "Collection Points",
     economy: "ECONOMY",
@@ -576,13 +577,15 @@ const translations = {
     addressNotProvided: "Address not provided",
     reportedBy: "Reported by",
     approvePointsTitle: "Approve Points",
-    approvePointsConfirm: "Are you sure you want to approve points for this report?",
+    approvePointsConfirm:
+      "Are you sure you want to approve points for this report?",
     pointsApprovedSuccess: "Points approved successfully",
     approvePointsError: "Error during approval",
     // Custom Points
     customPoints: "Custom Points",
     giveCustomPointsTitle: "Assign Custom Points",
-    giveCustomPointsDesc: "Search for a user and directly assign points to their balance.",
+    giveCustomPointsDesc:
+      "Search for a user and directly assign points to their balance.",
     searchUser: "Search User",
     searchUserPlaceholder: "Type name or email...",
     points: "Points",
@@ -614,7 +617,8 @@ const translations = {
     reports: "Signalements",
     users: "Utilisateurs",
     partners: "Partenaires",
-    community: "COMMUNAUT\u00C9",
+    community: "COMMUNAUTÉ",
+    posts: "Post Temp",
     localMissions: "Missions locales",
     collectionPoints: "Points de collecte",
     economy: "\u00C9CONOMIE",
@@ -1175,13 +1179,15 @@ const translations = {
     addressNotProvided: "Adresse non fournie",
     reportedBy: "Signalé par",
     approvePointsTitle: "Approuver les points",
-    approvePointsConfirm: "Voulez-vous vraiment approuver les points pour ce signalement ?",
+    approvePointsConfirm:
+      "Voulez-vous vraiment approuver les points pour ce signalement ?",
     pointsApprovedSuccess: "Points approuvés avec succès",
     approvePointsError: "Erreur lors de l'approbation",
     // Custom Points
     customPoints: "Points Personnalisés",
     giveCustomPointsTitle: "Attribuer des points",
-    giveCustomPointsDesc: "Recherchez un utilisateur et ajoutez des points à son solde.",
+    giveCustomPointsDesc:
+      "Recherchez un utilisateur et ajoutez des points à son solde.",
     searchUser: "Rechercher l'utilisateur",
     searchUserPlaceholder: "Nom ou email...",
     points: "Points",
