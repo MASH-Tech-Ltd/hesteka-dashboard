@@ -121,11 +121,28 @@ export default function PostsPage() {
     },
     {
       header: "Location",
-      cell: (r) => (
-        <span className="text-xs text-gray-500 truncate block max-w-[150px]">
-          {r.location?.address || "N/A"}
-        </span>
-      ),
+      cell: (r) => {
+        const address = r.location?.address;
+        const coords = r.location?.coordinates;
+        
+        if (address) {
+          return (
+            <span className="text-xs text-gray-500 truncate block max-w-[150px]" title={address}>
+              {address}
+            </span>
+          );
+        }
+        
+        if (coords && coords.length === 2) {
+          return (
+            <span className="text-xs text-gray-500 truncate block max-w-[150px]">
+              {coords[1].toFixed(4)}, {coords[0].toFixed(4)}
+            </span>
+          );
+        }
+        
+        return <span className="text-xs text-gray-500">N/A</span>;
+      },
     },
     {
       header: "Date",
@@ -204,9 +221,8 @@ export default function PostsPage() {
         title="Delete Post"
         message="Are you sure you want to delete this post? This action cannot be undone."
         onConfirm={handleDelete}
-        onCancel={() => setConfirmModal({ isOpen: false, id: null })}
-        confirmText={confirmLoading ? "Deleting..." : "Delete"}
-        cancelText="Cancel"
+        onClose={() => setConfirmModal({ isOpen: false, id: null })}
+        loading={confirmLoading}
       />
     </div>
   );
