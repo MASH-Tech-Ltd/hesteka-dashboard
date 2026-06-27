@@ -11,7 +11,8 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState({
     supportEmail: "",
     platformName: "",
-    maintenanceMode: false
+    maintenanceMode: false,
+    alertRadius: 5
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [admins, setAdmins] = useState([]);
@@ -194,7 +195,16 @@ export default function SettingsPage() {
                     <p className="text-[9px] text-[#9a8a7a]">{t.defaultGeo}</p>
                  </div>
                  <div className="flex items-center gap-2">
-                    <input type="number" defaultValue={5} className="w-12 bg-[#f5f0e8] border border-[#e8ddd0] rounded px-2 py-1 text-xs font-bold text-center outline-none" />
+                    <input 
+                      type="number" 
+                      value={settings.alertRadius} 
+                      onChange={(e) => {
+                        const newRadius = Number(e.target.value);
+                        setSettings({...settings, alertRadius: newRadius});
+                        api.patch("/settings", { alertRadius: newRadius });
+                      }}
+                      className="w-12 bg-[#f5f0e8] border border-[#e8ddd0] rounded px-2 py-1 text-xs font-bold text-center outline-none" 
+                    />
                     <span className="text-xs text-[#9a8a7a]">km</span>
                  </div>
               </div>
