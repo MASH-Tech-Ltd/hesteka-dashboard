@@ -93,7 +93,10 @@ export default function MissionsPage() {
   };
 
   const handleOpenEdit = (mission) => {
-    setEditingMission(mission);
+    setEditingMission({
+      ...mission,
+      missionDate: mission.missionDate || mission.createdAt,
+    });
     setIsModalOpen(true);
   };
 
@@ -229,7 +232,7 @@ export default function MissionsPage() {
       required: true,
     },
     {
-      name: "createdAt",
+      name: "missionDate",
       label: t.dateLabel || "Date",
       type: "date",
       required: true,
@@ -306,7 +309,7 @@ export default function MissionsPage() {
     {
       header: t.dateLabel || "DATE",
       width: "10%",
-      cell: (m) => new Date(m.createdAt).toLocaleDateString(),
+      cell: (m) => new Date(m.missionDate || m.createdAt).toLocaleDateString(),
     },
     {
       header: t.points || "POINTS",
@@ -529,7 +532,7 @@ export default function MissionsPage() {
                     </span>
                     <span className="text-[#9a8a7a]">{t.dateLabel || "Date"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
-                      {new Date(selectedMission.createdAt).toLocaleDateString()}
+                      {new Date(selectedMission.missionDate || selectedMission.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
