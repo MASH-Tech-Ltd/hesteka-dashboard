@@ -22,10 +22,32 @@ const Topbar = React.memo(({ onToggleSidebar }) => {
       .catch(() => { });
   }, [fetchWithCache]);
 
+  const [onlineCount, setOnlineCount] = useState(0);
+
   useEffect(() => {
     fetchStats();
     const interval = setInterval(fetchStats, 60000);
-    return () => clearInterval(interval);
+
+    const fetchOnlineUsers = async () => {
+      try {
+        const res = await api.get("/admin/online-users");
+        if (res.data?.status === "ok") {
+          setOnlineCount(res.data.data.online);
+        }
+      } catch (err) { }
+    };
+    fetchOnlineUsers();
+
+    const handleOnlineUsers = (data) => {
+      setOnlineCount(data.count);
+    };
+
+    socket.on("onlineUsersCount", handleOnlineUsers);
+
+    return () => {
+      clearInterval(interval);
+      socket.off("onlineUsersCount", handleOnlineUsers);
+    };
   }, [fetchStats]);
 
   // Per-route supplemental stats (for pages not covered by /admin/stats)
@@ -205,7 +227,18 @@ const Topbar = React.memo(({ onToggleSidebar }) => {
         </button>
         <div>
           <h1 className="text-lg md:text-xl font-bold text-[#3a2a1a] truncate max-w-[150px] sm:max-w-none">{page.title}</h1>
-          <p className="text-[10px] md:text-[11px] text-[#9a8a7a] mt-0.5 hidden sm:block">{page.sub}</p>
+          <p className="text-[10px] md:text-[11px] text-[#9a8a7a] mt-0.5 hidden sm:flex items-center gap-1.5">
+            {page.sub}
+            {location.pathname === "/dashboard" && (
+              <>
+                <span>·</span>
+                <span className="flex items-center gap-1 text-green-600 font-bold ml-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  {onlineCount.toLocaleString()} {t.onlineRightNow || "online right now"}
+                </span>
+              </>
+            )}
+          </p>
         </div>
       </div>
 

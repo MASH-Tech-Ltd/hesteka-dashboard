@@ -1,6 +1,6 @@
 import React from "react";
 
-const StatCard = React.memo(({ label, value, sub, subType = "up", loading = false, color = "bg-[#8B6914]" }) => {
+const StatCard = React.memo(({ label, value, sub, subType = "up", sub2, subType2 = "up", loading = false, color = "bg-[#8B6914]" }) => {
   const subColors = {
     up: "text-green-600",
     down: "text-red-600",
@@ -15,7 +15,7 @@ const StatCard = React.memo(({ label, value, sub, subType = "up", loading = fals
     neutral: "▶",
   };
 
-  const containerClasses = "bg-white rounded-xl p-3 px-4 border border-[#e8ddd0] flex flex-col justify-between h-[85px] w-full transition-all hover:shadow-md relative overflow-hidden";
+  const containerClasses = "bg-white rounded-xl p-3 px-4 border border-[#e8ddd0] flex flex-col justify-between min-h-[85px] w-full transition-all hover:shadow-md relative overflow-hidden";
 
   if (loading || value.text === "...") {
     return (
@@ -40,7 +40,7 @@ const StatCard = React.memo(({ label, value, sub, subType = "up", loading = fals
           {value.text}
         </p>
       </div>
-      <div className="mt-auto">
+      <div className="mt-auto space-y-1">
         {sub ? (
           <p className={`text-[10px] flex items-center gap-1 ${subColors[subType]}`}>
             <span>{subIcons[subType]}</span>
@@ -48,6 +48,12 @@ const StatCard = React.memo(({ label, value, sub, subType = "up", loading = fals
           </p>
         ) : (
           <p className="text-[10px] invisible leading-none">&nbsp;</p>
+        )}
+        {sub2 && (
+          <p className={`text-[10px] flex items-center gap-1 ${subColors[subType2]}`}>
+            <span>{subIcons[subType2]}</span>
+            {sub2}
+          </p>
         )}
       </div>
     </div>
