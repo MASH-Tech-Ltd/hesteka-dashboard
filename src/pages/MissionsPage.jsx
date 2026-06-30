@@ -143,6 +143,22 @@ export default function MissionsPage() {
     }
   };
 
+  const handleRejectParticipant = async (participationId) => {
+    try {
+      const res = await api.patch(`/local-missions/reject-local-mission/${participationId}`);
+      if (res.data.status === "ok") {
+        toast.success(t.participantRejected || "Participant rejected");
+        setParticipantsModal(prev => ({
+          ...prev,
+          data: prev.data.map(p => p._id === participationId ? { ...p, status: "rejected" } : p)
+        }));
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reject participant");
+    }
+  };
+
   const handleSubmit = async (formData) => {
     setModalLoading(true);
     try {
@@ -636,7 +652,7 @@ export default function MissionsPage() {
 
       {participantsModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl min-h-[500px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-6xl min-h-[500px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center bg-white z-10">
               <h2 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#8B6914]" /> {t.participantsOf || "Participants:"} {participantsModal.missionTitle}
@@ -679,24 +695,52 @@ export default function MissionsPage() {
                                   </div>
                                 )}
                               </div>
-                              <span className="font-bold text-[#3a2a1a] text-sm truncate max-w-[150px]">{p.user?.firstName} {p.user?.lastName}</span>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-[#3a2a1a] text-sm truncate max-w-[250px]">{p.user?.firstName} {p.user?.lastName}</span>
+                                {p.user?.phone && (
+                                  <span className="text-xs text-[#9a8a7a] mt-0.5">{p.user.phone}</span>
+                                )}
+                              </div>
                             </div>
                           </td>
-                          <td className="p-4 text-sm text-[#5a4a3a] truncate max-w-[150px]" title={p.user?.email}>{p.user?.email}</td>
+                          <td className="p-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm text-[#5a4a3a] truncate max-w-[250px]" title={p.user?.email}>{p.user?.email}</span>
+                              {(p.user?.address || p.user?.postalCode || p.user?.country) && (
+                                <span className="text-xs text-[#9a8a7a] truncate max-w-[300px] mt-0.5" title={[p.user?.address, p.user?.postalCode, p.user?.country].filter(Boolean).join(', ')}>
+                                  {[p.user?.address, p.user?.postalCode, p.user?.country].filter(Boolean).join(', ')}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-4 text-sm text-[#5a4a3a] whitespace-nowrap">{new Date(p.createdAt).toLocaleDateString()}</td>
                           <td className="p-4">
-                            <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase whitespace-nowrap ${p.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
-                              {p.status === 'completed' ? t.completed || 'Completed' : t.pending || 'Pending'}
+                            <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase whitespace-nowrap ${
+                              p.status === 'completed' ? 'bg-green-100 text-green-600' : 
+                              p.status === 'rejected' ? 'bg-red-100 text-red-600' : 
+                              'bg-orange-100 text-orange-600'
+                            }`}>
+                              {p.status === 'completed' ? t.completed || 'Completed' : 
+                               p.status === 'rejected' ? t.rejected || 'Rejected' : 
+                               t.pending || 'Pending'}
                             </span>
                           </td>
                           <td className="p-4 text-right">
                             {p.status === 'pending' ? (
-                              <button
-                                onClick={() => handleApproveParticipant(p._id)}
-                                className="bg-[#8B6914] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#6a5010] transition-colors inline-flex items-center gap-1"
-                              >
-                                <Check className="w-3 h-3" /> {t.approveBtn || "Approve"}
-                              </button>
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  onClick={() => handleRejectParticipant(p._id)}
+                                  className="bg-white border border-red-200 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors inline-flex items-center gap-1"
+                                >
+                                  <X className="w-3 h-3" /> {t.rejectBtn || "Reject"}
+                                </button>
+                                <button
+                                  onClick={() => handleApproveParticipant(p._id)}
+                                  className="bg-[#8B6914] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#6a5010] transition-colors inline-flex items-center gap-1"
+                                >
+                                  <Check className="w-3 h-3" /> {t.approveBtn || "Approve"}
+                                </button>
+                              </div>
                             ) : (
                               <span className="text-[#9a8a7a] text-[10px] font-medium">-</span>
                             )}

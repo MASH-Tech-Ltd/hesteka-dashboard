@@ -3,7 +3,7 @@ import { useLang } from "../context/LanguageContext";
 import api from "../utils/api";
 
 import ConfirmModal from "../components/common/ConfirmModal";
-import { Bell, Coins, Target, MapPin, Megaphone, Rocket, ClipboardList, Gift, Users, FileText, CreditCard, ArrowUp } from "lucide-react";
+import { Bell, Coins, Target, MapPin, Megaphone, Rocket, ClipboardList, Gift, Users, FileText, CreditCard, ArrowUp, Search, User, X } from "lucide-react";
 
 const NotifItem = React.memo(({ icon, title, sub, stats, date, isRead, onClick }) => (
   <div
@@ -79,6 +79,28 @@ const CustomSelect = ({ value, onChange, options, label }) => {
   );
 };
 
+const UserAvatar = ({ user }) => {
+  const [imgError, setImgError] = useState(false);
+  const showInitial = !user?.profileImage?.secure_url || imgError;
+  
+  return (
+    <div className="w-8 h-8 rounded-full bg-[#f5f0e8] overflow-hidden flex items-center justify-center shrink-0 border border-[#e8ddd0]">
+      {!showInitial ? (
+        <img 
+          src={user.profileImage.secure_url} 
+          alt="" 
+          className="w-full h-full object-cover" 
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className="text-[#8B6914] font-bold text-xs">
+          {(user?.firstName?.[0] || 'U').toUpperCase()}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function NotificationsPage() {
   const { t } = useLang();
   const [history, setHistory] = useState([]);
@@ -94,6 +116,13 @@ export default function NotificationsPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
+
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [selectedTargetUser, setSelectedTargetUser] = useState(null);
+  const [targetedMessage, setTargetedMessage] = useState("");
+  const [sendingTargetedAlert, setSendingTargetedAlert] = useState(false);
+  const [searchingUsers, setSearchingUsers] = useState(false);
 
   const listRef = useRef(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -215,52 +244,187 @@ export default function NotificationsPage() {
     }
   };
 
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (userSearchQuery.trim().length > 1) {
+        setSearchingUsers(true);
+        try {
+          const res = await api.get(`/user/get-all-user?search=${userSearchQuery}&role=user`);
+          if (res.data.status === "ok") {
+            const usersArray = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.users || []);
+            setUserSearchResults(usersArray.slice(0, 5));
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setSearchingUsers(false);
+        }
+      } else {
+        setUserSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [userSearchQuery]);
+
+  const handleSendTargetedAlert = async () => {
+    if (!targetedMessage.trim() || !selectedTargetUser) return;
+    setSendingTargetedAlert(true);
+    try {
+      const res = await api.post("/notifications/send-targeted-alert", {
+        userId: selectedTargetUser._id,
+        message: targetedMessage
+      });
+      if (res.data.status === "ok") {
+        setTargetedMessage("");
+        setSelectedTargetUser(null);
+        setUserSearchQuery("");
+        setViewMode("all");
+      }
+    } catch (err) {
+      console.error("Failed to send targeted alert", err);
+    } finally {
+      setSendingTargetedAlert(false);
+    }
+  };
+
   return (
     <div className="px-6 py-4 flex flex-col gap-4">
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Create Alert Form */}
-        <div className="lg:col-span-3 bg-white rounded-xl border border-[#e8ddd0] p-6 flex flex-col gap-5">
-          <h3 className="font-bold text-[#3a2a1a] text-xs flex items-center gap-2">
-            <Megaphone className="w-4 h-4 text-[#8B6914]" /> {t.createAlert || "Create an alert"}
-          </h3>
-          <div className="flex flex-col gap-4">
-            <CustomSelect
-              label={t.geoTarget || "GEOGRAPHIC TARGETING"}
-              value={alertTarget}
-              onChange={setAlertTarget}
-              options={[
-                { label: t.allFrance || "Toute la France", value: "all_france" },
-                { label: t.pacaRegion || "Provence-Alpes-Côte d'Azur", value: "paca" },
-                { label: "CSFS", value: "CSFS" },
-                ...uniqueCities.map(city => ({ label: city, value: city }))
-              ]}
-            />
-            <CustomSelect
-              label={t.userType || "USER TYPE"}
-              value={alertRole}
-              onChange={setAlertRole}
-              options={[
-                { label: t.allRoles || "Tous", value: "all" },
-                { label: t.userRole || "Propriétaires", value: "user" },
-                { label: t.partnerRole || "Partenaires", value: "partner" }
-              ]}
-            />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[9px] font-bold text-[#9a8a7a] uppercase">{t.message || "MESSAGE"}</label>
-              <textarea
-                value={alertMessage}
-                onChange={(e) => setAlertMessage(e.target.value)}
-                placeholder={t.enterAlertMessage || "Enter your alert message..."}
-                className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none h-32 resize-none"
+        <div className="lg:col-span-3 flex flex-col gap-4 overflow-y-auto custom-scrollbar h-[calc(100vh-110px)] pr-2">
+          {/* Create Alert Form */}
+          <div className="bg-white rounded-xl border border-[#e8ddd0] p-6 flex flex-col gap-5 shrink-0 shadow-sm">
+            <h3 className="font-bold text-[#3a2a1a] text-xs flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-[#8B6914]" /> {t.createAlert || "Create an alert"}
+            </h3>
+            <div className="flex flex-col gap-4">
+              <CustomSelect
+                label={t.geoTarget || "GEOGRAPHIC TARGETING"}
+                value={alertTarget}
+                onChange={setAlertTarget}
+                options={[
+                  { label: t.allFrance || "Toute la France", value: "all_france" },
+                  { label: t.pacaRegion || "Provence-Alpes-Côte d'Azur", value: "paca" },
+                  { label: "CSFS", value: "CSFS" },
+                  ...uniqueCities.map(city => ({ label: city, value: city }))
+                ]}
               />
+              <CustomSelect
+                label={t.userType || "USER TYPE"}
+                value={alertRole}
+                onChange={setAlertRole}
+                options={[
+                  { label: t.allRoles || "Tous", value: "all" },
+                  { label: t.userRole || "Propriétaires", value: "user" },
+                  { label: t.partnerRole || "Partenaires", value: "partner" }
+                ]}
+              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] font-bold text-[#9a8a7a] uppercase">{t.message || "MESSAGE"}</label>
+                <textarea
+                  value={alertMessage}
+                  onChange={(e) => setAlertMessage(e.target.value)}
+                  placeholder={t.enterAlertMessage || "Enter your alert message..."}
+                  className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none h-32 resize-none"
+                />
+              </div>
+              <button
+                onClick={handleSendAlert}
+                disabled={sendingAlert || !alertMessage.trim()}
+                className="bg-[#8B6914] text-white text-[11px] font-bold py-3 rounded-xl hover:bg-[#6a5010] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Rocket className="w-4 h-4" /> {sendingAlert ? "Sending..." : (t.sendAlert || "Send alert")}
+              </button>
             </div>
-            <button
-              onClick={handleSendAlert}
-              disabled={sendingAlert || !alertMessage.trim()}
-              className="bg-[#8B6914] text-white text-[11px] font-bold py-3 rounded-xl hover:bg-[#6a5010] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Rocket className="w-4 h-4" /> {sendingAlert ? "Sending..." : (t.sendAlert || "Send alert")}
-            </button>
+          </div>
+
+          {/* Targeted Notification Form */}
+          <div className="bg-white rounded-xl border border-[#e8ddd0] p-6 flex flex-col gap-5 shrink-0 shadow-sm">
+            <h3 className="font-bold text-[#3a2a1a] text-xs flex items-center gap-2">
+              <User className="w-4 h-4 text-[#8B6914]" /> {t.targetedAlert || "Targeted Notification"}
+            </h3>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5 relative">
+                <label className="text-[9px] font-bold text-[#9a8a7a] uppercase">{t.searchUser || "SEARCH USER"}</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-[#9a8a7a]" />
+                  </div>
+                  <input
+                    type="text"
+                    autoComplete="new-password"
+                    placeholder={t.searchUserPlaceholder || "Search by name or email..."}
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="w-full bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl pl-10 pr-3 py-2.5 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-colors"
+                  />
+                  {searchingUsers && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <div className="animate-spin h-3 w-3 border-2 border-[#8B6914] border-t-transparent rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+                
+                {userSearchResults.length > 0 && (
+                  <div className="absolute top-[100%] left-0 w-full mt-1 bg-white border border-[#e8ddd0] rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
+                    {userSearchResults.map((user) => (
+                      <div 
+                        key={user._id}
+                        onClick={() => {
+                          setSelectedTargetUser(user);
+                          setUserSearchQuery("");
+                          setUserSearchResults([]);
+                        }}
+                        className="px-4 py-2.5 cursor-pointer transition-colors border-b border-[#f0e8d8] last:border-b-0 hover:bg-[#fcfaf7] flex items-center gap-3"
+                      >
+                        <UserAvatar user={user} />
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-[#3a2a1a]">{user.firstName} {user.lastName}</span>
+                          <span className="text-[10px] text-[#9a8a7a]">{user.email}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {selectedTargetUser && (
+                  <div className="mt-2 p-3 bg-[#f5f0e8] border border-[#e8ddd0] rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <UserAvatar user={selectedTargetUser} />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-[#8B6914]">{t.selected || "Selected:"} {selectedTargetUser.firstName} {selectedTargetUser.lastName}</span>
+                        <span className="text-[10px] text-[#9a8a7a]">{selectedTargetUser.email}</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedTargetUser(null)}
+                      className="text-[#9a8a7a] hover:text-red-500 transition-colors p-1 bg-white rounded-full border border-[#e8ddd0]"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] font-bold text-[#9a8a7a] uppercase">{t.message || "MESSAGE"}</label>
+                <textarea
+                  value={targetedMessage}
+                  onChange={(e) => setTargetedMessage(e.target.value)}
+                  placeholder={t.enterTargetedMessage || "Enter message for this user..."}
+                  className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs text-[#3a2a1a] outline-none h-24 resize-none disabled:opacity-50"
+                  disabled={!selectedTargetUser}
+                />
+              </div>
+              <button
+                onClick={handleSendTargetedAlert}
+                disabled={sendingTargetedAlert || !targetedMessage.trim() || !selectedTargetUser}
+                className="bg-[#8B6914] text-white text-[11px] font-bold py-3 rounded-xl hover:bg-[#6a5010] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Rocket className="w-4 h-4" /> {sendingTargetedAlert ? "Sending..." : (t.sendAlert || "Send alert")}
+              </button>
+            </div>
           </div>
         </div>
 
