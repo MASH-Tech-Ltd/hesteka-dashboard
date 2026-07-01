@@ -5,7 +5,7 @@ import api from "../utils/api";
 import ConfirmModal from "../components/common/ConfirmModal";
 import { Bell, Coins, Target, MapPin, Megaphone, Rocket, ClipboardList, Gift, Users, FileText, CreditCard, ArrowUp, Search, User, X } from "lucide-react";
 
-const NotifItem = React.memo(({ icon, title, sub, stats, date, isRead, onClick }) => (
+const NotifItem = React.memo(({ icon, title, sub, stats, date, isRead, targetUser, onClick }) => (
   <div
     onClick={onClick}
     className={`border rounded-xl p-3 flex items-center justify-between transition-all cursor-pointer ${isRead ? 'bg-[#fcfaf7] border-[#e8ddd0] opacity-80' : 'bg-white border-[#8B6914] shadow-sm hover:shadow-md'}`}
@@ -22,6 +22,14 @@ const NotifItem = React.memo(({ icon, title, sub, stats, date, isRead, onClick }
     </div>
     <div className="text-right flex flex-col items-end gap-1">
       {!isRead && <span className="w-2 h-2 bg-red-500 rounded-full"></span>}
+      {targetUser && typeof targetUser === 'object' && (
+        <div className="flex items-center gap-2 mt-1 bg-[#f5f0e8] px-2 py-1 rounded-lg border border-[#e8ddd0]">
+          <div className="flex flex-col text-right">
+            <span className="text-[10px] font-bold text-[#3a2a1a] truncate max-w-[120px]">{targetUser.firstName} {targetUser.lastName}</span>
+            <span className="text-[9px] text-[#9a8a7a] truncate max-w-[120px]">{targetUser.email}</span>
+          </div>
+        </div>
+      )}
       {stats && (
         <>
           <p className="text-[10px] text-[#9a8a7a] font-bold">{stats.sent} {t.sentCount || "sent"} \u00B7 {t.opening || "Open"} {stats.open}%</p>
@@ -124,6 +132,15 @@ export default function NotificationsPage() {
   const [sendingTargetedAlert, setSendingTargetedAlert] = useState(false);
   const [searchingUsers, setSearchingUsers] = useState(false);
 
+  const [targetedHistory, setTargetedHistory] = useState([]);
+  const [targetedLoading, setTargetedLoading] = useState(true);
+  const [targetedPage, setTargetedPage] = useState(1);
+  const [targetedHasMore, setTargetedHasMore] = useState(true);
+  const [targetedSearch, setTargetedSearch] = useState("");
+  const targetedObserver = useRef();
+  const targetedListRef = useRef(null);
+  const [showTargetedBackToTop, setShowTargetedBackToTop] = useState(false);
+
   const listRef = useRef(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [uniqueCities, setUniqueCities] = useState([]);
@@ -182,6 +199,64 @@ export default function NotificationsPage() {
     };
     fetchNotifications();
   }, [viewMode, page]);
+
+  const handleTargetedScroll = () => {
+    if (targetedListRef.current) {
+      setShowTargetedBackToTop(targetedListRef.current.scrollTop > 200);
+    }
+  };
+
+  const scrollToTargetedTop = () => {
+    if (targetedListRef.current) {
+      targetedListRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const lastTargetedElementRef = useCallback(node => {
+    if (targetedLoading) return;
+    if (targetedObserver.current) targetedObserver.current.disconnect();
+    targetedObserver.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && targetedHasMore) {
+        setTargetedPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) targetedObserver.current.observe(node);
+  }, [targetedLoading, targetedHasMore]);
+
+  const fetchTargetedNotifications = async (pageToFetch, searchQuery = targetedSearch) => {
+    setTargetedLoading(true);
+    try {
+      const res = await api.get(`/notifications/get-targeted-admin-notifications?page=${pageToFetch}&limit=20&search=${encodeURIComponent(searchQuery)}`);
+      if (res.data.status === "ok") {
+        const newNotifs = res.data.data;
+        setTargetedHistory(prev => {
+          if (pageToFetch === 1) return newNotifs;
+          const existingIds = new Set(prev.map(n => n._id));
+          const filteredNew = newNotifs.filter(n => !existingIds.has(n._id));
+          return [...prev, ...filteredNew];
+        });
+        setTargetedHasMore(newNotifs.length === 20);
+      }
+    } catch (err) {
+      console.error("Failed to fetch targeted notifications", err);
+    } finally {
+      setTargetedLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (targetedPage > 1) {
+      fetchTargetedNotifications(targetedPage, targetedSearch);
+    }
+  }, [targetedPage]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setTargetedPage(1);
+      fetchTargetedNotifications(1, targetedSearch);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [targetedSearch]);
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -280,6 +355,11 @@ export default function NotificationsPage() {
         setSelectedTargetUser(null);
         setUserSearchQuery("");
         setViewMode("all");
+        if (targetedPage === 1) {
+          fetchTargetedNotifications(1);
+        } else {
+          setTargetedPage(1);
+        }
       }
     } catch (err) {
       console.error("Failed to send targeted alert", err);
@@ -425,6 +505,64 @@ export default function NotificationsPage() {
                 <Rocket className="w-4 h-4" /> {sendingTargetedAlert ? "Sending..." : (t.sendAlert || "Send alert")}
               </button>
             </div>
+          </div>
+          
+          {/* Targeted Notification History Box */}
+          <div className="bg-white rounded-xl border border-[#e8ddd0] p-6 flex flex-col gap-4 flex-1 shadow-sm min-h-[300px] relative">
+            <div className="flex items-center justify-between shrink-0">
+              <h3 className="font-bold text-[#3a2a1a] text-xs flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-[#8B6914]" /> {t.targetedNotifHistory || "Targeted Notification History"}
+              </h3>
+              <div className="relative w-1/2 max-w-[200px]">
+                <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                  <Search className="h-3.5 w-3.5 text-[#9a8a7a]" />
+                </div>
+                <input
+                  type="text"
+                  placeholder={t.searchUserPlaceholder || "Search by name or email..."}
+                  value={targetedSearch}
+                  onChange={(e) => setTargetedSearch(e.target.value)}
+                  className="w-full bg-[#fcfaf7] border border-[#e8ddd0] rounded-lg pl-8 pr-2 py-1.5 text-[10px] text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-colors"
+                />
+              </div>
+            </div>
+            <div
+              className="flex flex-col gap-3 overflow-y-auto pr-1 flex-1 scrollbar-thin scrollbar-thumb-[#8B6914]/20 scrollbar-track-transparent h-full"
+              ref={targetedListRef}
+              onScroll={handleTargetedScroll}
+            >
+              {targetedHistory.map((item, index) => {
+                const isLast = targetedHistory.length === index + 1;
+                const notifElement = (
+                  <NotifItem
+                    key={item._id}
+                    icon={getIcon(item.type)}
+                    title={item.title}
+                    sub={item.description}
+                    date={item.createdAt}
+                    isRead={item.isRead}
+                    targetUser={item.user}
+                    onClick={() => handleNotifClick(item)}
+                  />
+                );
+                return isLast ? <div ref={lastTargetedElementRef} key={item._id}>{notifElement}</div> : notifElement;
+              })}
+              {targetedHistory.length === 0 && !targetedLoading && (
+                <p className="text-[10px] text-[#9a8a7a] text-center py-8 italic">{t.noTargetedNotifHistory || "No targeted history."}</p>
+              )}
+              {targetedLoading && (
+                 <p className="text-[10px] text-[#9a8a7a] text-center py-2">{t.loading || "Loading..."}</p>
+              )}
+            </div>
+            {showTargetedBackToTop && (
+              <button
+                onClick={scrollToTargetedTop}
+                className="absolute bottom-6 right-6 bg-[#8B6914] text-white p-2.5 rounded-full shadow-lg hover:bg-[#6a5010] transition-all z-10 hover:scale-105"
+                title="Back to top"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
