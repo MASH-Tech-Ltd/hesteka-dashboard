@@ -652,7 +652,7 @@ export default function MissionsPage() {
 
       {participantsModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-6xl min-h-[500px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-4xl min-h-[500px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center bg-white z-10">
               <h2 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#8B6914]" /> {t.participantsOf || "Participants:"} {participantsModal.missionTitle}
