@@ -613,6 +613,8 @@ const translations = {
     srcLocalMission: "Local Mission",
     srcAnimalReport: "Animal Report",
     srcRedeem: "Redeem",
+    targetedNotifHistory: "Targeted Notification History",
+    noTargetedNotifHistory: "No targeted history.",
   },
   fr: {
     admin: "ADMIN",
@@ -1220,6 +1222,8 @@ const translations = {
     srcLocalMission: "Mission locale",
     srcAnimalReport: "Signalement d'animal",
     srcRedeem: "Échange",
+    targetedNotifHistory: "Historique des notifications ciblées",
+    noTargetedNotifHistory: "Aucun historique ciblé.",
   },
 };
 const LanguageContext = createContext(null);

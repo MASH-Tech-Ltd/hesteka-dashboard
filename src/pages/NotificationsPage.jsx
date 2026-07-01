@@ -288,11 +288,16 @@ export default function NotificationsPage() {
   const handleNotifClick = async (notif) => {
     setSelectedNotif(notif);
     if (!notif.isRead) {
+      // Optimistic update for both lists
+      setHistory((prev) =>
+        prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
+      );
+      setTargetedHistory((prev) =>
+        prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
+      );
+      
       try {
         await api.patch(`/notifications/mark-as-read/${notif._id}`);
-        setHistory((prev) =>
-          prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
-        );
       } catch (error) {
         console.error("Failed to mark notification as read", error);
       }
@@ -683,9 +688,7 @@ export default function NotificationsPage() {
               )}
             </div>
           }
-          confirmText="Close"
-          onConfirm={() => setSelectedNotif(null)}
-          hideCancel={true}
+          hideFooter={true}
         />
       )}
     </div>
