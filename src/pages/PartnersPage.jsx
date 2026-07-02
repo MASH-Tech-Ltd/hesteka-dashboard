@@ -343,6 +343,16 @@ export default function PartnersPage() {
     { name: "postalCode", label: "Postal Code (5 digits)", type: "number", required: true },
     { name: "country", label: "Country" },
     {
+      name: "partnerType",
+      label: t.partnerType || "Partner Type",
+      type: "select",
+      options: [
+        { label: "Association", value: "association" },
+        { label: "Brand", value: "brand" },
+        { label: "Collection Point", value: "collection_point" }
+      ]
+    },
+    {
       name: "region",
       label: t.regionLabel || "Region",
       type: "select",
@@ -381,6 +391,16 @@ export default function PartnersPage() {
     { name: "city", label: t.cityLabel || "City" },
     { name: "postalCode", label: "Postal Code (5 digits)", type: "number" },
     { name: "country", label: "Country" },
+    {
+      name: "partnerType",
+      label: t.partnerType || "Partner Type",
+      type: "select",
+      options: [
+        { label: "Association", value: "association" },
+        { label: "Brand", value: "brand" },
+        { label: "Collection Point", value: "collection_point" }
+      ]
+    },
     {
       name: "region",
       label: t.regionLabel || "Region",
@@ -427,6 +447,7 @@ export default function PartnersPage() {
     { name: "city", label: t.cityLabel || "City", disabled: true },
     { name: "postalCode", label: "Postal Code", disabled: true },
     { name: "country", label: "Country", disabled: true },
+    { name: "partnerType", label: t.partnerType || "Partner Type", disabled: true },
     { name: "region", label: t.regionLabel || "Region", disabled: true },
     { name: "department", label: t.departmentLabel || "Department", disabled: true },
     { name: "status", label: t.statusLabel || "Status", disabled: true },
@@ -526,6 +547,16 @@ export default function PartnersPage() {
                   label: t.departmentLabel || "Dept...",
                   value: queryParams.department || 'all',
                   options: locations.departments.map(d => ({ label: d, value: d }))
+                },
+                {
+                  name: "partnerType",
+                  label: t.partnerType || "Type...",
+                  value: queryParams.partnerType || 'all',
+                  options: [
+                    { label: "Association", value: "association" },
+                    { label: "Brand", value: "brand" },
+                    { label: "Collection Point", value: "collection_point" }
+                  ]
                 }
               ]}
               sortOptions={[

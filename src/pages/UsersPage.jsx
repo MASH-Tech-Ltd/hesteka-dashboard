@@ -9,7 +9,83 @@ import FilterBar from "../components/common/FilterBar";
 import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
-import { Star, Plus } from "lucide-react";
+import { Star, Plus, Trash2, X, AlertTriangle } from "lucide-react";
+
+const DeleteUserModal = ({ isOpen, user, onClose, onConfirm, loading }) => {
+  const [countdown, setCountdown] = useState(5);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCountdown(5);
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center bg-[#fcfaf7]">
+          <h2 className="text-lg font-bold text-[#3a2a1a] flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-600" /> Confirm Deletion
+          </h2>
+          <button 
+            onClick={onClose}
+            className="text-[#9a8a7a] hover:text-[#3a2a1a] transition-colors p-1"
+            disabled={loading}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-6">
+          <p className="text-sm text-[#5a4a3a] mb-4">
+            You are about to delete user <strong>{user?.firstName} {user?.lastName} ({user?.email})</strong>.
+          </p>
+          <div className="bg-red-50 border border-red-100 text-red-700 p-4 rounded-lg text-xs font-medium mb-2 flex flex-col gap-2">
+            <p className="font-bold uppercase tracking-wider text-[10px]">Warning: Permanent Action</p>
+            <p>This will initiate a cascading delete that removes:</p>
+            <ul className="list-disc ml-5 opacity-90 space-y-1">
+              <li>All chat messages & community posts</li>
+              <li>Animal reports & associated comments</li>
+              <li>Mission participations & partner ads</li>
+              <li>Private conversations & direct messages</li>
+            </ul>
+            <p className="mt-1 text-red-800 font-semibold opacity-90">Financial records (donations, payments) will be securely anonymized.</p>
+          </div>
+        </div>
+
+        <div className="p-4 bg-[#fcfaf7] border-t border-[#f0e8d8] flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 px-4 py-2 rounded-lg border border-[#e8ddd0] text-[#3a2a1a] text-sm font-bold hover:bg-white transition-all disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading || countdown > 0}
+            className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
+            {countdown > 0 ? `Wait ${countdown}s...` : "Delete Permanently"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function UsersPage() {
   const { t } = useLang();
@@ -34,6 +110,8 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [deleteUserModal, setDeleteUserModal] = useState({ isOpen: false, user: null });
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [formErrors, setFormErrors] = useState([]);
 
@@ -191,6 +269,23 @@ export default function UsersPage() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deleteUserModal.user) return;
+    setDeleteLoading(true);
+    try {
+      const res = await api.delete(`/user/delete-user/${deleteUserModal.user._id}`);
+      if (res.data.status === "ok" || res.status === 200) {
+        toast.success("User permanently deleted and related records cleared.");
+        setDeleteUserModal({ isOpen: false, user: null });
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete user");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const columns = [
     {
       header: t.user,
@@ -267,6 +362,13 @@ export default function UsersPage() {
               {t.blocked || "Block"}
             </button>
           )}
+          <button 
+            onClick={() => setDeleteUserModal({ isOpen: true, user })}
+            className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded hover:bg-red-100 transition-colors flex items-center justify-center"
+            title="Delete User"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       )
     }
@@ -397,6 +499,14 @@ export default function UsersPage() {
         onClose={() => !confirmLoading && setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         onConfirm={confirmModal.onConfirm}
         loading={confirmLoading}
+      />
+
+      <DeleteUserModal 
+        isOpen={deleteUserModal.isOpen}
+        user={deleteUserModal.user}
+        onClose={() => !deleteLoading && setDeleteUserModal({ isOpen: false, user: null })}
+        onConfirm={handleDeleteUser}
+        loading={deleteLoading}
       />
     </div>
   );
