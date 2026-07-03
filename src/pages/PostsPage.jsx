@@ -219,6 +219,17 @@ export default function PostsPage() {
       },
     },
     {
+      header: t.likes || "Likes",
+      align: "center",
+      cell: (r) => (
+        <div className="flex justify-center">
+          <span className="bg-red-50 text-red-600 text-[11px] font-bold px-2.5 py-1 rounded-full border border-red-100">
+            {r.likes?.length || r.likesCount || 0}
+          </span>
+        </div>
+      ),
+    },
+    {
       header: t.location || "Location",
       cell: (r) => {
         const address = r.location?.address;
@@ -260,10 +271,15 @@ export default function PostsPage() {
       cell: (r) => (
         <button
           onClick={() => handleViewComments(r)}
-          className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-xs font-medium whitespace-nowrap"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors text-xs font-medium whitespace-nowrap"
         >
-          <MessageCircle className="w-3.5 h-3.5" />
-          {t.viewComments || "View Comments"}
+          <div className="flex items-center gap-1">
+            <MessageCircle className="w-3.5 h-3.5" />
+            {t.viewComments || "View Comments"}
+          </div>
+          <span className="bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold min-w-[20px] text-center">
+            {r.replyCount || r.repliesCount || r.commentsCount || r.replies?.length || 0}
+          </span>
         </button>
       ),
     },
@@ -286,19 +302,6 @@ export default function PostsPage() {
 
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
-      {/* Header */}
-      <div className="bg-white rounded-xl border border-[#e8ddd0] p-6 flex justify-between items-center shadow-sm">
-        <div>
-          <h1 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
-            <MessageSquare className="w-6 h-6 text-[#8B6914]" />
-            {t.posts || "Posts (Temporary)"}
-          </h1>
-          <p className="text-sm text-[#9a8a7a] mt-1">
-            {t.managePostsDesc || "Manage community posts (chat messages)."}
-          </p>
-        </div>
-      </div>
-
       {/* Table Section */}
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden">
         <FilterBar

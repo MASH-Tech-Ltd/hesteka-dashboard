@@ -9,69 +9,88 @@ import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
 import { Medal, CheckCircle, ClipboardList, Plus } from "lucide-react";
 
-const PartnerCard = React.memo(({ partner, isPending, onApprove, onReject, onView, onEdit, onDelete, t }) => (
-  <div className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl p-3 flex items-center justify-between hover:shadow-sm transition-all relative overflow-hidden">
-    <div className="absolute left-0 top-0 w-1 h-full bg-[#8B6914]"></div>
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-[#8B6914] flex items-center justify-center text-white text-lg font-bold shrink-0 overflow-hidden">
-        {partner.logo?.secure_url || partner.profileImage?.secure_url ? (
-          <img src={partner.logo?.secure_url || partner.profileImage?.secure_url} alt="Logo" className="w-full h-full object-contain" />
+const PartnerCard = React.memo(
+  ({
+    partner,
+    isPending,
+    onApprove,
+    onReject,
+    onView,
+    onEdit,
+    onDelete,
+    t,
+  }) => (
+    <div className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl p-3 flex items-center justify-between hover:shadow-sm transition-all relative overflow-hidden">
+      <div className="absolute left-0 top-0 w-1 h-full bg-[#8B6914]"></div>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-[#8B6914] flex items-center justify-center text-white text-lg font-bold shrink-0 overflow-hidden">
+          {partner.logo?.secure_url || partner.profileImage?.secure_url ? (
+            <img
+              src={partner.logo?.secure_url || partner.profileImage?.secure_url}
+              alt="Logo"
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            (partner.company || partner.firstName || "P")
+              .charAt(0)
+              .toUpperCase()
+          )}
+        </div>
+        <div className="min-w-0">
+          <h4 className="text-sm font-bold text-[#3a2a1a] truncate">
+            {partner.company || `${partner.firstName} ${partner.lastName}`}
+          </h4>
+          <p className="text-[10px] text-[#9a8a7a] truncate">{partner.email}</p>
+        </div>
+      </div>
+      <div className="flex gap-2 shrink-0">
+        {isPending ? (
+          <>
+            <button
+              onClick={() => onView(partner._id)}
+              className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-blue-200 transition-colors"
+            >
+              {t.viewBtn || "View"}
+            </button>
+            <button
+              onClick={() => onApprove(partner._id)}
+              className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-green-200 transition-colors"
+            >
+              {t.validateBtn}
+            </button>
+            <button
+              onClick={() => onReject(partner._id)}
+              className="bg-red-100 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-red-200 transition-colors"
+            >
+              {t.rejectBtn || "Reject"}
+            </button>
+          </>
         ) : (
-          (partner.company || partner.firstName || 'P').charAt(0).toUpperCase()
+          <>
+            <button
+              onClick={() => onView(partner._id)}
+              className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-blue-200 transition-colors"
+            >
+              {t.viewBtn}
+            </button>
+            <button
+              onClick={() => onEdit(partner._id)}
+              className="bg-orange-100 text-orange-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-orange-200 transition-colors"
+            >
+              {t.editBtn}
+            </button>
+            <button
+              onClick={() => onDelete(partner._id)}
+              className="bg-red-100 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-red-200 transition-colors"
+            >
+              {t.deleteBtn || "Delete"}
+            </button>
+          </>
         )}
       </div>
-      <div className="min-w-0">
-        <h4 className="text-sm font-bold text-[#3a2a1a] truncate">{partner.company || `${partner.firstName} ${partner.lastName}`}</h4>
-        <p className="text-[10px] text-[#9a8a7a] truncate">{partner.email}</p>
-      </div>
     </div>
-    <div className="flex gap-2 shrink-0">
-      {isPending ? (
-        <>
-          <button
-            onClick={() => onView(partner._id)}
-            className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-blue-200 transition-colors"
-          >
-            {t.viewBtn || "View"}
-          </button>
-          <button
-            onClick={() => onApprove(partner._id)}
-            className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-green-200 transition-colors"
-          >
-            {t.validateBtn}
-          </button>
-          <button
-            onClick={() => onReject(partner._id)}
-            className="bg-red-100 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-red-200 transition-colors"
-          >
-            {t.rejectBtn || "Reject"}
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            onClick={() => onView(partner._id)}
-            className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-blue-200 transition-colors"
-          >
-            {t.viewBtn}
-          </button>
-          <button
-            onClick={() => onEdit(partner._id)}
-            className="bg-orange-100 text-orange-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-orange-200 transition-colors"
-          >
-            {t.editBtn}
-          </button>
-          <button
-            onClick={() => onDelete(partner._id)}
-            className="bg-red-100 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-red-200 transition-colors"
-          >
-            {t.deleteBtn || "Delete"}
-          </button>
-        </>
-      )}
-    </div>
-  </div>
-));
+  ),
+);
 
 export default function PartnersPage() {
   const { t } = useLang();
@@ -82,7 +101,12 @@ export default function PartnersPage() {
   const [loading, setLoading] = useState(true);
   // const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [locations, setLocations] = useState({ departments: [], regions: [] });
 
@@ -93,15 +117,17 @@ export default function PartnersPage() {
     status: "active",
     search: "",
     sortBy: "date",
-    sort: "descending"
+    sort: "descending",
   });
 
   const fetchActivePartners = useCallback(async () => {
     setLoading(true);
     try {
       const cleanParams = { ...queryParams };
-      if (!cleanParams.region || cleanParams.region === 'all') delete cleanParams.region;
-      if (!cleanParams.department || cleanParams.department === 'all') delete cleanParams.department;
+      if (!cleanParams.region || cleanParams.region === "all")
+        delete cleanParams.region;
+      if (!cleanParams.department || cleanParams.department === "all")
+        delete cleanParams.department;
       const queryString = new URLSearchParams(cleanParams).toString();
       const res = await api.get(`/user/get-all-user?${queryString}`);
       if (res.data.status === "ok") {
@@ -117,7 +143,9 @@ export default function PartnersPage() {
 
   const fetchPendingPartners = useCallback(async () => {
     try {
-      const res = await api.get("/user/get-all-user?role=partners&status=pending&limit=100");
+      const res = await api.get(
+        "/user/get-all-user?role=partners&status=pending&limit=100",
+      );
       if (res.data.status === "ok") {
         setPendingPartners(res.data.data || []);
       }
@@ -141,36 +169,48 @@ export default function PartnersPage() {
     fetchActivePartners();
     fetchPendingPartners();
     fetchStats();
-    
-    api.get("/contacts/locations").then(res => {
-      if (res.data?.data) {
-        setLocations(res.data.data);
-      }
-    }).catch(err => console.error("Failed to load locations", err));
+
+    api
+      .get("/contacts/locations")
+      .then((res) => {
+        if (res.data?.data) {
+          setLocations(res.data.data);
+        }
+      })
+      .catch((err) => console.error("Failed to load locations", err));
   }, [fetchActivePartners, fetchPendingPartners, fetchStats]);
 
   const handleApprove = (id) => {
     setConfirmModal({
       isOpen: true,
       title: t.approvePartnerTitle || "Approve Partner",
-      message: t.confirmApproveMessage || "Are you sure you want to approve this partner?",
+      message:
+        t.confirmApproveMessage ||
+        "Are you sure you want to approve this partner?",
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
           const res = await api.patch(`/user/approve-partner/${id}`);
           if (res.data.status === "ok") {
             toast.success("Partner approved successfully");
-            setQueryParams(prev => ({ ...prev, status: 'active', search: '', page: 1 }));
+            setQueryParams((prev) => ({
+              ...prev,
+              status: "active",
+              search: "",
+              page: 1,
+            }));
             fetchPendingPartners();
             fetchStats();
           }
         } catch (err) {
-          toast.error(err.response?.data?.message || "Failed to approve partner");
+          toast.error(
+            err.response?.data?.message || "Failed to approve partner",
+          );
         } finally {
           setConfirmLoading(false);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         }
-      }
+      },
     });
   };
 
@@ -178,7 +218,9 @@ export default function PartnersPage() {
     setConfirmModal({
       isOpen: true,
       title: t.rejectPartnerTitle || "Reject Partner",
-      message: t.confirmRejectMessage || "Are you sure you want to reject this partner?",
+      message:
+        t.confirmRejectMessage ||
+        "Are you sure you want to reject this partner?",
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
@@ -189,12 +231,14 @@ export default function PartnersPage() {
             fetchStats();
           }
         } catch (err) {
-          toast.error(err.response?.data?.message || "Failed to reject partner");
+          toast.error(
+            err.response?.data?.message || "Failed to reject partner",
+          );
         } finally {
           setConfirmLoading(false);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         }
-      }
+      },
     });
   };
 
@@ -202,7 +246,9 @@ export default function PartnersPage() {
     setConfirmModal({
       isOpen: true,
       title: t.deletePartnerTitle || "Delete Partner",
-      message: t.confirmDeleteMessage || "Are you sure you want to delete this partner? This action cannot be undone.",
+      message:
+        t.confirmDeleteMessage ||
+        "Are you sure you want to delete this partner? This action cannot be undone.",
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
@@ -214,12 +260,14 @@ export default function PartnersPage() {
             fetchStats();
           }
         } catch (err) {
-          toast.error(err.response?.data?.message || "Failed to delete partner");
+          toast.error(
+            err.response?.data?.message || "Failed to delete partner",
+          );
         } finally {
           setConfirmLoading(false);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         }
-      }
+      },
     });
   };
 
@@ -261,7 +309,7 @@ export default function PartnersPage() {
     Object.keys(obj).forEach((key) => {
       const val = obj[key];
       // Skip null, undefined, and empty strings (treat as "not provided")
-      if (val === undefined || val === null || val === '') return;
+      if (val === undefined || val === null || val === "") return;
       fd.append(key, val);
     });
     return fd;
@@ -288,7 +336,7 @@ export default function PartnersPage() {
       if (Array.isArray(serverErrors) && serverErrors.length > 0) {
         setAddFieldErrors(serverErrors);
         toast.error(err.response?.data?.message || "Validation failed");
-        serverErrors.forEach(error => {
+        serverErrors.forEach((error) => {
           if (error.message) toast.error(error.message);
         });
       } else {
@@ -304,9 +352,13 @@ export default function PartnersPage() {
     setEditFieldErrors([]);
     try {
       const fd = objectToFormData(formData);
-      const res = await api.patch(`/user/update-user-admin/${editingUser._id}`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await api.patch(
+        `/user/update-user-admin/${editingUser._id}`,
+        fd,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
       if (res.data.status === "ok") {
         setIsEditModalOpen(false);
         setEditFieldErrors([]);
@@ -320,7 +372,7 @@ export default function PartnersPage() {
       if (Array.isArray(serverErrors) && serverErrors.length > 0) {
         setEditFieldErrors(serverErrors);
         toast.error(err.response?.data?.message || "Validation failed");
-        serverErrors.forEach(error => {
+        serverErrors.forEach((error) => {
           if (error.message) toast.error(error.message);
         });
       } else {
@@ -334,35 +386,50 @@ export default function PartnersPage() {
   const getPartnerFields = () => [
     { name: "firstName", label: t.firstName || "First Name", required: true },
     { name: "lastName", label: t.lastName || "Last Name", required: true },
-    { name: "email", label: t.emailLabel || "Email", type: "email", required: true },
-    { name: "password", label: t.passwordLabel || "Password", type: "password", required: true },
+    {
+      name: "email",
+      label: t.emailLabel || "Email",
+      type: "email",
+      required: true,
+    },
+    {
+      name: "password",
+      label: t.passwordLabel || "Password",
+      type: "password",
+      required: true,
+    },
     { name: "company", label: t.companyName || "Company Name", required: true },
     { name: "phone", label: t.phone || "Phone", required: true },
     { name: "address", label: t.address || "Address", required: true },
     { name: "city", label: t.cityLabel || "City", required: true },
-    { name: "postalCode", label: "Postal Code (5 digits)", type: "number", required: true },
+    {
+      name: "postalCode",
+      label: "Postal Code (5 digits)",
+      type: "number",
+      required: true,
+    },
     { name: "country", label: "Country" },
     {
       name: "partnerType",
       label: t.partnerType || "Partner Type",
       type: "select",
       options: [
-        { label: "Association", value: "association" },
-        { label: "Brand", value: "brand" },
-        { label: "Collection Point", value: "collection_point" }
-      ]
+        { label: t.associationLabel || "Association", value: "association" },
+        { label: t.brandLabel || "Brand", value: "brand" },
+        { label: t.collectionPointLabel || "Collection Point", value: "collection_point" },
+      ],
     },
     {
       name: "region",
       label: t.regionLabel || "Region",
       type: "select",
-      options: locations.regions.map(r => ({ label: r, value: r })),
+      options: locations.regions.map((r) => ({ label: r, value: r })),
     },
     {
       name: "department",
       label: t.departmentLabel || "Department",
       type: "select",
-      options: locations.departments.map(d => ({ label: d, value: d })),
+      options: locations.departments.map((d) => ({ label: d, value: d })),
     },
     { name: "logo", label: "Logo (Required)", type: "file", required: true },
     { name: "partnerImage", label: "Partner Image", type: "file" },
@@ -396,22 +463,22 @@ export default function PartnersPage() {
       label: t.partnerType || "Partner Type",
       type: "select",
       options: [
-        { label: "Association", value: "association" },
-        { label: "Brand", value: "brand" },
-        { label: "Collection Point", value: "collection_point" }
-      ]
+        { label: t.associationLabel || "Association", value: "association" },
+        { label: t.brandLabel || "Brand", value: "brand" },
+        { label: t.collectionPointLabel || "Collection Point", value: "collection_point" },
+      ],
     },
     {
       name: "region",
       label: t.regionLabel || "Region",
       type: "select",
-      options: locations.regions.map(r => ({ label: r, value: r })),
+      options: locations.regions.map((r) => ({ label: r, value: r })),
     },
     {
       name: "department",
       label: t.departmentLabel || "Department",
       type: "select",
-      options: locations.departments.map(d => ({ label: d, value: d })),
+      options: locations.departments.map((d) => ({ label: d, value: d })),
     },
     {
       name: "status",
@@ -424,9 +491,9 @@ export default function PartnersPage() {
         { label: t.inactive || "Inactive", value: "inactive" },
         { label: t.blocked || "Blocked", value: "blocked" },
         { label: t.rejected || "Rejected", value: "rejected" },
-        { label: t.banned || "Banned", value: "banned" }
-      ]
-    }
+        { label: t.banned || "Banned", value: "banned" },
+      ],
+    },
   ];
 
   const getViewFields = () => [
@@ -435,9 +502,24 @@ export default function PartnersPage() {
     { name: "email", label: t.emailLabel || "Email", disabled: true },
     { name: "company", label: t.companyName || "Company Name", disabled: true },
     { name: "logo", label: "Logo", disabled: true, type: "file" },
-    { name: "partnerImage", label: "Partner Image", disabled: true, type: "file" },
-    { name: "description", label: "Description", disabled: true, type: "textarea" },
-    { name: "website", label: t.websiteLabel || "Website", disabled: true, type: "url" },
+    {
+      name: "partnerImage",
+      label: "Partner Image",
+      disabled: true,
+      type: "file",
+    },
+    {
+      name: "description",
+      label: "Description",
+      disabled: true,
+      type: "textarea",
+    },
+    {
+      name: "website",
+      label: t.websiteLabel || "Website",
+      disabled: true,
+      type: "url",
+    },
     { name: "facebook", label: "Facebook URL", disabled: true, type: "url" },
     { name: "instagram", label: "Instagram URL", disabled: true, type: "url" },
     { name: "twitter", label: "Twitter URL", disabled: true, type: "url" },
@@ -447,11 +529,30 @@ export default function PartnersPage() {
     { name: "city", label: t.cityLabel || "City", disabled: true },
     { name: "postalCode", label: "Postal Code", disabled: true },
     { name: "country", label: "Country", disabled: true },
-    { name: "partnerType", label: t.partnerType || "Partner Type", disabled: true },
+    {
+      name: "partnerType",
+      label: t.partnerType || "Partner Type",
+      disabled: true,
+      type: "select",
+      options: [
+        { label: t.associationLabel || "Association", value: "association" },
+        { label: t.brandLabel || "Brand", value: "brand" },
+        { label: t.collectionPointLabel || "Collection Point", value: "collection_point" },
+      ],
+    },
     { name: "region", label: t.regionLabel || "Region", disabled: true },
-    { name: "department", label: t.departmentLabel || "Department", disabled: true },
+    {
+      name: "department",
+      label: t.departmentLabel || "Department",
+      disabled: true,
+    },
     { name: "status", label: t.statusLabel || "Status", disabled: true },
-    { name: "createdAt", label: t.joinedDate || "Joined Date", disabled: true, type: "date" },
+    {
+      name: "createdAt",
+      label: t.joinedDate || "Joined Date",
+      disabled: true,
+      type: "date",
+    },
   ];
 
   return (
@@ -482,7 +583,9 @@ export default function PartnersPage() {
             <h3 className="font-bold text-[#3a2a1a] text-xs flex items-center gap-2">
               <Medal className="w-4 h-4 text-[#8B6914]" /> {t.pendingValidation}
             </h3>
-            <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{pendingPartners.length}</span>
+            <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              {pendingPartners.length}
+            </span>
           </div>
           <div className="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
             {pendingPartners.map((p) => (
@@ -499,7 +602,9 @@ export default function PartnersPage() {
               />
             ))}
             {pendingPartners.length === 0 && (
-              <p className="text-[10px] text-[#9a8a7a] text-center py-10 italic border border-dashed border-[#e8ddd0] rounded-xl">{t.noPartnersPending || "No pending partners."}</p>
+              <p className="text-[10px] text-[#9a8a7a] text-center py-10 italic border border-dashed border-[#e8ddd0] rounded-xl">
+                {t.noPartnersPending || "No pending partners."}
+              </p>
             )}
           </div>
         </div>
@@ -508,20 +613,48 @@ export default function PartnersPage() {
           <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-[#e8ddd0] bg-[#fcfaf7] flex items-center justify-between">
               <h3 className="font-bold text-[#3a2a1a] text-xs flex items-center gap-2">
-                <span className={queryParams.status === 'active' ? "text-green-500" : "text-blue-500"}>
-                  {queryParams.status === 'active' ? <CheckCircle className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
+                <span
+                  className={
+                    queryParams.status === "active"
+                      ? "text-green-500"
+                      : "text-blue-500"
+                  }
+                >
+                  {queryParams.status === "active" ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <ClipboardList className="w-4 h-4" />
+                  )}
                 </span>
-                {queryParams.status === 'all'
-                  ? (t.allPartners || "All Partners")
-                  : (t[queryParams.status] ? `${t[queryParams.status]} ${t.partnersTitle}` : t.activePartners)}
+                {queryParams.status === "all"
+                  ? t.allPartners || "All Partners"
+                  : t[queryParams.status]
+                    ? `${t[queryParams.status]} ${t.partnersTitle}`
+                    : t.activePartners}
               </h3>
             </div>
 
             <FilterBar
-              onSearch={(val) => setQueryParams(p => p.search === val ? p : { ...p, search: val, page: 1 })}
-              onFilterChange={(name, val) => setQueryParams(p => p[name] === val ? p : { ...p, [name]: val, page: 1 })}
-              onSortChange={(sortBy, sort) => setQueryParams(p => p.sortBy === sortBy && p.sort === sort ? p : { ...p, sortBy, sort, page: 1 })}
-              placeholder={t.searchPartnerPlaceholder || "Search for a partner..."}
+              onSearch={(val) =>
+                setQueryParams((p) =>
+                  p.search === val ? p : { ...p, search: val, page: 1 },
+                )
+              }
+              onFilterChange={(name, val) =>
+                setQueryParams((p) =>
+                  p[name] === val ? p : { ...p, [name]: val, page: 1 },
+                )
+              }
+              onSortChange={(sortBy, sort) =>
+                setQueryParams((p) =>
+                  p.sortBy === sortBy && p.sort === sort
+                    ? p
+                    : { ...p, sortBy, sort, page: 1 },
+                )
+              }
+              placeholder={
+                t.searchPartnerPlaceholder || "Search for a partner..."
+              }
               related={true}
               filters={[
                 {
@@ -533,37 +666,52 @@ export default function PartnersPage() {
                     { label: t.inactive, value: "inactive" },
                     { label: t.blocked || "Blocked", value: "blocked" },
                     { label: t.rejected, value: "rejected" },
-                    { label: t.banned || "Banned", value: "banned" }
-                  ]
+                    { label: t.banned || "Banned", value: "banned" },
+                  ],
                 },
                 {
                   name: "region",
                   label: t.regionLabel || "Region...",
-                  value: queryParams.region || 'all',
-                  options: locations.regions.map(r => ({ label: r, value: r }))
+                  value: queryParams.region || "all",
+                  options: locations.regions.map((r) => ({
+                    label: r,
+                    value: r,
+                  })),
                 },
                 {
                   name: "department",
                   label: t.departmentLabel || "Dept...",
-                  value: queryParams.department || 'all',
-                  options: locations.departments.map(d => ({ label: d, value: d }))
+                  value: queryParams.department || "all",
+                  options: locations.departments.map((d) => ({
+                    label: d,
+                    value: d,
+                  })),
                 },
                 {
                   name: "partnerType",
                   label: t.partnerType || "Type...",
-                  value: queryParams.partnerType || 'all',
+                  value: queryParams.partnerType || "all",
                   options: [
-                    { label: "Association", value: "association" },
-                    { label: "Brand", value: "brand" },
-                    { label: "Collection Point", value: "collection_point" }
-                  ]
-                }
+                    { label: t.associationLabel || "Association", value: "association" },
+                    { label: t.brandLabel || "Brand", value: "brand" },
+                    { label: t.collectionPointLabel || "Collection Point", value: "collection_point" },
+                  ],
+                },
               ]}
               sortOptions={[
-                { label: t.dateDesc || "Date (Newest)", value: "date:descending" },
-                { label: t.dateAsc || "Date (Oldest)", value: "date:ascending" },
+                {
+                  label: t.dateDesc || "Date (Newest)",
+                  value: "date:descending",
+                },
+                {
+                  label: t.dateAsc || "Date (Oldest)",
+                  value: "date:ascending",
+                },
                 { label: t.nameAsc || "Name (A-Z)", value: "name:ascending" },
-                { label: t.companyAsc || "Company (A-Z)", value: "company:ascending" }
+                {
+                  label: t.companyAsc || "Company (A-Z)",
+                  value: "company:ascending",
+                },
               ]}
               actionButton={
                 <button
@@ -583,23 +731,37 @@ export default function PartnersPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded bg-[#8B6914] flex items-center justify-center text-white font-bold text-[10px] overflow-hidden">
                         {p.logo?.secure_url || p.profileImage?.secure_url ? (
-                          <img src={p.logo?.secure_url || p.profileImage?.secure_url} alt="Logo" className="w-full h-full object-contain" />
+                          <img
+                            src={
+                              p.logo?.secure_url || p.profileImage?.secure_url
+                            }
+                            alt="Logo"
+                            className="w-full h-full object-contain"
+                          />
                         ) : (
-                          (p.company || p.firstName || 'P').charAt(0).toUpperCase()
+                          (p.company || p.firstName || "P")
+                            .charAt(0)
+                            .toUpperCase()
                         )}
                       </div>
                       <div>
-                        <div className="font-bold">{p.company || `${p.firstName} ${p.lastName}`}</div>
-                        <div className="text-[10px] text-[#9a8a7a]">{p.email}</div>
+                        <div className="font-bold">
+                          {p.company || `${p.firstName} ${p.lastName}`}
+                        </div>
+                        <div className="text-[10px] text-[#9a8a7a]">
+                          {p.email}
+                        </div>
                       </div>
                     </div>
-                  )
+                  ),
                 },
                 { header: t.cityLabel || "CITY", accessor: "address" },
                 {
                   header: t.localMissions || "MISSIONS",
                   align: "center",
-                  cell: (p) => <span className="font-bold">{p.totalMissions || 0}</span>
+                  cell: (p) => (
+                    <span className="font-bold">{p.totalMissions || 0}</span>
+                  ),
                 },
                 {
                   header: t.actionsLabel || "ACTIONS",
@@ -625,8 +787,8 @@ export default function PartnersPage() {
                         {t.deleteBtn || "Delete"}
                       </button>
                     </div>
-                  )
-                }
+                  ),
+                },
               ]}
               data={activePartners}
               loading={loading}
@@ -635,7 +797,7 @@ export default function PartnersPage() {
 
             <Pagination
               meta={meta}
-              onPageChange={(page) => setQueryParams(p => ({ ...p, page }))}
+              onPageChange={(page) => setQueryParams((p) => ({ ...p, page }))}
             />
           </div>
         </div>
@@ -643,7 +805,10 @@ export default function PartnersPage() {
 
       <CRUDModal
         isOpen={isAddModalOpen}
-        onClose={() => { setIsAddModalOpen(false); setAddFieldErrors([]); }}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setAddFieldErrors([]);
+        }}
         title={t.addPartner || "Add Partner"}
         fields={getPartnerFields()}
         onSubmit={handleAddPartner}
@@ -683,7 +848,10 @@ export default function PartnersPage() {
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
         message={confirmModal.message}
-        onClose={() => !confirmLoading && setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onClose={() =>
+          !confirmLoading &&
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }))
+        }
         onConfirm={confirmModal.onConfirm}
         loading={confirmLoading}
       />

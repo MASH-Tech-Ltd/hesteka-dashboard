@@ -626,10 +626,16 @@ const translations = {
     managePostsDesc: "Manage community posts (chat messages).",
     noPostsFound: "No posts found.",
     deletePost: "Delete Post",
-    confirmDeletePost: "Are you sure you want to delete this post? This action cannot be undone.",
+    confirmDeletePost:
+      "Are you sure you want to delete this post? This action cannot be undone.",
     commentsForPost: "Comments for Post",
     noCommentsFound: "No comments found.",
     noRepliesYet: "This post has no replies yet.",
+    partnerType: "Partner Type",
+    brandLabel: "Brand",
+    associationLabel: "Association",
+    collectionPointLabel: "Collection Point",
+    likes: "Likes",
   },
   fr: {
     admin: "ADMIN",
@@ -1250,10 +1256,16 @@ const translations = {
     managePostsDesc: "Gérer les publications de la communauté (messages chat).",
     noPostsFound: "Aucune publication trouvée.",
     deletePost: "Supprimer la publication",
-    confirmDeletePost: "Voulez-vous vraiment supprimer cette publication ? Cette action est irréversible.",
+    confirmDeletePost:
+      "Voulez-vous vraiment supprimer cette publication ? Cette action est irréversible.",
     commentsForPost: "Commentaires de la publication",
     noCommentsFound: "Aucun commentaire trouvé.",
     noRepliesYet: "Cette publication n'a pas encore de réponses.",
+    partnerType: "Type de partenaire",
+    brandLabel: "Marques",
+    associationLabel: "Associations",
+    collectionPointLabel: "Points de collecte",
+    likes: "J'aimes",
   },
 };
 const LanguageContext = createContext(null);
