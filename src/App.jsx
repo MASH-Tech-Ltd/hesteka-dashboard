@@ -17,6 +17,7 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const UsersPage = lazy(() => import("./pages/UsersPage"));
+const LiveMapPage = lazy(() => import("./pages/LiveMapPage"));
 const PartnersPage = lazy(() => import("./pages/PartnersPage"));
 const MissionsPage = lazy(() => import("./pages/MissionsPage"));
 const CollectionPointsPage = lazy(() => import("./pages/CollectionPointsPage"));
@@ -117,6 +118,7 @@ const App = () => {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="users" element={<UsersPage />} />
+              <Route path="live-map" element={<LiveMapPage />} />
               <Route path="partners" element={<PartnersPage />} />
               <Route path="missions" element={<MissionsPage />} />
               <Route

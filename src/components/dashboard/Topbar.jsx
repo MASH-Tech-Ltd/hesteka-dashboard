@@ -93,6 +93,7 @@ const Topbar = React.memo(({ onToggleSidebar }) => {
     "/shopify-products": { title: t.shopifyProducts, sub: "Manage Shopify products" },
     "/faq": { title: t.faqTitle || "FAQ", sub: t.faqSub || "Manage FAQ content" },
     "/posts": { title: t.posts || "Posts (Temporary)", sub: t.managePostsDesc || "Manage community posts (chat messages)." },
+    "/live-map": { title: t.liveMap || "Live Map", sub: "Real-time user locations" },
   };
 
   const page = PAGE_TITLES[location.pathname] || { title: t.dashboard || "Dashboard", sub: "HESTEKA Admin" };

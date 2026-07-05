@@ -117,6 +117,7 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
           badgeColor: "bg-red-600",
         },
         { icon: Users, key: "users", path: "/users", badge: null },
+        { icon: MapPin, key: "liveMap", path: "/live-map", badge: null },
         {
           icon: Handshake,
           key: "partners",
