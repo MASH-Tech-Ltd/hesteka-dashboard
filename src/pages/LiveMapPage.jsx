@@ -272,6 +272,7 @@ const LiveMapPage = () => {
               mapTypeId={mapType}
               onLoad={onLoad}
               onUnmount={onUnmount}
+              onClick={() => setSelectedUser(null)}
               options={{
                 disableDefaultUI: false,
                 zoomControl: true,
@@ -304,7 +305,7 @@ const LiveMapPage = () => {
 
               {selectedUser && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none bg-black/5 backdrop-blur-[1px]">
-                  <div className="bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-2xl border border-[#e8ddd0] min-w-[280px] pointer-events-auto transform transition-all relative">
+                  <div className="bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-2xl border border-[#e8ddd0] min-w-[280px] pointer-events-none transform transition-all relative">
                     <div className="text-center">
                       <div className="w-20 h-20 bg-[#f5f0e8] rounded-full mx-auto mb-4 overflow-hidden flex items-center justify-center text-[#8B6914] text-2xl font-bold border-2 border-[#e8ddd0] shadow-sm">
                         {selectedUser.profileImage?.secure_url ? (
