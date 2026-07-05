@@ -250,45 +250,48 @@ const LiveMapPage = () => {
               </MarkerClusterer>
               
               {selectedUser && (
-                <InfoWindowF
-                  position={{ lat: selectedUser.location.coordinates[1], lng: selectedUser.location.coordinates[0] }}
-                  onCloseClick={() => setSelectedUser(null)}
-                  options={{ disableAutoPan: true }}
-                >
-                  <div className="text-center p-2 min-w-[140px]">
-                    <div className="w-12 h-12 bg-[#f5f0e8] rounded-full mx-auto mb-2 overflow-hidden flex items-center justify-center text-[#8B6914] font-bold border border-[#e8ddd0]">
-                      {selectedUser.profileImage?.secure_url ? (
-                        <img
-                          src={selectedUser.profileImage.secure_url}
-                          alt={selectedUser.firstName}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        selectedUser.firstName?.charAt(0) || "U"
-                      )}
+                <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none bg-black/5 backdrop-blur-[1px]">
+                  <div className="bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-2xl border border-[#e8ddd0] min-w-[280px] pointer-events-auto transform transition-all relative">
+                    <button 
+                      onClick={() => setSelectedUser(null)}
+                      className="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    
+                    <div className="text-center">
+                      <div className="w-20 h-20 bg-[#f5f0e8] rounded-full mx-auto mb-4 overflow-hidden flex items-center justify-center text-[#8B6914] text-2xl font-bold border-2 border-[#e8ddd0] shadow-sm">
+                        {selectedUser.profileImage?.secure_url ? (
+                          <img
+                            src={selectedUser.profileImage.secure_url}
+                            alt={selectedUser.firstName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          selectedUser.firstName?.charAt(0) || "U"
+                        )}
+                      </div>
+                      <p className="font-bold text-[#3a2a1a] text-xl leading-tight">
+                        {selectedUser.firstName} {selectedUser.lastName}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 mt-2 mb-3">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full border border-white shadow-sm"
+                          style={{ backgroundColor: getUserCategory(selectedUser).color }}
+                        ></span>
+                        <span className="text-[11px] text-[#9a8a7a] font-bold uppercase tracking-wider">
+                          {getUserCategory(selectedUser).label}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-gray-500 mt-1.5 truncate max-w-[240px] mx-auto pb-4">
+                        {selectedUser.email}
+                      </p>
                     </div>
-                    <p className="font-bold text-[#3a2a1a] text-[14px] leading-tight">
-                      {selectedUser.firstName} {selectedUser.lastName}
-                    </p>
-                    <div className="flex items-center justify-center gap-1.5 mt-1">
-                      <span
-                        className="w-2 h-2 rounded-full border border-white"
-                        style={{ backgroundColor: getUserCategory(selectedUser).color }}
-                      ></span>
-                      <span className="text-[10px] text-[#9a8a7a] font-bold uppercase tracking-wider">
-                        {getUserCategory(selectedUser).label}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[#9a8a7a] mt-1.5 truncate max-w-[150px]">
-                      {selectedUser.email}
-                    </p>
-                    {selectedUser.partnerType && (
-                      <span className="inline-block mt-2 px-2 py-0.5 bg-orange-100 text-orange-800 text-[9px] font-bold rounded-full uppercase">
-                        {selectedUser.partnerType}
-                      </span>
-                    )}
                   </div>
-                </InfoWindowF>
+                </div>
               )}
             </GoogleMap>
           </>
