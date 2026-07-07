@@ -5,7 +5,7 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onClose, loading, hid
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center bg-[#fcfaf7]">
           <h2 className="text-lg font-bold text-[#3a2a1a] flex items-center gap-2">

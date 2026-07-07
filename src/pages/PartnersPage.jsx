@@ -444,6 +444,7 @@ export default function PartnersPage() {
   const getEditFields = () => [
     { name: "firstName", label: t.firstName || "First Name", disabled: true },
     { name: "lastName", label: t.lastName || "Last Name", disabled: true },
+    { name: "email", label: t.emailLabel || "Email", disabled: editingUser?.provider !== 'local' },
     { name: "company", label: t.companyName || "Company Name" },
     { name: "logo", label: "Logo", type: "file" },
     { name: "partnerImage", label: "Partner Image", type: "file" },
@@ -823,7 +824,7 @@ export default function PartnersPage() {
           setEditingUser(null);
           setEditFieldErrors([]);
         }}
-        title={t.updateStatusTitle || "Update Status"}
+        title={t.partnerDetailsUpdate || "Partner Details Update"}
         fields={getEditFields()}
         initialData={editingUser}
         onSubmit={handleEditPartner}
