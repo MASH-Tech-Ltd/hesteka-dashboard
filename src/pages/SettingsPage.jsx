@@ -14,6 +14,7 @@ export default function SettingsPage() {
     maintenanceMode: false,
     alertRadius: 5
   });
+  const [supportLink, setSupportLink] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [admins, setAdmins] = useState([]);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
@@ -40,16 +41,31 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchSupportLink = async () => {
+    try {
+      const res = await api.get("/support-link/get-support-link");
+      if (res.data.status === "ok" && res.data.data) {
+        setSupportLink(res.data.data.link);
+      }
+    } catch (err) {
+      console.error("Failed to fetch support link", err);
+    }
+  };
+
   useEffect(() => {
     fetchAdmins();
     fetchSettings();
+    fetchSupportLink();
   }, []);
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
       await api.patch("/settings", settings);
-      toast.success(`${t.supportEmailLabel} is now ${settings.supportEmail}`);
+      if (supportLink) {
+        await api.post("/support-link/create-support-link", { link: supportLink });
+      }
+      toast.success("Settings and links updated successfully");
     } catch (err) {
       console.error("Failed to save settings", err);
       toast.error("Failed to update settings");
@@ -147,6 +163,17 @@ export default function SettingsPage() {
                     className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs outline-none focus:border-[#8B6914]"
                  />
                  <p className="text-[8px] text-[#9a8a7a] italic">{t.supportEmailSub}</p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                 <label className="text-[10px] font-bold text-[#9a8a7a] uppercase">Support Website Link</label>
+                 <input 
+                    type="url"
+                    value={supportLink}
+                    onChange={(e) => setSupportLink(e.target.value)}
+                    placeholder="https://example.com/support"
+                    className="bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-3 py-2 text-xs outline-none focus:border-[#8B6914]"
+                 />
+                 <p className="text-[8px] text-[#9a8a7a] italic">Public link for external support or donations.</p>
               </div>
               <button 
                 onClick={handleSaveSettings}
