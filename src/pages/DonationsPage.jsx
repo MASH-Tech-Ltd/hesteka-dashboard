@@ -473,34 +473,8 @@ export default function DonationsPage() {
   }, [fetchData]);
 
   useEffect(() => {
-    socket.connect();
-    
-    const handleNewDonation = (data) => {
+    const handleNewDonation = () => {
       fetchData();
-      if (data && data.donor) {
-        if (data.status === "pending") {
-          const msg = t.newDonationIntent 
-            ? t.newDonationIntent.replace('{method}', data.method || 'donation').replace('{amount}', data.amount || '').replace('{donor}', data.donor) 
-            : `🕒 A new ${data.method || 'donation'} intent of ${data.amount || ''}€ was initiated by ${data.donor}.`;
-          toast.info(msg, {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: true,
-          });
-        } else {
-          const msg = t.donationConfirmed
-            ? t.donationConfirmed.replace('{method}', data.method || 'donation').replace('{amount}', data.amount || '').replace('{donor}', data.donor)
-            : `🎉 Payment for ${data.method || 'donation'} of ${data.amount || ''}€ from ${data.donor} was confirmed via webhook!`;
-          toast.success(msg, {
-            position: "top-right",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          });
-        }
-      }
     };
     
     socket.on("donation_new", handleNewDonation);
@@ -508,7 +482,7 @@ export default function DonationsPage() {
     return () => {
       socket.off("donation_new", handleNewDonation);
     };
-  }, [fetchData]);
+  }, [fetchData, t]);
 
   const statCards = [
     { label: t.totalCollected, value: { text: `${stats?.totalCollected || 0}€`, color: "text-green-600" }, color: "bg-green-500" },

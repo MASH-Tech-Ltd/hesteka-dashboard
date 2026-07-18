@@ -154,7 +154,6 @@ export default function ValidationDonationsPage() {
   }, [fetchAllProofs]);
 
   useEffect(() => {
-    socket.connect();
     socket.on("donation_validation_updated", () => {
       fetchData();
       fetchStats();
