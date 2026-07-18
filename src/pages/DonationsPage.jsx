@@ -7,7 +7,39 @@ import Pagination from "../components/common/Pagination";
 import FilterBar from "../components/common/FilterBar";
 import DataTable from "../components/common/DataTable";
 import { toast } from "react-toastify";
-import { FileText, X, Mail, Printer, CreditCard, Package, Wallet, Download } from "lucide-react";
+import { FileText, X, Mail, Printer, CreditCard, Package, Wallet, Download, Trash2, BarChart3 } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const StripeIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13.976 9.15c-1.306-.606-2.604-1.074-2.604-1.895 0-.616.48-1.002 1.4-1.002 1.344 0 2.766.422 3.864 1.042l1.092-4.04C16.51 2.515 14.654 2 12.563 2 8.35 2 5.56 4.368 5.56 8.337c0 5.432 7.643 4.547 7.643 7.02 0 .81-.72 1.253-1.822 1.253-1.63 0-3.35-.558-4.735-1.39l-1.15 4.19c1.477.83 3.655 1.36 5.82 1.36 4.414 0 7.306-2.22 7.306-6.207 0-5.748-7.643-4.82-7.643-7.233z" fill="#635BFF"/>
+  </svg>
+);
+
+const PayPalIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#003087" d="M11.6 3.1h7.8c3.2 0 5.6 1.6 6.1 5.2.5 3.4-1.2 6.2-4.1 7.2-1.4.5-2.8.5-4.3.5H15l-1.9 12H7l3.6-22.7c.2-1.3 1.3-2.2 2.6-2.2z"/>
+    <path fill="#0079C1" d="M25.6 8.3c-.5-3.6-2.9-5.2-6.1-5.2h-7.8c-1.3 0-2.4.9-2.6 2.2L5.5 28.1H11l1.6-10.4c.2-1.3 1.3-2.2 2.6-2.2h2.1c2.8 0 5.4-1.1 6.2-4.5.3-1.7.1-3.3-1-4.4.8.5 1.5 1 2 1.8z"/>
+    <path fill="#00457C" d="M15.2 15.5h2.1c2.8 0 5.4-1.1 6.2-4.5.1-.3.1-.7.2-1-1.3 1.8-3.4 2.8-5.9 2.8H15l-1.6 10.4-1.3 8.1c-.2 1.3 1.1 2.2 2.4 2.2H20l1.3-8.3c.2-1.3-1.1-2.2-2.4-2.2h-3.7z"/>
+  </svg>
+);
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-[#3a2a1a] text-white p-3 rounded-xl border border-white/20 shadow-2xl backdrop-blur-md">
+        <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mb-1">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm font-black flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
+            <span className="capitalize">{entry.name}</span>: {entry.value}€
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 const ReceiptModal = ({ donation, isOpen, onClose, t, isFiscal }) => {
   const [emailLoading, setEmailLoading] = useState(false);
@@ -350,6 +382,17 @@ export default function DonationsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isFiscal, setIsFiscal] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [donationToDelete, setDonationToDelete] = useState(null);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [statPeriod, setStatPeriod] = useState("all");
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // update every minute
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchSingleDonation = async (id, type = 'details') => {
     try {
@@ -368,6 +411,31 @@ export default function DonationsPage() {
     }
   };
 
+  const handleDeleteDonation = (id) => {
+    setDonationToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteDonation = async () => {
+    if (!donationToDelete) return;
+    
+    try {
+      setLoading(true);
+      const res = await api.delete(`/donations/${donationToDelete}`);
+      if (res.data.status === "ok" || res.data.success) {
+        toast.success(t.deleteSuccess || "Donation deleted successfully!");
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to delete donation", err);
+      toast.error(err.response?.data?.message || "Failed to delete donation");
+    } finally {
+      setLoading(false);
+      setIsDeleteModalOpen(false);
+      setDonationToDelete(null);
+    }
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -382,7 +450,7 @@ export default function DonationsPage() {
 
       const [donationsRes, statsRes] = await Promise.all([
         api.get(`/donations/get-all-donation?${query}`),
-        api.get("/donations/stats"),
+        api.get(`/donations/stats?period=${statPeriod}`),
       ]);
 
       if (donationsRes.data.status === "ok" || donationsRes.data.success) {
@@ -398,7 +466,7 @@ export default function DonationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [queryParams]);
+  }, [queryParams, statPeriod]);
 
   useEffect(() => {
     fetchData();
@@ -406,11 +474,39 @@ export default function DonationsPage() {
 
   useEffect(() => {
     socket.connect();
-    socket.on("donation_new", () => {
+    
+    const handleNewDonation = (data) => {
       fetchData();
-    });
+      if (data && data.donor) {
+        if (data.status === "pending") {
+          const msg = t.newDonationIntent 
+            ? t.newDonationIntent.replace('{method}', data.method || 'donation').replace('{amount}', data.amount || '').replace('{donor}', data.donor) 
+            : `🕒 A new ${data.method || 'donation'} intent of ${data.amount || ''}€ was initiated by ${data.donor}.`;
+          toast.info(msg, {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: true,
+          });
+        } else {
+          const msg = t.donationConfirmed
+            ? t.donationConfirmed.replace('{method}', data.method || 'donation').replace('{amount}', data.amount || '').replace('{donor}', data.donor)
+            : `🎉 Payment for ${data.method || 'donation'} of ${data.amount || ''}€ from ${data.donor} was confirmed via webhook!`;
+          toast.success(msg, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+        }
+      }
+    };
+    
+    socket.on("donation_new", handleNewDonation);
+    
     return () => {
-      socket.off("donation_new");
+      socket.off("donation_new", handleNewDonation);
     };
   }, [fetchData]);
 
@@ -436,8 +532,8 @@ export default function DonationsPage() {
     {
       header: t.paymentMethodLabel || "METHOD",
       cell: (d) => (
-        <div className="font-medium flex items-center gap-1.5 uppercase text-[10px] text-[#3a2a1a]">
-          <span>{d.method === 'stripe' ? <CreditCard className="w-3.5 h-3.5" /> : d.method === 'collection_point' ? <Package className="w-3.5 h-3.5" /> : <Wallet className="w-3.5 h-3.5" />}</span>
+        <div className="font-bold flex items-center gap-2 uppercase text-[11px] text-[#3a2a1a]">
+          <span>{d.method === 'stripe' ? <StripeIcon className="w-4 h-4" /> : d.method === 'collection_point' ? <Package className="w-4 h-4 text-[#8B6914]" /> : <PayPalIcon className="w-4 h-4" />}</span>
           {d.method?.replace('_', ' ')}
         </div>
       )
@@ -475,12 +571,23 @@ export default function DonationsPage() {
             {t.detailsBtn || "Details"}
           </button>
           {(d.status?.toLowerCase().includes("pending") || (d.payment?.status?.toLowerCase().includes("pending"))) ? (
-            <button
-              onClick={() => fetchSingleDonation(d._id, 'receipt')}
-              className="md:w-28 bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded hover:bg-blue-200 transition-colors text-center"
-            >
-              {t.receiptBtn}
-            </button>
+            <>
+              <button
+                onClick={() => fetchSingleDonation(d._id, 'receipt')}
+                className="md:w-28 bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded hover:bg-blue-200 transition-colors text-center"
+              >
+                {t.receiptBtn}
+              </button>
+              {(currentTime - new Date(d.createdAt).getTime()) > 2 * 60 * 1000 && (
+                <button
+                  onClick={() => handleDeleteDonation(d._id)}
+                  className="bg-red-50 text-red-600 hover:text-red-700 hover:bg-red-100 p-1.5 rounded transition-colors flex items-center justify-center border border-red-100"
+                  title={t.deleteBtn || "Delete"}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </>
           ) : (
             <button
               onClick={() => fetchSingleDonation(d._id, 'fiscal')}
@@ -503,6 +610,111 @@ export default function DonationsPage() {
           <StatCard key={i} loading={loading} {...s} />
         ))}
       </div>
+
+      {/* Analytics Chart */}
+      {stats?.chartData && stats.chartData.length > 0 && (
+        <div className="bg-white rounded-2xl border border-[#e8ddd0] p-6 shadow-sm flex flex-col mt-2">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
+              <div className="p-2 bg-[#8B6914]/10 rounded-lg">
+                <BarChart3 className="w-4 h-4 text-[#8B6914]" />
+              </div>
+              {t.analytics || "ANALYTICS"}
+            </h3>
+            
+            <div className="flex items-center gap-6">
+              <div className="flex bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl overflow-hidden text-[10px] font-bold">
+                {['all', 'weekly', 'monthly', 'yearly'].map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setStatPeriod(period)}
+                    className={`px-3 py-2 capitalize transition-colors ${statPeriod === period ? 'bg-[#8B6914] text-white' : 'text-[#9a8a7a] hover:bg-[#f0e8d8] hover:text-[#3a2a1a]'}`}
+                  >
+                    {t[period] || period}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#9a8a7a]">
+                  <div className="w-2 h-2 rounded-full bg-[#8B6914]"></div> {t.totalCollected || "Collected"}
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#9a8a7a]">
+                  <div className="w-2 h-2 rounded-full bg-[#a855f7]"></div> {t.stripe || "Stripe"}
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#9a8a7a]">
+                  <div className="w-2 h-2 rounded-full bg-[#3b82f6]"></div> {t.paypal || "PayPal"}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8B6914" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8B6914" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorStripe" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorPayPal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#9a8a7a', fontSize: 10, fontWeight: 'bold' }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#9a8a7a', fontSize: 10, fontWeight: 'bold' }}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="collected" 
+                  name={t.totalCollected || "Collected"}
+                  stroke="#8B6914" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorCollected)" 
+                  animationDuration={2000}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="stripe" 
+                  name={t.stripe || "Stripe"}
+                  stroke="#a855f7" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorStripe)" 
+                  animationDuration={2000}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="paypal" 
+                  name={t.paypal || "PayPal"}
+                  stroke="#3b82f6" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorPayPal)" 
+                  animationDuration={2000}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Transactions Table */}
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden shadow-sm flex flex-col">
@@ -563,6 +775,41 @@ export default function DonationsPage() {
         t={t}
         isFiscal={isFiscal}
       />
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden border border-[#e8ddd0]">
+            <div className="bg-[#fcfaf7] px-6 py-4 border-b border-[#e8ddd0] flex justify-between items-center">
+              <h3 className="font-bold text-red-600 flex items-center gap-2">
+                {t.confirmDeleteTitle || "Confirm Deletion"}
+              </h3>
+              <button onClick={() => { setIsDeleteModalOpen(false); setDonationToDelete(null); }} className="text-[#9a8a7a] hover:text-[#3a2a1a] transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-[#3a2a1a]">
+                {t.confirmDeleteText || "Are you sure you want to delete this pending donation? This action cannot be undone."}
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-[#fcfaf7] border-t border-[#e8ddd0] flex justify-end gap-3">
+              <button
+                onClick={() => { setIsDeleteModalOpen(false); setDonationToDelete(null); }}
+                disabled={loading}
+                className="border border-[#e8ddd0] bg-white text-[#3a2a1a] text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#fcfaf7] transition-colors"
+              >
+                {t.cancelBtn || "Cancel"}
+              </button>
+              <button
+                onClick={confirmDeleteDonation}
+                disabled={loading}
+                className="bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                {loading ? (t.deletingLabel || "Deleting...") : (t.deleteBtn || "Delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
