@@ -4,6 +4,7 @@ import StatCard from "../components/dashboard/StatCard";
 import DataTable from "../components/common/DataTable";
 import FilterBar from "../components/common/FilterBar";
 import Pagination from "../components/common/Pagination";
+import ConfirmModal from "../components/common/ConfirmModal";
 import api from "../utils/api";
 import { toast } from "react-toastify";
 import { MapPin, Target, Package, Ruler, Lightbulb, Settings, Save, Search, User, History } from "lucide-react";
@@ -79,6 +80,8 @@ export default function PointsPage() {
   const [customPointsNote, setCustomPointsNote] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [assignMode, setAssignMode] = useState("single"); // "single" | "all"
+  const [isConfirmAllOpen, setIsConfirmAllOpen] = useState(false);
 
   // History state
   const [historyParams, setHistoryParams] = useState({ 
@@ -157,6 +160,39 @@ export default function PointsPage() {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || t.pointsAssignedError || "Failed to assign points");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleAssignAllCustomPoints = () => {
+    if (!customPoints || parseInt(customPoints) <= 0) {
+      toast.error(t.fillAllFields || "Please fill all fields properly");
+      return;
+    }
+    setIsConfirmAllOpen(true);
+  };
+
+  const executeAssignAll = async () => {
+    setIsConfirmAllOpen(false);
+    setIsAssigning(true);
+    try {
+      const res = await api.post("/points/admin/assign-custom-points-to-all", {
+        points: parseInt(customPoints),
+        note: customPointsNote || undefined
+      });
+      if (res.data.status === "ok" || res.data.success) {
+        toast.success(`Points assigned to all ${res.data.data?.usersUpdated || 'users'} successfully!`);
+        setCustomPoints("");
+        setCustomPointsNote("");
+        const statsRes = await api.get("/points/admin/stats");
+        if (statsRes.data.status === "ok" || statsRes.data.success) {
+          setStats(statsRes.data.data);
+        }
+        fetchHistory();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to assign points to all users");
     } finally {
       setIsAssigning(false);
     }
@@ -420,14 +456,33 @@ export default function PointsPage() {
         {/* Assign Custom Points Card */}
         <div className="bg-linear-to-br from-[#3a2a1a] to-[#2a1a0a] rounded-2xl p-6 text-white shadow-xl flex flex-col gap-3 relative overflow-hidden group h-full">
              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
-             <div className="bg-[#8B6914] text-[8px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-widest border border-white/20">{t.customPoints || "Custom Points"}</div>
-             <h4 className="text-lg font-black leading-tight tracking-tight">{t.giveCustomPointsTitle || "Assign Custom Points"}</h4>
-             <p className="text-[10px] text-white/60 font-bold leading-relaxed">{t.giveCustomPointsDesc || "Search for a user and directly assign points to their balance."}</p>
+             
+             <div className="flex items-center justify-between relative z-10">
+               <div className="bg-[#8B6914] text-[8px] font-black px-2 py-0.5 rounded-full w-fit uppercase tracking-widest border border-white/20">{t.customPoints || "Custom Points"}</div>
+               <div className="flex bg-white/10 p-0.5 rounded-lg border border-white/20">
+                 <button 
+                   onClick={() => setAssignMode("single")}
+                   className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${assignMode === "single" ? "bg-white text-[#3a2a1a] shadow-sm" : "text-white/70 hover:text-white"}`}
+                 >
+                   Single User
+                 </button>
+                 <button 
+                   onClick={() => setAssignMode("all")}
+                   className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${assignMode === "all" ? "bg-white text-[#3a2a1a] shadow-sm" : "text-white/70 hover:text-white"}`}
+                 >
+                   All Users
+                 </button>
+               </div>
+             </div>
+
+             <h4 className="text-lg font-black leading-tight tracking-tight mt-1">{assignMode === "single" ? (t.giveCustomPointsTitle || "Assign Custom Points") : "Assign to All Users"}</h4>
+             <p className="text-[10px] text-white/60 font-bold leading-relaxed">{assignMode === "single" ? (t.giveCustomPointsDesc || "Search for a user and directly assign points to their balance.") : "Assign points to all registered users simultaneously."}</p>
              
              <div className="flex flex-col gap-2 mt-2 bg-white/10 p-3 rounded-xl relative z-10">
                {/* User Search */}
-               <div className="flex flex-col gap-1 relative">
-                 <label className="text-[9px] font-bold text-white/80">{t.searchUser || "Search User"}</label>
+               {assignMode === "single" && (
+                 <div className="flex flex-col gap-1 relative">
+                   <label className="text-[9px] font-bold text-white/80">{t.searchUser || "Search User"}</label>
                  <div className="relative">
                    <input
                      type="text"
@@ -474,6 +529,7 @@ export default function PointsPage() {
                    </div>
                  )}
                </div>
+               )}
 
                {/* Points & Note */}
                <div className="flex gap-2 mt-1">
@@ -501,8 +557,8 @@ export default function PointsPage() {
              </div>
 
              <button 
-              onClick={handleAssignCustomPoints}
-              disabled={isAssigning || !selectedUser || !customPoints}
+              onClick={assignMode === "single" ? handleAssignCustomPoints : handleAssignAllCustomPoints}
+              disabled={isAssigning || (assignMode === "single" && !selectedUser) || !customPoints}
               className="mt-2 bg-[#8B6914] text-white text-[10px] font-black py-3 rounded-xl hover:bg-[#6a5010] transition-all active:scale-95 shadow-lg uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
              >
                 {isAssigning ? (
@@ -573,6 +629,16 @@ export default function PointsPage() {
           />
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={isConfirmAllOpen}
+        title={t.confirmAssignAllTitle || "Assign to All Users"}
+        message={t.confirmAssignAllDesc || `Are you absolutely sure you want to assign ${customPoints || 0} points to ALL registered users? This action cannot be easily undone.`}
+        confirmText={t.confirmAssign || "Yes, Assign Points"}
+        onConfirm={executeAssignAll}
+        onClose={() => setIsConfirmAllOpen(false)}
+        loading={isAssigning}
+      />
 
     </div>
   );
