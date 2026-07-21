@@ -5,10 +5,11 @@ import {
   useJsApiLoader,
   InfoWindowF,
   MarkerClusterer,
+  Autocomplete,
 } from "@react-google-maps/api";
 import api from "../utils/api";
 import { useLang } from "../context/LanguageContext";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, Search, MapPin } from "lucide-react";
 
 const libraries = ["places"];
 const mapContainerStyle = {
@@ -95,6 +96,10 @@ const LiveMapPage = () => {
   const [mapType, setMapType] = useState("roadmap");
   const mapRef = useRef(null);
 
+  // Search state
+  const [autocomplete, setAutocomplete] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
@@ -145,6 +150,74 @@ const LiveMapPage = () => {
     });
   }, [users, isLoaded]);
 
+  const onLoadAutocomplete = (autoC) => {
+    setAutocomplete(autoC);
+  };
+
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace();
+      
+      // Handle cases where the user types text without selecting a valid option from the dropdown menu
+      if (!place.geometry || !place.geometry.location) {
+        console.warn("No valid location selected from dropdown.");
+        setSelectedLocation(null);
+        return;
+      }
+
+      // Extract and handle the selected place's details
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      
+      const locationData = {
+        formattedAddress: place.formatted_address,
+        lat: lat,
+        lng: lng,
+        placeId: place.place_id
+      };
+
+      // Store the selected location data in the component's state
+      setSelectedLocation(locationData);
+      
+      if (mapRef.current) {
+        mapRef.current.panTo({ lat, lng });
+        mapRef.current.setZoom(14); // Zoom in closer to the searched place
+      }
+    }
+  };
+
+  const onMapClick = (e) => {
+    setSelectedUser(null);
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    
+    if (window.google && window.google.maps && window.google.maps.Geocoder) {
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results[0]) {
+          const formattedAddress = results[0].formatted_address;
+          setSelectedLocation({
+            formattedAddress,
+            lat,
+            lng,
+            placeId: results[0].place_id
+          });
+          const input = document.getElementById('live-map-search-input');
+          if (input) input.value = formattedAddress;
+        } else {
+          setSelectedLocation({
+            formattedAddress: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+            lat,
+            lng,
+            placeId: null
+          });
+          const input = document.getElementById('live-map-search-input');
+          if (input) input.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        }
+      });
+    }
+  };
+
   const onLoad = useCallback(function callback(map) {
     mapRef.current = map;
   }, []);
@@ -156,6 +229,50 @@ const LiveMapPage = () => {
   const activeCount = users.filter((u) => u.isOnline).length;
   const offlineCount = users.filter((u) => !u.isOnline).length;
 
+  // Ensure dropdown matches input width perfectly via ResizeObserver
+  useEffect(() => {
+    if (!isLoaded) return;
+    
+    const updatePacWidth = () => {
+      const input = document.getElementById('live-map-search-input');
+      const pacs = document.querySelectorAll('.pac-container');
+      if (pacs.length > 0 && input) {
+        const width = input.offsetWidth;
+        pacs.forEach(pac => {
+          pac.style.setProperty('min-width', `${width}px`, 'important');
+          pac.style.setProperty('width', `${width}px`, 'important');
+        });
+      }
+    };
+    
+    let observer;
+    
+    const initWidthSync = () => {
+      const input = document.getElementById('live-map-search-input');
+      if (input) {
+        observer = new ResizeObserver(updatePacWidth);
+        observer.observe(input);
+        input.addEventListener('focus', updatePacWidth);
+        input.addEventListener('input', updatePacWidth);
+        window.addEventListener('resize', updatePacWidth);
+      } else {
+        setTimeout(initWidthSync, 100);
+      }
+    };
+    
+    initWidthSync();
+
+    return () => {
+      if (observer) observer.disconnect();
+      window.removeEventListener('resize', updatePacWidth);
+      const input = document.getElementById('live-map-search-input');
+      if (input) {
+        input.removeEventListener('focus', updatePacWidth);
+        input.removeEventListener('input', updatePacWidth);
+      }
+    };
+  }, [isLoaded]);
+
   // MarkerClusterer options
   const clusterOptions = {
     imagePath:
@@ -166,13 +283,94 @@ const LiveMapPage = () => {
 
   return (
     <div className="p-4 flex flex-col gap-4 h-[calc(100vh-90px)]">
+      <style>{`
+        .pac-container {
+          border-radius: 0.75rem !important;
+          border: 1px solid #e8ddd0 !important;
+          box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+          margin-top: 8px !important;
+          font-family: inherit !important;
+          box-sizing: border-box !important;
+          padding-bottom: 0 !important;
+        }
+
+        /* Hide Powered by Google logo */
+        .pac-container::after {
+          display: none !important;
+          content: none !important;
+        }
+        
+        .pac-item {
+          padding: 12px 16px !important;
+          cursor: pointer !important;
+          border-top: none !important;
+          border-bottom: 1px solid #e8ddd0 !important;
+          color: #9a8a7a !important;
+          font-size: 13px !important;
+          transition: all 0.2s ease !important;
+          display: flex !important;
+          align-items: center !important;
+        }
+
+        .pac-item:last-of-type {
+          border-bottom: none !important;
+        }
+        
+        .pac-item:hover, .pac-item-selected {
+          background-color: #fcfaf7 !important;
+        }
+        
+        .pac-item-query {
+          color: #3a2a1a !important;
+          font-size: 14px !important;
+          font-weight: 600 !important;
+          padding-right: 6px !important;
+        }
+        
+        .pac-icon {
+          display: none !important;
+        }
+        
+        .pac-item::before {
+          content: '';
+          display: inline-block;
+          width: 18px;
+          height: 18px;
+          min-width: 18px;
+          margin-right: 12px;
+          background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238B6914" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>');
+          background-repeat: no-repeat;
+          background-position: center;
+        }
+      `}</style>
       {/* Page Header */}
-      <div className="flex items-center justify-between shrink-0">
-        <h1 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
+      <div className="flex items-center justify-between shrink-0 gap-4">
+        <h1 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2 shrink-0">
           <Users className="w-6 h-6 text-[#8B6914]" />
           {t.liveMap || "Live Map"}
         </h1>
-        <div className="bg-white px-4 py-2 rounded-lg border border-[#e8ddd0] shadow-sm flex items-center gap-2">
+        
+        {/* Search Field */}
+        <div className="flex-1 max-w-2xl relative z-[200]">
+          {isLoaded && (
+            <div className="relative">
+              <Autocomplete
+                onLoad={onLoadAutocomplete}
+                onPlaceChanged={onPlaceChanged}
+              >
+                <input
+                  id="live-map-search-input"
+                  type="text"
+                  placeholder={t.searchLocationPlaceholder || "Search for an address or city..."}
+                  className="w-full bg-white border border-[#e8ddd0] rounded-xl pl-10 pr-4 py-2 text-sm text-[#3a2a1a] outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all shadow-sm"
+                />
+              </Autocomplete>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a8a7a] pointer-events-none" />
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white px-4 py-2 rounded-lg border border-[#e8ddd0] shadow-sm flex items-center gap-2 shrink-0">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
           <p className="text-xs font-bold text-[#8B6914] uppercase tracking-widest">
             {users.length} Mapped Users
@@ -272,7 +470,7 @@ const LiveMapPage = () => {
               mapTypeId={mapType}
               onLoad={onLoad}
               onUnmount={onUnmount}
-              onClick={() => setSelectedUser(null)}
+              onClick={onMapClick}
               options={{
                 disableDefaultUI: false,
                 zoomControl: true,
@@ -302,6 +500,16 @@ const LiveMapPage = () => {
                   })
                 }
               </MarkerClusterer>
+
+              {/* Pin for the searched location */}
+              {selectedLocation && (
+                <MarkerF
+                  position={{
+                    lat: selectedLocation.lat,
+                    lng: selectedLocation.lng,
+                  }}
+                />
+              )}
 
               {selectedUser && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none bg-black/5 backdrop-blur-[1px]">
