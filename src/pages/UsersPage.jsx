@@ -181,9 +181,9 @@ export default function UsersPage() {
         });
 
         // Append files if selected
-        if (formData.profileImage) formDataPayload.append("profileImage", formData.profileImage);
-        if (formData.logo) formDataPayload.append("logo", formData.logo);
-        if (formData.partnerImage) formDataPayload.append("partnerImage", formData.partnerImage);
+        if (formData.profileImage instanceof File) formDataPayload.append("profileImage", formData.profileImage);
+        if (formData.logo instanceof File) formDataPayload.append("logo", formData.logo);
+        if (formData.partnerImage instanceof File) formDataPayload.append("partnerImage", formData.partnerImage);
 
         // Check if formDataPayload has any keys
         const hasData = Array.from(formDataPayload.keys()).length > 0;
