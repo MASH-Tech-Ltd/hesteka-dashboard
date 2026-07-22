@@ -76,6 +76,11 @@ export default function ValidationDonationsPage() {
   const [imageModal, setImageModal] = useState({ isOpen: false, url: null });
   const [trendPeriod, setTrendPeriod] = useState("monthly");
 
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+
   const [allProofs, setAllProofs] = useState([]);
   const [allMeta, setAllMeta] = useState(null);
   const [queryParams, setQueryParams] = useState({ 
@@ -88,14 +93,14 @@ export default function ValidationDonationsPage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await api.get(`/donation-proofs/stats?period=${trendPeriod}`);
+      const res = await api.get(`/donation-proofs/stats?period=${trendPeriod}&month=${selectedMonth}&year=${selectedYear}`);
       if (res.data.status === "ok") {
         setStats(res.data.data);
       }
     } catch (err) {
       console.error("Failed to fetch stats", err);
     }
-  }, [trendPeriod]);
+  }, [trendPeriod, selectedMonth, selectedYear]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -273,6 +278,19 @@ export default function ValidationDonationsPage() {
       }
     },
     {
+      header: t.reasonLabel || "REASON",
+      cell: (d) => {
+        if (d.status === 'rejected') {
+          return (
+            <span className="text-[10px] text-red-600 italic">
+              {d.refusalReason ? (t[d.refusalReason.replace(/_([a-z])/g, (g) => g[1]?.toUpperCase())] || d.refusalReason.replace(/_/g, ' ')) : d.adminNote || "-"}
+            </span>
+          );
+        }
+        return <span className="text-[10px] text-gray-400">-</span>;
+      }
+    },
+    {
       header: t.actionsLabel || "ACTIONS",
       align: "right",
       cell: (d) => (
@@ -311,10 +329,45 @@ export default function ValidationDonationsPage() {
         </button>
       </div> */}
 
+      {/* Date Filter for Stats */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-sm font-bold text-[#3a2a1a]">{t.statsTitle || "Statistics"}</h2>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => {
+              setSelectedMonth(currentMonth);
+              setSelectedYear(currentYear);
+            }}
+            className="text-[11px] font-bold text-[#8B6914] bg-[#fcfaf7] border border-[#e8ddd0] px-3 py-1.5 rounded-lg hover:bg-[#f0e8d8]"
+          >
+            {t.thisMonth || "This Month"}
+          </button>
+          <select 
+            value={selectedMonth} 
+            onChange={e => setSelectedMonth(Number(e.target.value))}
+            className="bg-[#fcfaf7] border border-[#e8ddd0] text-[#3a2a1a] text-[11px] font-bold rounded-lg px-2 py-1.5 outline-none cursor-pointer"
+          >
+            {Array.from({length: 12}, (_, i) => i + 1).map(m => {
+              const monthName = new Date(0, m - 1).toLocaleString(localStorage.getItem('language') === 'fr' ? 'fr-FR' : 'en-US', { month: 'long' });
+              return <option key={m} value={m}>{monthName.charAt(0).toUpperCase() + monthName.slice(1)}</option>
+            })}
+          </select>
+          <select 
+            value={selectedYear} 
+            onChange={e => setSelectedYear(Number(e.target.value))}
+            className="bg-[#fcfaf7] border border-[#e8ddd0] text-[#3a2a1a] text-[11px] font-bold rounded-lg px-2 py-1.5 outline-none cursor-pointer"
+          >
+            {Array.from({length: 5}, (_, i) => currentYear - i).map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard loading={loading} label={t.pendingValidationDon} value={{ text: stats?.pendingCount?.toString() || "0", color: "text-orange-500" }} sub={t.toValidate} subType="wait" />
-        <StatCard loading={loading} label={t.validatedThisMonth} value={{ text: stats?.validatedThisMonth?.toString() || "0", color: "text-green-600" }} sub={`${(stats?.validatedGrowth || 0) >= 0 ? "+" : ""}${stats?.validatedGrowth || 0}% ${t.vsLastMonth}`} subType={(stats?.validatedGrowth || 0) >= 0 ? "up" : "down"} />
+        <StatCard loading={loading} label={t.validatedThisMonth || "Validated"} value={{ text: stats?.validatedThisMonth?.toString() || "0", color: "text-green-600" }} sub={`${(stats?.validatedGrowth || 0) >= 0 ? "+" : ""}${stats?.validatedGrowth || 0}% ${t.vsLastMonth}`} subType={(stats?.validatedGrowth || 0) >= 0 ? "up" : "down"} />
         <StatCard loading={loading} label={t.refused} value={{ text: stats?.refusedThisMonth?.toString() || "0", color: "text-red-600" }} sub={`${(stats?.refusedGrowth || 0) >= 0 ? "+" : ""}${stats?.refusedGrowth || 0}% ${t.vsLastMonth}`} subType={(stats?.refusedGrowth || 0) >= 0 ? "up" : "down"} />
         <StatCard loading={loading} label={t.ptsGranted} value={{ text: stats?.pointsGranted?.toLocaleString() || "0", color: "text-blue-600" }} />
       </div>
@@ -421,12 +474,12 @@ export default function ValidationDonationsPage() {
             )}
          </div>
 
-         {/* Sidebar Stats & History */}
+          {/* Sidebar Stats & History */}
          <div className="flex flex-col gap-6">
             {/* Deposits Stats */}
             <div className="bg-white rounded-xl border border-[#e8ddd0] p-5 flex flex-col gap-5">
                <h3 className="font-bold text-[#3a2a1a] text-xs flex items-center gap-2">
-                 <BarChart3 className="w-4 h-4 text-[#8B6914]" /> {t.depositsThisMonth}
+                 <BarChart3 className="w-4 h-4 text-[#8B6914]" /> {t.depositsThisMonth || "Deposits for selected period"}
                </h3>
                  <div className="flex flex-col gap-4">
                    {(stats?.depositsByCategory?.length > 0 ? stats.depositsByCategory : [
@@ -455,11 +508,17 @@ export default function ValidationDonationsPage() {
                  <AlertTriangle className="w-4 h-4 text-red-600" /> {t.refusalReasons}
                </h3>
                 <div className="flex flex-col gap-2">
-                   {(stats?.refusalReasons?.length > 0 ? stats.refusalReasons : [
-                     { label: "blurred_photo", count: 0 },
-                     { label: "item_not_visible", count: 0 },
-                     { label: "point_not_recognized", count: 0 },
-                   ]).map((r, i) => (
+                   {(acceptedValues.refusalReasons.length > 0 
+                     ? acceptedValues.refusalReasons.map(reason => {
+                         const found = stats?.refusalReasons?.find(r => r.label === reason);
+                         return { label: reason, count: found ? found.count : 0 };
+                       })
+                     : [
+                         { label: "blurred_photo", count: 0 },
+                         { label: "item_not_visible", count: 0 },
+                         { label: "point_not_recognized", count: 0 },
+                       ]
+                   ).map((r, i) => (
                     <div key={i} className="flex items-center justify-between bg-white/60 p-2 rounded-lg text-[10px] font-bold text-red-800">
                        <span className="capitalize">
                          {r.label ? (t[r.label.replace(/_([a-z])/g, (g) => g[1]?.toUpperCase())] || r.label.replace(/_/g, ' ')) : t.rejected}
