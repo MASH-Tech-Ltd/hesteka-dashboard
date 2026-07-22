@@ -157,7 +157,11 @@ const CollectionPointsPage = React.memo(() => {
   };
 
   const handleOpenEdit = (point) => {
-    setEditingPoint(point);
+    setEditingPoint({
+      ...point,
+      partner: point.partner?._id || point.partner,
+      _originalPartner: point.partner,
+    });
     setIsModalOpen(true);
   };
 
@@ -304,6 +308,32 @@ const CollectionPointsPage = React.memo(() => {
       name: "longitude",
       label: t.longitudeLabel || "Longitude",
       type: "number",
+    },
+    {
+      name: "partner",
+      label: t.partner || "Assign Partner (Optional)",
+      type: "select",
+      fullWidth: true,
+      options: editingPoint?._originalPartner ? [{
+        label: editingPoint._originalPartner.email ? `${editingPoint._originalPartner.company || editingPoint._originalPartner.firstName} - ${editingPoint._originalPartner.email}` : "Current Partner",
+        value: editingPoint._originalPartner._id || editingPoint._originalPartner,
+        logo: editingPoint._originalPartner.profileImage?.secure_url || null
+      }] : [],
+      loadOptions: async (search) => {
+        try {
+          const res = await api.get(`/user/get-all-user?role=partners&search=${encodeURIComponent(search)}&limit=50`);
+          if (res.data?.data) {
+            return res.data.data.map(p => ({
+              label: `${p.company || p.firstName} - ${p.email}`,
+              value: p._id,
+              logo: p.profileImage?.secure_url || null
+            }));
+          }
+          return [];
+        } catch (e) {
+          return [];
+        }
+      }
     },
   ];
 

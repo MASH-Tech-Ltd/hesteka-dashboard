@@ -151,16 +151,47 @@ const LocationPicker = ({ lat, lng, onChange }) => {
 const CustomSelectField = ({
   name,
   value,
-  options,
+  options: initialOptions,
   onChange,
   disabled,
   hasError,
   t,
   required,
+  loadOptions,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = React.useRef(null);
+  const [options, setOptions] = useState(initialOptions || []);
+  const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (!loadOptions) {
+      setOptions(initialOptions || []);
+    }
+  }, [initialOptions, loadOptions]);
+
+  React.useEffect(() => {
+    if (loadOptions) {
+      if (!searchTerm.trim()) {
+        setOptions(initialOptions || []);
+        return;
+      }
+      const fetchOptions = async () => {
+        setLoading(true);
+        try {
+          const result = await loadOptions(searchTerm);
+          setOptions(result || []);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      const timeoutId = setTimeout(fetchOptions, 300);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [searchTerm, loadOptions]);
 
   React.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -184,9 +215,11 @@ const CustomSelectField = ({
     value: "",
   };
 
-  const filteredOptions = options.filter(opt => 
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOptions = loadOptions 
+    ? options 
+    : options.filter(opt => 
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
@@ -194,7 +227,12 @@ const CustomSelectField = ({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`w-full bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] transition-all font-bold flex justify-between items-center ${disabled ? "cursor-default opacity-80" : "cursor-pointer hover:border-[#8B6914] focus:border-[#8B6914]"} ${hasError ? "border-red-400 bg-red-50/30" : "border-[#e8ddd0]"}`}
       >
-        <span className="truncate pr-4">{selectedOption.label}</span>
+        <span className="truncate pr-4 flex items-center gap-2">
+          {selectedOption.logo && (
+            <img src={selectedOption.logo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
+          )}
+          {selectedOption.label}
+        </span>
         <svg
           className={`w-4 h-4 text-[#9a8a7a] transition-transform ${isOpen ? "rotate-180" : ""}`}
           fill="none"
@@ -212,7 +250,7 @@ const CustomSelectField = ({
 
       {isOpen && (
         <div className="absolute top-[100%] left-0 w-full mt-1 bg-white border border-[#e8ddd0] rounded-xl shadow-xl z-[500] max-h-60 flex flex-col overflow-hidden">
-          {options.length > 5 && (
+          {(options.length > 5 || loadOptions) && (
             <div className="p-2 border-b border-[#e8ddd0] shrink-0 sticky top-0 bg-white z-10">
               <input
                 type="text"
@@ -236,7 +274,34 @@ const CustomSelectField = ({
                 {t.selectOption || "Select..."}
               </div>
             )}
-            {filteredOptions.length === 0 ? (
+            {loading ? (
+              <div className="px-4 py-2.5 text-xs text-[#9a8a7a] text-center">
+                {t.loading || "Loading..."}
+              </div>
+            ) : loadOptions && !searchTerm.trim() ? (
+              <>
+                {filteredOptions.length > 0 && filteredOptions.map((opt, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      onChange({
+                        target: { name, value: opt.value, type: "select" },
+                      });
+                      setIsOpen(false);
+                    }}
+                    className={`px-4 py-2.5 text-xs cursor-pointer transition-colors flex items-center gap-2 ${value === opt.value ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
+                  >
+                    {opt.logo && (
+                      <img src={opt.logo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+                ))}
+                <div className="px-4 py-3 text-xs text-[#9a8a7a] text-center italic border-t border-[#e8ddd0]/50">
+                  {t.typeToSearch || "Type to search..."}
+                </div>
+              </>
+            ) : filteredOptions.length === 0 ? (
               <div className="px-4 py-2.5 text-xs text-[#9a8a7a] text-center">
                 {t.noDataFound || "No options found"}
               </div>
@@ -250,9 +315,12 @@ const CustomSelectField = ({
                     });
                     setIsOpen(false);
                   }}
-                  className={`px-4 py-2.5 text-xs cursor-pointer transition-colors ${value === opt.value ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
+                  className={`px-4 py-2.5 text-xs cursor-pointer transition-colors flex items-center gap-2 ${value === opt.value ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
                 >
-                  {opt.label}
+                  {opt.logo && (
+                    <img src={opt.logo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
+                  )}
+                  <span className="truncate">{opt.label}</span>
                 </div>
               ))
             )}
@@ -592,7 +660,7 @@ const CRUDModal = ({
               return (
                 <div
                   key={field.name}
-                  className={`flex flex-col gap-1.5 ${field.type === "textarea" || field.type === "file" ? "md:col-span-2" : ""}`}
+                  className={`flex flex-col gap-1.5 ${field.type === "textarea" || field.type === "file" || field.fullWidth ? "md:col-span-2" : ""}`}
                 >
                   <label
                     className={`text-[9px] font-black tracking-wider uppercase ml-1 opacity-80 ${hasError ? "text-red-500" : "text-[#9a8a7a]"}`}
@@ -613,6 +681,7 @@ const CRUDModal = ({
                       hasError={hasError}
                       t={t}
                       required={field.required}
+                      loadOptions={field.loadOptions}
                     />
                   ) : field.type === "textarea" ? (
                     <textarea
