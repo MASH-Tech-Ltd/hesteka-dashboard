@@ -185,7 +185,11 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
           icon: MessageSquare,
           key: "supportMessages",
           path: "/support-messages",
-          badge: null,
+          badge:
+            stats?.supportMessages?.pending > 0
+              ? stats.supportMessages.pending
+              : null,
+          badgeColor: "bg-red-600",
         },
         { icon: HelpCircle, key: "faq", path: "/faq", badge: null },
         { icon: Settings, key: "settings", path: "/settings", badge: null },

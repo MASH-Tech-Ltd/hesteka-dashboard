@@ -68,6 +68,7 @@ export default function SupportMessagesPage() {
       toast.success(t.replySent || "Reply sent successfully");
       setIsModalOpen(false);
       fetchMessages();
+      window.dispatchEvent(new Event("refetch-stats"));
     } catch (err) {
       console.error("Failed to send reply", err);
       toast.error(err?.response?.data?.message || t.replyFailed || "Failed to send reply");
@@ -84,6 +85,7 @@ export default function SupportMessagesPage() {
       toast.success(t.messageDeleted || "Message deleted successfully");
       setMessageToDelete(null);
       fetchMessages();
+      window.dispatchEvent(new Event("refetch-stats"));
     } catch (err) {
       console.error("Failed to delete message", err);
       toast.error(t.deleteFailed || "Failed to delete message");
