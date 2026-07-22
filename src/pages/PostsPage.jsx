@@ -11,12 +11,117 @@ import {
   ChevronLeft,
   ChevronRight,
   PlayCircle,
+  Eye,
+  MapPin,
+  Calendar,
+  Heart,
+  Mail,
+  ExternalLink,
+  FileText,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
 import api from "../utils/api";
 import Pagination from "../components/common/Pagination";
 import CustomVideoPlayer from "../components/common/CustomVideoPlayer";
+
+const AddressDisplay = ({
+  location,
+  userAddress,
+  userLocationAddress,
+  className = "text-xs text-gray-700 font-medium",
+  notSetText = "Not set yet",
+}) => {
+  const directAddress =
+    location?.address ||
+    location?.locationAddress ||
+    userAddress ||
+    userLocationAddress;
+
+  const coords = location?.coordinates;
+  const [resolvedAddress, setResolvedAddress] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (directAddress && directAddress.trim()) {
+      setResolvedAddress(directAddress);
+      return;
+    }
+
+    if (!coords || !Array.isArray(coords) || coords.length !== 2) {
+      setResolvedAddress(null);
+      return;
+    }
+
+    const lng = coords[0];
+    const lat = coords[1];
+
+    if (!lat || !lng || (lat === 0 && lng === 0)) {
+      setResolvedAddress(null);
+      return;
+    }
+
+    const cacheKey = `geo_addr_${lat.toFixed(4)}_${lng.toFixed(4)}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      setResolvedAddress(cached);
+      return;
+    }
+
+    let isMounted = true;
+    setLoading(true);
+
+    fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+      { headers: { "Accept-Language": "en,fr" } }
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data && data.display_name) {
+          sessionStorage.setItem(cacheKey, data.display_name);
+          setResolvedAddress(data.display_name);
+        } else {
+          sessionStorage.setItem(cacheKey, "");
+          setResolvedAddress(null);
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setResolvedAddress(null);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [directAddress, coords]);
+
+  if (resolvedAddress && resolvedAddress.trim()) {
+    return (
+      <span className={className} title={resolvedAddress}>
+        {resolvedAddress}
+      </span>
+    );
+  }
+
+  if (loading) {
+    return (
+      <span className="text-xs text-gray-400 italic flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+        Loading...
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-xs text-gray-400 italic" title={notSetText}>
+      {notSetText}
+    </span>
+  );
+};
 
 const MediaSliderModal = ({ isOpen, media, initialIndex = 0, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -121,6 +226,9 @@ export default function PostsPage() {
   const [loading, setLoading] = useState(true);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  // Post Details Modal State
+  const [detailsModal, setDetailsModal] = useState({ isOpen: false, post: null });
 
   // Comments Modal State
   const [commentsModal, setCommentsModal] = useState({ isOpen: false, post: null });
@@ -325,31 +433,28 @@ export default function PostsPage() {
       ),
     },
     {
-      header: t.location || "Location",
+      header: t.address || "ADDRESS",
       cell: (r) => {
-        const address = r.location?.address;
-        const coords = r.location?.coordinates;
+        const address =
+          r.location?.address ||
+          r.address ||
+          r.user?.address ||
+          r.user?.locationAddress ||
+          r.user?.location?.address;
+        const hasAddress = Boolean(address && address.trim());
 
-        if (address) {
-          return (
-            <span
-              className="text-xs text-gray-500 truncate block max-w-[150px]"
-              title={address}
-            >
-              {address}
-            </span>
-          );
-        }
-
-        if (coords && coords.length === 2) {
-          return (
-            <span className="text-xs text-gray-500 truncate block max-w-[150px]">
-              {coords[1].toFixed(4)}, {coords[0].toFixed(4)}
-            </span>
-          );
-        }
-
-        return <span className="text-xs text-gray-500">N/A</span>;
+        return (
+          <div className="flex items-center gap-1.5 max-w-[180px]">
+            <MapPin className={`w-3.5 h-3.5 shrink-0 ${hasAddress ? "text-[#8B6914]" : "text-gray-400"}`} />
+            <AddressDisplay
+              location={r.location}
+              userAddress={r.user?.address}
+              userLocationAddress={r.user?.location?.address}
+              notSetText={t.notSetYet || "Not set yet"}
+              className="text-xs text-gray-700 font-medium truncate block max-w-[150px]"
+            />
+          </div>
+        );
       },
     },
     {
@@ -393,7 +498,15 @@ export default function PostsPage() {
       header: t.actions || "ACTIONS",
       align: "right",
       cell: (r) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1.5">
+          <button
+            onClick={() => setDetailsModal({ isOpen: true, post: r })}
+            className="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors flex items-center gap-1 text-xs font-medium"
+            title={t.viewDetails || "View Details"}
+          >
+            <Eye className="w-4 h-4" />
+            <span>{t.view || "View"}</span>
+          </button>
           <button
             onClick={() => setConfirmModal({ isOpen: true, id: r._id })}
             className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
@@ -434,6 +547,216 @@ export default function PostsPage() {
           />
         </div>
       </div>
+
+      {/* Post Details Modal */}
+      {detailsModal.isOpen && detailsModal.post && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-[#f0e8d8] flex justify-between items-center bg-[#faf7f2]">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-[#8B6914]/10 text-[#8B6914] flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#3a2a1a]">
+                    {t.postDetails || "Post Details"}
+                  </h2>
+                </div>
+              </div>
+              <button
+                onClick={() => setDetailsModal({ isOpen: false, post: null })}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white custom-scrollbar">
+              {/* Author & Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#fdfbf7] p-4 rounded-xl border border-[#e8ddd0]">
+                {/* Author Info */}
+                <div className="md:col-span-2 flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-[#8B6914] text-white flex items-center justify-center font-bold text-lg overflow-hidden shrink-0 shadow-sm">
+                    {detailsModal.post.user?.profileImage?.secure_url ? (
+                      <img
+                        src={detailsModal.post.user.profileImage.secure_url}
+                        alt="author"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      detailsModal.post.user?.firstName?.charAt(0)?.toUpperCase() || "U"
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-800 text-base">
+                      {detailsModal.post.user?.firstName} {detailsModal.post.user?.lastName}
+                    </span>
+                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                      <Mail className="w-3.5 h-3.5 text-gray-400" />
+                      {detailsModal.post.user?.email || "No email"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex flex-wrap md:flex-col justify-around md:justify-center items-start gap-2 border-t md:border-t-0 md:border-l border-[#e8ddd0] pt-3 md:pt-0 md:pl-4">
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Heart className="w-4 h-4 text-red-500 fill-red-500/20" />
+                    <span className="font-semibold text-gray-800">
+                      {detailsModal.post.likes?.length || detailsModal.post.likesCount || 0}
+                    </span>
+                    <span>{t.likes || "Likes"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <MessageCircle className="w-4 h-4 text-blue-500 fill-blue-500/20" />
+                    <span className="font-semibold text-gray-800">
+                      {detailsModal.post.replyCount || detailsModal.post.repliesCount || detailsModal.post.commentsCount || 0}
+                    </span>
+                    <span>{t.commentsLabel || "Comments"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span>{new Date(detailsModal.post.createdAt).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-[#8B6914]" />
+                  {t.content || "Content"}
+                </h3>
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                  {detailsModal.post.content || (
+                    <span className="italic text-gray-400">No text content</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-[#8B6914]" />
+                  {t.address || "Address"}
+                </h3>
+                <div className="p-4 bg-amber-50/40 rounded-xl border border-amber-200/60 flex items-center">
+                  <AddressDisplay
+                    location={detailsModal.post.location}
+                    userAddress={detailsModal.post.user?.address}
+                    userLocationAddress={detailsModal.post.user?.location?.address}
+                    notSetText={t.notSetYet || "Not set yet"}
+                    className="text-sm font-semibold text-gray-800"
+                  />
+                </div>
+              </div>
+
+              {/* Media Attachments */}
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4 text-[#8B6914]" />
+                  {t.media || "Media Attachments"} ({detailsModal.post.media?.length || 0})
+                </h3>
+                {detailsModal.post.media && detailsModal.post.media.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {detailsModal.post.media.map((m, idx) => {
+                      const optimizedUrl = m.url?.includes("cloudinary.com")
+                        ? m.url.replace("/upload/", "/upload/w_400,h_300,c_fill/")
+                        : m.url;
+                      const mediaItems = detailsModal.post.media.filter(
+                        (mItem) => mItem.type === "image" || mItem.type === "video"
+                      );
+                      const mediaIndex = mediaItems.findIndex((item) => item.url === m.url);
+
+                      return m.type === "image" ? (
+                        <div
+                          key={idx}
+                          onClick={() =>
+                            setMediaModal({
+                              isOpen: true,
+                              media: mediaItems,
+                              initialIndex: Math.max(0, mediaIndex),
+                            })
+                          }
+                          className="relative aspect-video rounded-xl overflow-hidden border border-gray-200 cursor-pointer group shadow-sm"
+                        >
+                          <img
+                            src={optimizedUrl}
+                            alt="post media"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Eye className="w-6 h-6 text-white drop-shadow" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          key={idx}
+                          onClick={() =>
+                            setMediaModal({
+                              isOpen: true,
+                              media: mediaItems,
+                              initialIndex: Math.max(0, mediaIndex),
+                            })
+                          }
+                          className="relative aspect-video rounded-xl overflow-hidden border border-gray-200 cursor-pointer bg-black flex items-center justify-center group shadow-sm"
+                        >
+                          <video
+                            src={m.url}
+                            className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity pointer-events-none"
+                          />
+                          <PlayCircle className="w-10 h-10 text-white opacity-90 z-10 drop-shadow-md group-hover:scale-110 transition-transform" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">
+                    No media attached to this post.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-[#f0e8d8] bg-[#faf7f2] flex flex-wrap justify-between items-center gap-3">
+              <button
+                onClick={() => {
+                  const post = detailsModal.post;
+                  setDetailsModal({ isOpen: false, post: null });
+                  handleViewComments(post);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-semibold"
+              >
+                <MessageCircle className="w-4 h-4" />
+                {t.viewComments || "View Comments"} ({detailsModal.post.replyCount || detailsModal.post.repliesCount || detailsModal.post.commentsCount || 0})
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const id = detailsModal.post._id;
+                    setDetailsModal({ isOpen: false, post: null });
+                    setConfirmModal({ isOpen: true, id });
+                  }}
+                  className="px-3.5 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {t.deleteBtn || "Delete Post"}
+                </button>
+                <button
+                  onClick={() => setDetailsModal({ isOpen: false, post: null })}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors text-xs"
+                >
+                  {t.closeBtn || "Close"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation */}
       <ConfirmModal
@@ -499,11 +822,11 @@ export default function PostsPage() {
                           </span>
                           <div className="ml-auto flex items-center">
                             <button
-                                onClick={() => setDeleteCommentModal({ isOpen: true, id: comment._id })}
-                                className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded"
-                                title={t.deleteBtn || "Delete"}
+                              onClick={() => setDeleteCommentModal({ isOpen: true, id: comment._id })}
+                              className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded"
+                              title={t.deleteBtn || "Delete"}
                             >
-                                <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
@@ -514,11 +837,11 @@ export default function PostsPage() {
                           <div className="mt-2 flex flex-wrap gap-2">
                             {comment.media.map((m, idx) => {
                               const optimizedUrl = m.url?.includes(
-                                "cloudinary.com",
+                                "cloudinary.com"
                               )
                                 ? m.url.replace(
                                     "/upload/",
-                                    "/upload/w_200,h_200,c_fill/",
+                                    "/upload/w_200,h_200,c_fill/"
                                   )
                                 : m.url;
 
@@ -526,7 +849,7 @@ export default function PostsPage() {
                                 (mItem) => mItem.type === "image" || mItem.type === "video"
                               );
                               const mediaIndex = mediaItems.findIndex(
-                                (item) => item.url === m.url,
+                                (item) => item.url === m.url
                               );
 
                               return m.type === "image" ? (
