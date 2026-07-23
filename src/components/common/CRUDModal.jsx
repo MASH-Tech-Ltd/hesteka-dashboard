@@ -263,7 +263,7 @@ const CustomSelectField = ({
             </div>
           )}
           <div className="overflow-y-auto custom-scrollbar flex-1">
-            {!required && !searchTerm && (
+            {!required && !searchTerm && !options.some(opt => opt.value === "") && (
               <div
                 onClick={() => {
                   onChange({ target: { name, value: "", type: "select" } });
@@ -671,31 +671,33 @@ const CRUDModal = ({
                   key={field.name}
                   className={`flex flex-col gap-1.5 ${field.type === "textarea" || field.type === "file" || field.fullWidth ? "md:col-span-2" : ""}`}
                 >
-                  <div className="flex items-center gap-2">
-                    <label
-                      className={`text-[9px] font-black tracking-wider uppercase ml-1 opacity-80 ${hasError ? "text-red-500" : "text-[#9a8a7a]"}`}
-                    >
-                      {field.label}
-                      {field.required && (
-                        <span className="text-red-400 ml-0.5">*</span>
-                      )}
-                    </label>
-                    {field.allowIndefinite && !isViewOnly && (
-                      <label className="flex items-center gap-1.5 cursor-pointer" title={field.indefiniteLabel}>
-                        <div className={`relative inline-flex items-center h-3.5 rounded-full w-7 transition-colors ${formData[field.indefiniteKey || 'isIndefiniteDate'] ? 'bg-red-500' : 'bg-[#e8ddd0]'}`}>
-                          <input
-                            type="checkbox"
-                            name={field.indefiniteKey || "isIndefiniteDate"}
-                            checked={!!formData[field.indefiniteKey || "isIndefiniteDate"]}
-                            onChange={handleChange}
-                            disabled={field.disabled}
-                            className="sr-only"
-                          />
-                          <span className={`inline-block w-2.5 h-2.5 transform bg-white rounded-full transition-transform ${formData[field.indefiniteKey || 'isIndefiniteDate'] ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
-                        </div>
+                  {field.type !== "checkbox" && (
+                    <div className="flex items-center gap-2 max-w-full min-w-0 overflow-hidden">
+                      <label
+                        className={`text-[9px] font-black tracking-wider uppercase ml-1 opacity-80 truncate block ${hasError ? "text-red-500" : "text-[#9a8a7a]"}`}
+                      >
+                        {field.label}
+                        {field.required && (
+                          <span className="text-red-400 ml-0.5">*</span>
+                        )}
                       </label>
-                    )}
-                  </div>
+                      {field.allowIndefinite && !isViewOnly && (
+                        <label className="flex items-center gap-1.5 cursor-pointer shrink-0" title={field.indefiniteLabel}>
+                          <div className={`relative inline-flex items-center h-3.5 rounded-full w-7 transition-colors ${formData[field.indefiniteKey || 'isIndefiniteDate'] ? 'bg-red-500' : 'bg-[#e8ddd0]'}`}>
+                            <input
+                              type="checkbox"
+                              name={field.indefiniteKey || "isIndefiniteDate"}
+                              checked={!!formData[field.indefiniteKey || "isIndefiniteDate"]}
+                              onChange={handleChange}
+                              disabled={field.disabled}
+                              className="sr-only"
+                            />
+                            <span className={`inline-block w-2.5 h-2.5 transform bg-white rounded-full transition-transform ${formData[field.indefiniteKey || 'isIndefiniteDate'] ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                          </div>
+                        </label>
+                      )}
+                    </div>
+                  )}
 
                   {field.type === "select" ? (
                     <CustomSelectField
@@ -766,7 +768,7 @@ const CRUDModal = ({
                         disabled={field.disabled || isViewOnly}
                         className="w-4 h-4 text-[#8B6914] bg-[#fcfaf7] border-[#e8ddd0] rounded focus:ring-[#8B6914] focus:ring-2"
                       />
-                      <span className="text-xs font-medium text-[#3a2a1a] cursor-pointer" onClick={() => !field.disabled && !isViewOnly && handleChange({target: {name: field.name, type: "checkbox", checked: !formData[field.name]}})}>
+                      <span className="text-[10px] md:text-[11px] font-medium text-[#3a2a1a] cursor-pointer whitespace-nowrap" onClick={() => !field.disabled && !isViewOnly && handleChange({target: {name: field.name, type: "checkbox", checked: !formData[field.name]}})}>
                         {field.checkboxLabel || field.label}
                       </span>
                     </div>

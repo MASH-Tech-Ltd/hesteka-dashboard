@@ -115,6 +115,8 @@ export default function UsersPage() {
 
   const [formErrors, setFormErrors] = useState([]);
 
+  const [locations, setLocations] = useState({ regions: [], departments: [] });
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -140,6 +142,18 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchData();
+    
+    const fetchLocations = async () => {
+      try {
+        const res = await api.get("/contacts/locations");
+        if (res.data.status === "ok") {
+          setLocations(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch locations", err);
+      }
+    };
+    fetchLocations();
   }, [fetchData]);
 
   const handleUpdateStatus = (userId, newStatus) => {
@@ -172,7 +186,7 @@ export default function UsersPage() {
       if (editingUser) {
         // Collect updated fields for the admin update API
         const formDataPayload = new FormData();
-        const editableFields = ["firstName", "lastName", "phone", "address", "postalCode", "city", "company", "role", "status"];
+        const editableFields = ["firstName", "lastName", "phone", "address", "postalCode", "city", "country", "company", "role", "status", "region", "department"];
         
         editableFields.forEach(field => {
           if (formData[field] !== undefined && formData[field] !== editingUser[field]) {
@@ -382,10 +396,28 @@ export default function UsersPage() {
     { name: "email", label: t.emailLabel || "Email", type: "email", required: !isEditing, disabled: isEditing },
     ...(!isEditing ? [{ name: "password", label: t.passwordLabel || "Password", type: "password", required: true }] : []),
     { name: "phone", label: t.phone || "Phone", required: !isEditing },
-    { name: "address", label: t.address || "Address", required: !isEditing },
+    { name: "address", label: t.address || "Address", required: !isEditing, fullWidth: isEditing },
     { name: "postalCode", label: t.postalCode || "Postal Code", required: !isEditing },
     { name: "city", label: t.city || "City", required: !isEditing },
-    { name: "company", label: t.company || "Company", required: !isEditing },
+    {
+      name: "region",
+      label: t.regionLabel || "Region",
+      type: "select",
+      options: [
+        { value: "", label: t.selectRegion || "Select a region" },
+        ...locations.regions.map(r => ({ value: r, label: r }))
+      ]
+    },
+    {
+      name: "department",
+      label: t.departmentLabel || "Department",
+      type: "select",
+      options: [
+        { value: "", label: t.selectDepartment || "Select a department" },
+        ...locations.departments.map(d => ({ value: d, label: d }))
+      ]
+    },
+    { name: "company", label: t.company || "Company", required: false },
     { 
       name: "role", 
       label: t.role || "Role", 
@@ -409,7 +441,17 @@ export default function UsersPage() {
         { label: t.blocked || "Blocked", value: "blocked" },
         { label: t.banned || "Banned", value: "banned" }
       ]
-    }] : [])
+    }] : []),
+    {
+      name: "country",
+      label: t.countryLabel || "Country",
+      type: "select",
+      defaultValue: !isEditing ? "France" : undefined,
+      options: [
+        { value: "", label: t.selectCountry || "Select a country" },
+        ...(locations.countries ? locations.countries.map(c => ({ value: c, label: c })) : [])
+      ]
+    }
   ];
 
   return (

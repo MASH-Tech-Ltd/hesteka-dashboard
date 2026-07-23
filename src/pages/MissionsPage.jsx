@@ -43,6 +43,7 @@ export default function MissionsPage() {
     onConfirm: null,
   });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [locations, setLocations] = useState({ regions: [], departments: [] });
   
   const [participantsModal, setParticipantsModal] = useState({
     isOpen: false,
@@ -86,6 +87,20 @@ export default function MissionsPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const res = await api.get("/contacts/locations");
+        if (res.data.status === "ok") {
+          setLocations(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch locations", err);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   const handleOpenAdd = () => {
     setEditingMission(null);
@@ -266,6 +281,24 @@ export default function MissionsPage() {
       indefiniteKey: "isIndefiniteDate",
     },
     { name: "address", label: t.address || "Address", required: true },
+    { 
+      name: "region", 
+      label: t.regionLabel || "Region",
+      type: "select",
+      options: [
+        { value: "", label: t.selectRegion || "Select a region" },
+        ...locations.regions.map(r => ({ value: r, label: r }))
+      ]
+    },
+    { 
+      name: "department", 
+      label: t.departmentLabel || "Department",
+      type: "select",
+      options: [
+        { value: "", label: t.selectDepartment || "Select a department" },
+        ...locations.departments.map(d => ({ value: d, label: d }))
+      ]
+    },
     {
       name: "latitude",
       label: t.latitude || "Latitude",
@@ -286,6 +319,12 @@ export default function MissionsPage() {
     },
     { name: "duration", label: t.durationLabel || "Duration", required: true },
     { name: "image", label: t.missionPhoto || "Mission Photo", type: "file" },
+    ...(!editingMission ? [{
+      name: "notifyAllFrance",
+      label: t.notifyAllFranceLabel || "Notify all users in France",
+      type: "checkbox",
+      fullWidth: true,
+    }] : []),
   ];
 
   const columns = [
@@ -571,6 +610,14 @@ export default function MissionsPage() {
                     <span className="text-[#9a8a7a]">{t.points || "Points"}:</span>
                     <span className="font-bold text-orange-600">
                       +{selectedMission.points} pts
+                    </span>
+                    <span className="text-[#9a8a7a]">{t.regionLabel || "Region"}:</span>
+                    <span className="font-medium text-[#3a2a1a]">
+                      {selectedMission.region || "N/A"}
+                    </span>
+                    <span className="text-[#9a8a7a]">{t.departmentLabel || "Department"}:</span>
+                    <span className="font-medium text-[#3a2a1a]">
+                      {selectedMission.department || "N/A"}
                     </span>
                     <span className="text-[#9a8a7a]">{t.dateLabel || "Date"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
