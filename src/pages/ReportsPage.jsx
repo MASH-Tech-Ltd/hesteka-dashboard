@@ -22,6 +22,10 @@ import {
   HelpCircle,
   ThumbsUp,
   MessageCircle,
+  Edit2,
+  Trash2,
+  Send,
+  CornerDownRight
 } from "lucide-react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
@@ -58,6 +62,27 @@ export default function ReportsPage() {
     sortBy: "date",
     sort: "descending",
   });
+
+  const [newComment, setNewComment] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [newReply, setNewReply] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+
+  const getAdminId = () => {
+    try {
+      const userStr = localStorage.getItem("adminUser");
+      if (userStr) return JSON.parse(userStr)?._id;
+    } catch (e) {
+      return null;
+    }
+    return null;
+  };
+  const adminId = getAdminId();
+
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentContent, setEditCommentContent] = useState("");
+  const [editingReplyId, setEditingReplyId] = useState(null);
+  const [editReplyContent, setEditReplyContent] = useState("");
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -145,6 +170,139 @@ export default function ReportsPage() {
     } catch (err) {
       console.error("Failed to fetch report details", err);
     }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    setCommentLoading(true);
+    try {
+      const res = await api.post("/comments/create-comment", {
+        reportId: selectedReport._id,
+        content: newComment,
+      });
+      if (res.data.status === "ok" || res.status === 201) {
+        toast.success(t.commentAddedSuccess || "Comment added successfully");
+        setNewComment("");
+        openReportDetails(selectedReport._id);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || t.failedAddComment || "Failed to add comment");
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleAddReply = async (commentId) => {
+    if (!newReply.trim()) return;
+    setCommentLoading(true);
+    try {
+      const res = await api.post(`/comments/create-reply/${commentId}`, {
+        reportId: selectedReport._id,
+        content: newReply,
+      });
+      if (res.data.status === "ok" || res.status === 201) {
+        toast.success(t.replyAddedSuccess || "Reply added successfully");
+        setNewReply("");
+        setReplyingTo(null);
+        openReportDetails(selectedReport._id);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || t.failedAddReply || "Failed to add reply");
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleUpdateComment = async (commentId) => {
+    if (!editCommentContent.trim()) return;
+    setCommentLoading(true);
+    try {
+      const res = await api.patch(`/comments/update-comment/${commentId}`, {
+        content: editCommentContent,
+      });
+      if (res.data.status === "ok" || res.status === 200) {
+        toast.success(t.commentUpdatedSuccess || "Comment updated successfully");
+        setEditingCommentId(null);
+        setEditCommentContent("");
+        openReportDetails(selectedReport._id);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || t.failedUpdateComment || "Failed to update comment");
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleUpdateReply = async (replyId) => {
+    if (!editReplyContent.trim()) return;
+    setCommentLoading(true);
+    try {
+      const res = await api.patch(`/comments/update-reply/${replyId}`, {
+        content: editReplyContent,
+      });
+      if (res.data.status === "ok" || res.status === 200) {
+        toast.success(t.replyUpdatedSuccess || "Reply updated successfully");
+        setEditingReplyId(null);
+        setEditReplyContent("");
+        openReportDetails(selectedReport._id);
+        fetchData();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || t.failedUpdateReply || "Failed to update reply");
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleDeleteComment = (commentId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: t.deleteCommentTitle || "Delete Comment",
+      message: t.deleteCommentConfirm || "Are you sure you want to delete this comment?",
+      onConfirm: async () => {
+        setConfirmLoading(true);
+        try {
+          const res = await api.delete(`/comments/delete-comment/${commentId}`);
+          if (res.data.status === "ok" || res.status === 200) {
+            toast.success(t.commentDeletedSuccess || "Comment deleted successfully");
+            openReportDetails(selectedReport._id);
+            fetchData();
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || t.failedDeleteComment || "Failed to delete comment");
+        } finally {
+          setConfirmLoading(false);
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
+  };
+
+  const handleDeleteReply = (replyId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: t.deleteReplyTitle || "Delete Reply",
+      message: t.deleteReplyConfirm || "Are you sure you want to delete this reply?",
+      onConfirm: async () => {
+        setConfirmLoading(true);
+        try {
+          const res = await api.delete(`/comments/delete-reply/${replyId}`);
+          if (res.data.status === "ok" || res.status === 200) {
+            toast.success(t.replyDeletedSuccess || "Reply deleted successfully");
+            openReportDetails(selectedReport._id);
+            fetchData();
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || t.failedDeleteReply || "Failed to delete reply");
+        } finally {
+          setConfirmLoading(false);
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
   const getIcon = (type) => {
@@ -845,74 +1003,237 @@ export default function ReportsPage() {
               </div>
 
               {/* Comments Section */}
-              {selectedReport.comments && selectedReport.comments.length > 0 && (
-                <div className="flex flex-col gap-4 mt-2">
-                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4 text-[#8B6914]" /> {t.commentsLabel || "Comments"} ({selectedReport.comments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0)})
-                  </h3>
-                  <div className="flex flex-col gap-3">
-                    {selectedReport.comments.map((comment) => (
-                      <div key={comment._id} className="bg-[#fcfaf7] p-3 rounded-xl border border-[#e8ddd0] flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-xs font-bold overflow-hidden border border-[#e8ddd0] shrink-0">
-                            {comment.author?.profileImage?.secure_url ? (
-                              <img
-                                src={comment.author.profileImage.secure_url}
-                                alt="Comment Author"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              (comment.author?.firstName?.[0] || "U").toUpperCase()
-                            )}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-[#3a2a1a] text-xs">
-                              {comment.author?.firstName} {comment.author?.lastName}
-                            </span>
-                            <span className="text-[10px] text-[#9a8a7a]">
-                              {new Date(comment.createdAt).toLocaleString()}
-                            </span>
+              {/* Comments Section */}
+              <div className="flex flex-col gap-4 mt-2">
+                <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-[#8B6914]" /> {t.commentsLabel || "Comments"} ({selectedReport.comments?.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0) || 0})
+                </h3>
+                <div className="flex flex-col gap-4">
+                  {selectedReport.comments && selectedReport.comments.length > 0 ? (
+                    selectedReport.comments.map((comment) => (
+                      <div key={comment._id} className="bg-white p-4 rounded-2xl shadow-sm border border-[#e8ddd0] flex flex-col gap-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-[#f5f0e8] text-[#8B6914] flex items-center justify-center text-sm font-bold overflow-hidden border border-[#e8ddd0] shrink-0">
+                              {comment.author?.profileImage?.secure_url ? (
+                                <img
+                                  src={comment.author.profileImage.secure_url}
+                                  alt="Comment Author"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                (comment.author?.firstName?.[0] || "U").toUpperCase()
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-[#3a2a1a] text-sm">
+                                {comment.author?.firstName} {comment.author?.lastName}
+                              </span>
+                              <span className="text-[11px] text-[#9a8a7a]">
+                                {new Date(comment.createdAt).toLocaleString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <p className="text-sm text-[#5a4a3a] leading-relaxed">
-                          {comment.content}
-                        </p>
+                        
+                        {editingCommentId === comment._id ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              type="text"
+                              className="flex-1 text-sm bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl px-4 py-2 focus:outline-none focus:border-[#8B6914] focus:ring-2 focus:ring-[#8B6914]/20 transition-all"
+                              value={editCommentContent}
+                              onChange={(e) => setEditCommentContent(e.target.value)}
+                            />
+                            <button
+                              onClick={() => handleUpdateComment(comment._id)}
+                              disabled={commentLoading}
+                              className="bg-[#8B6914] text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-[#6a5010] transition-colors disabled:opacity-50"
+                            >
+                              {t.saveBtn || "Save"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditCommentContent("");
+                              }}
+                              className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors px-2"
+                            >
+                              {t.cancelBtn || "Cancel"}
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[#5a4a3a] leading-relaxed">
+                            {comment.content}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center gap-4 mt-1">
+                          <button
+                            onClick={() => setReplyingTo(replyingTo === comment._id ? null : comment._id)}
+                            className="flex items-center gap-1 text-xs font-medium text-[#9a8a7a] hover:text-[#8B6914] transition-colors"
+                          >
+                            <CornerDownRight className="w-3.5 h-3.5" />
+                            {t.replyBtn || "Reply"}
+                          </button>
+                          {comment.author?._id === adminId && adminId && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingCommentId(comment._id);
+                                  setEditCommentContent(comment.content);
+                                  setReplyingTo(null);
+                                }}
+                                className="flex items-center gap-1 text-xs font-medium text-[#9a8a7a] hover:text-blue-600 transition-colors"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                {t.editBtn || "Edit"}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteComment(comment._id)}
+                                className="flex items-center gap-1 text-xs font-medium text-[#9a8a7a] hover:text-red-600 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                {t.deleteBtn || "Delete"}
+                              </button>
+                            </>
+                          )}
+                        </div>
+
+                        {replyingTo === comment._id && (
+                          <div className="flex items-center gap-2 mt-2 bg-[#fcfaf7] border border-[#e8ddd0] rounded-full px-4 py-1.5 focus-within:ring-2 focus-within:ring-[#8B6914]/20 focus-within:border-[#8B6914] transition-all shadow-inner">
+                            <input
+                              type="text"
+                              className="flex-1 text-sm bg-transparent border-none outline-none"
+                              placeholder={t.writeReply || "Write a reply..."}
+                              value={newReply}
+                              onChange={(e) => setNewReply(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleAddReply(comment._id)}
+                            />
+                            <button
+                              onClick={() => handleAddReply(comment._id)}
+                              disabled={commentLoading || !newReply.trim()}
+                              className="bg-[#8B6914] text-white p-1.5 rounded-full hover:bg-[#6a5010] transition-colors disabled:opacity-50 flex items-center justify-center shrink-0"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+
                         {/* Display replies if any */}
                         {comment.replies && comment.replies.length > 0 && (
-                          <div className="ml-6 mt-2 flex flex-col gap-2 border-l-2 border-[#f0e8d8] pl-3">
+                          <div className="ml-4 mt-2 flex flex-col gap-3 border-l-2 border-[#f5f0e8] pl-4">
                             {comment.replies.map((reply) => (
-                              <div key={reply._id} className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-[#9a8a7a] text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
-                                    {reply.author?.profileImage?.secure_url ? (
-                                      <img
-                                        src={reply.author.profileImage.secure_url}
-                                        alt="Reply Author"
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      (reply.author?.firstName?.[0] || "U").toUpperCase()
+                              <div key={reply._id} className="flex flex-col gap-1.5 bg-[#fcfaf7] p-3 rounded-xl border border-[#f0e8d8]">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-[#f0e8d8] text-[#8B6914] flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
+                                      {reply.author?.profileImage?.secure_url ? (
+                                        <img
+                                          src={reply.author.profileImage.secure_url}
+                                          alt="Reply Author"
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        (reply.author?.firstName?.[0] || "U").toUpperCase()
+                                      )}
+                                    </div>
+                                    <span className="font-bold text-[#3a2a1a] text-[11px]">
+                                      {reply.author?.firstName} {reply.author?.lastName}
+                                    </span>
+                                    <span className="text-[10px] text-[#9a8a7a]">
+                                      {new Date(reply.createdAt).toLocaleString()}
+                                    </span>
+                                  </div>
+                                </div>
+                                {editingReplyId === reply._id ? (
+                                  <div className="flex items-center gap-2 mt-1 pl-8">
+                                    <input
+                                      type="text"
+                                      className="flex-1 text-xs bg-white border border-[#e8ddd0] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#8B6914] focus:ring-2 focus:ring-[#8B6914]/20 transition-all"
+                                      value={editReplyContent}
+                                      onChange={(e) => setEditReplyContent(e.target.value)}
+                                    />
+                                    <button
+                                      onClick={() => handleUpdateReply(reply._id)}
+                                      disabled={commentLoading}
+                                      className="bg-[#8B6914] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#6a5010] transition-colors disabled:opacity-50"
+                                    >
+                                      {t.saveBtn || "Save"}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingReplyId(null);
+                                        setEditReplyContent("");
+                                      }}
+                                      className="text-[10px] font-medium text-red-500 hover:text-red-700 transition-colors px-2"
+                                    >
+                                      {t.cancelBtn || "Cancel"}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-1.5 pl-8">
+                                    <p className="text-xs text-[#5a4a3a]">
+                                      {reply.content}
+                                    </p>
+                                    {reply.author?._id === adminId && adminId && (
+                                      <div className="flex items-center gap-3">
+                                        <button
+                                          onClick={() => {
+                                            setEditingReplyId(reply._id);
+                                            setEditReplyContent(reply.content);
+                                          }}
+                                          className="flex items-center gap-1 text-[10px] font-medium text-[#9a8a7a] hover:text-blue-600 transition-colors w-fit"
+                                        >
+                                          <Edit2 className="w-3 h-3" />
+                                          {t.editBtn || "Edit"}
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteReply(reply._id)}
+                                          className="flex items-center gap-1 text-[10px] font-medium text-[#9a8a7a] hover:text-red-600 transition-colors w-fit"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                          {t.deleteBtn || "Delete"}
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
-                                  <span className="font-bold text-[#3a2a1a] text-[11px]">
-                                    {reply.author?.firstName} {reply.author?.lastName}
-                                  </span>
-                                  <span className="text-[9px] text-[#9a8a7a]">
-                                    {new Date(reply.createdAt).toLocaleString()}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-[#5a4a3a] pl-8">
-                                  {reply.content}
-                                </p>
+                                )}
                               </div>
                             ))}
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-6 bg-[#fcfaf7] rounded-xl border border-dashed border-[#e8ddd0]">
+                      <MessageCircle className="w-8 h-8 text-[#d8c8b8] mb-2" />
+                      <p className="text-sm text-[#9a8a7a]">{t.noComments || "No comments yet. Be the first to comment!"}</p>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* Add new comment */}
+                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[#f0e8d8]">
+                  <div className="flex-1 flex items-center gap-2 bg-[#fcfaf7] border border-[#e8ddd0] rounded-full px-4 py-2 focus-within:ring-2 focus-within:ring-[#8B6914]/20 focus-within:border-[#8B6914] transition-all shadow-inner">
+                    <input
+                      type="text"
+                      className="flex-1 text-sm bg-transparent border-none outline-none"
+                      placeholder={t.writeComment || "Write a comment..."}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddComment}
+                    disabled={commentLoading || !newComment.trim()}
+                    className="bg-[#8B6914] text-white font-bold p-3 rounded-full hover:bg-[#6a5010] hover:shadow-lg transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center shrink-0"
+                    title={t.sendBtn || "Send"}
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

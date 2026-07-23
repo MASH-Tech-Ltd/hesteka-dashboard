@@ -335,6 +335,20 @@ export default function MissionsPage() {
       ),
     },
     {
+      header: t.requestedLabel || "REQUESTED",
+      align: "center",
+      width: "10%",
+      cell: (m) => (
+        m.pendingRequestsCount > 0 ? (
+          <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">
+            {m.pendingRequestsCount}
+          </span>
+        ) : (
+          <span className="font-bold">0</span>
+        )
+      ),
+    },
+    {
       header: t.participants || "PARTICIPANTS",
       align: "center",
       width: "10%",
