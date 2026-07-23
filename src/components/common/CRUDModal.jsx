@@ -379,6 +379,11 @@ const CRUDModal = ({
               initial[f.name] = initialData[f.name];
             }
           }
+          if (f.allowIndefinite && f.indefiniteKey) {
+            if (initialData[f.indefiniteKey] !== undefined) {
+              initial[f.indefiniteKey] = initialData[f.indefiniteKey];
+            }
+          }
           // Detect photo/image preview from any common field naming
           if (f.type === "file") {
             const imgUrl = initialData[f.name]?.secure_url;
@@ -652,8 +657,12 @@ const CRUDModal = ({
                 return null;
 
               if (field.dependsOn) {
-                const { field: depField, value: depValue } = field.dependsOn;
-                if (formData[depField] !== depValue) return null;
+                if (typeof field.dependsOn === 'function') {
+                  if (!field.dependsOn(formData)) return null;
+                } else {
+                  const { field: depField, value: depValue } = field.dependsOn;
+                  if (formData[depField] !== depValue) return null;
+                }
               }
 
               const hasError = !!fieldErrors[field.name];
@@ -662,14 +671,31 @@ const CRUDModal = ({
                   key={field.name}
                   className={`flex flex-col gap-1.5 ${field.type === "textarea" || field.type === "file" || field.fullWidth ? "md:col-span-2" : ""}`}
                 >
-                  <label
-                    className={`text-[9px] font-black tracking-wider uppercase ml-1 opacity-80 ${hasError ? "text-red-500" : "text-[#9a8a7a]"}`}
-                  >
-                    {field.label}
-                    {field.required && (
-                      <span className="text-red-400 ml-0.5">*</span>
+                  <div className="flex items-center gap-2">
+                    <label
+                      className={`text-[9px] font-black tracking-wider uppercase ml-1 opacity-80 ${hasError ? "text-red-500" : "text-[#9a8a7a]"}`}
+                    >
+                      {field.label}
+                      {field.required && (
+                        <span className="text-red-400 ml-0.5">*</span>
+                      )}
+                    </label>
+                    {field.allowIndefinite && !isViewOnly && (
+                      <label className="flex items-center gap-1.5 cursor-pointer" title={field.indefiniteLabel}>
+                        <div className={`relative inline-flex items-center h-3.5 rounded-full w-7 transition-colors ${formData[field.indefiniteKey || 'isIndefiniteDate'] ? 'bg-red-500' : 'bg-[#e8ddd0]'}`}>
+                          <input
+                            type="checkbox"
+                            name={field.indefiniteKey || "isIndefiniteDate"}
+                            checked={!!formData[field.indefiniteKey || "isIndefiniteDate"]}
+                            onChange={handleChange}
+                            disabled={field.disabled}
+                            className="sr-only"
+                          />
+                          <span className={`inline-block w-2.5 h-2.5 transform bg-white rounded-full transition-transform ${formData[field.indefiniteKey || 'isIndefiniteDate'] ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                        </div>
+                      </label>
                     )}
-                  </label>
+                  </div>
 
                   {field.type === "select" ? (
                     <CustomSelectField
@@ -730,14 +756,35 @@ const CRUDModal = ({
                         </div>
                       </div>
                     </div>
+                  ) : field.type === "checkbox" ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="checkbox"
+                        name={field.name}
+                        checked={!!formData[field.name]}
+                        onChange={handleChange}
+                        disabled={field.disabled || isViewOnly}
+                        className="w-4 h-4 text-[#8B6914] bg-[#fcfaf7] border-[#e8ddd0] rounded focus:ring-[#8B6914] focus:ring-2"
+                      />
+                      <span className="text-xs font-medium text-[#3a2a1a] cursor-pointer" onClick={() => !field.disabled && !isViewOnly && handleChange({target: {name: field.name, type: "checkbox", checked: !formData[field.name]}})}>
+                        {field.checkboxLabel || field.label}
+                      </span>
+                    </div>
+                  ) : field.allowIndefinite && formData[field.indefiniteKey || "isIndefiniteDate"] ? (
+                    <input
+                      type="text"
+                      disabled
+                      value={field.indefiniteLabel}
+                      className={`bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none transition-all font-bold opacity-80 border-[#e8ddd0] cursor-not-allowed`}
+                    />
                   ) : (
                     <input
                       type={field.type || "text"}
                       name={field.name}
                       value={formData[field.name] || ""}
                       onChange={handleChange}
-                      required={field.required}
-                      disabled={field.disabled || isViewOnly}
+                      required={field.required && !(field.allowIndefinite && formData[field.indefiniteKey || "isIndefiniteDate"])}
+                      disabled={field.disabled || isViewOnly || (field.allowIndefinite && formData[field.indefiniteKey || "isIndefiniteDate"])}
                       className={`bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-bold placeholder:font-medium placeholder:opacity-50 disabled:opacity-80 ${hasError ? "border-red-400 bg-red-50/30" : "border-[#e8ddd0]"}`}
                       placeholder={`Enter ${field.label.toLowerCase()}...`}
                     />

@@ -95,7 +95,8 @@ export default function MissionsPage() {
   const handleOpenEdit = (mission) => {
     setEditingMission({
       ...mission,
-      missionDate: mission.missionDate || mission.createdAt,
+      missionDate: mission.missionDate,
+      isIndefiniteDate: !mission.missionDate,
     });
     setIsModalOpen(true);
   };
@@ -174,6 +175,14 @@ export default function MissionsPage() {
         } else if (key === "longitude") {
           hasLoc = true;
           lng = formData[key];
+        } else if (key === "isIndefiniteDate") {
+          // Do not append this to FormData directly
+        } else if (key === "missionDate") {
+          if (formData.isIndefiniteDate) {
+            data.append("missionDate", "");
+          } else if (formData[key]) {
+            data.append(key, formData[key]);
+          }
         } else if (formData[key] !== undefined) {
           data.append(key, formData[key]);
         }
@@ -252,6 +261,9 @@ export default function MissionsPage() {
       label: t.dateLabel || "Date",
       type: "date",
       required: true,
+      allowIndefinite: true,
+      indefiniteLabel: t.indefiniteDuration || "No set date",
+      indefiniteKey: "isIndefiniteDate",
     },
     { name: "address", label: t.address || "Address", required: true },
     {
@@ -325,7 +337,7 @@ export default function MissionsPage() {
     {
       header: t.dateLabel || "DATE",
       width: "10%",
-      cell: (m) => new Date(m.missionDate || m.createdAt).toLocaleDateString(),
+      cell: (m) => m.missionDate ? new Date(m.missionDate).toLocaleDateString() : (t.indefiniteDuration || "No set date"),
     },
     {
       header: t.points || "POINTS",
@@ -562,7 +574,7 @@ export default function MissionsPage() {
                     </span>
                     <span className="text-[#9a8a7a]">{t.dateLabel || "Date"}:</span>
                     <span className="font-medium text-[#3a2a1a]">
-                      {new Date(selectedMission.missionDate || selectedMission.createdAt).toLocaleDateString()}
+                      {selectedMission.missionDate ? new Date(selectedMission.missionDate).toLocaleDateString() : (t.indefiniteDuration || "No set date")}
                     </span>
                   </div>
                 </div>
