@@ -6,14 +6,21 @@ import { Rocket } from "lucide-react";
 export default function CrowdfundingCard() {
   const { t } = useLang();
   const [stats, setStats] = useState(null);
+  const [donors, setDonors] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCrowdfunding = async () => {
       try {
-        const res = await api.get("/admin/crowdfunding");
-        if (res.data.status === "ok") {
-          setStats(res.data.data);
+        const [statsRes, donorsRes] = await Promise.all([
+          api.get("/crowdfunding/stats"),
+          api.get("/crowdfunding/donors")
+        ]);
+        if (statsRes.data.status === "ok") {
+          setStats(statsRes.data.data);
+        }
+        if (donorsRes.data.status === "ok") {
+          setDonors(donorsRes.data.data || []);
         }
       } catch (err) {
         console.error("Failed to fetch crowdfunding stats", err);
@@ -27,7 +34,12 @@ export default function CrowdfundingCard() {
   const total = stats?.totalCollected || 0;
   const goal = stats?.goalAmount || 5000;
   const pct = stats?.percentage || 0;
-  const left = goal - total;
+  const left = Math.max(0, goal - total);
+  
+  const donorsCount = donors?.length || stats?.donorsCount || 0;
+  const remainingDays = stats?.dateEnd 
+    ? Math.max(0, Math.ceil((new Date(stats.dateEnd) - new Date()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
   return (
     <div className="bg-white rounded-xl p-4 border border-[#e8ddd0]">
@@ -51,8 +63,8 @@ export default function CrowdfundingCard() {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { val: "142", lbl: t.donors },
-          { val: "18j", lbl: t.remaining },
+          { val: loading ? "..." : donorsCount, lbl: t.donors },
+          { val: loading ? "..." : `${remainingDays}d`, lbl: t.remaining },
           { val: loading ? "..." : `${left.toLocaleString()}€`, lbl: t.left },
         ].map((s) => (
           <div

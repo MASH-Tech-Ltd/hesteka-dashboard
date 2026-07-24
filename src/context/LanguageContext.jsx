@@ -314,7 +314,7 @@ const translations = {
     sheltered: "Sheltered",
     injured: "Injured",
     // Crowdfunding
-    goal: "/ 5,000€ goal",
+    goal: "goal",
     donors: "Donors",
     remaining: "Remaining",
     left: "Left",
@@ -447,7 +447,7 @@ const translations = {
     counterpart: "COUNTERPART",
     confirmed: "Confirmed",
     collected: "collected",
-    futureLaunch: "Future launch",
+    futureLaunch: "Ulule",
     // Analytics Page
     analyticsTitle: "Analytics",
     analyticsSub: "Global performance",
@@ -968,7 +968,7 @@ const translations = {
     found: "Trouvé",
     sheltered: "Recueillis",
     injured: "Blessés",
-    goal: "/ 5 000€ objectif",
+    goal: "objectif",
     donors: "Donateurs",
     remaining: "Restants",
     left: "Restant",
@@ -1097,7 +1097,7 @@ const translations = {
     counterpart: "CONTREPARTIE",
     confirmed: "Confirm\u00E9",
     collected: "collect\u00E9s",
-    futureLaunch: "Lancement futur",
+    futureLaunch: "Ulule",
     // Analytics Page
     analyticsTitle: "Analytics",
     analyticsSub: "Performances globales",

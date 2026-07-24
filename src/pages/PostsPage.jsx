@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLang } from "../context/LanguageContext";
 import DataTable from "../components/common/DataTable";
 import FilterBar from "../components/common/FilterBar";
@@ -18,6 +18,8 @@ import {
   Mail,
   ExternalLink,
   FileText,
+  CornerDownRight,
+  Send,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
@@ -236,6 +238,11 @@ export default function PostsPage() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [deleteCommentModal, setDeleteCommentModal] = useState({ isOpen: false, id: null });
   const [deleteCommentLoading, setDeleteCommentLoading] = useState(false);
+  const [newCommentText, setNewCommentText] = useState("");
+  const [addCommentLoading, setAddCommentLoading] = useState(false);
+  const commentInputRef = useRef(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [nestedReplies, setNestedReplies] = useState({});
 
   const [mediaModal, setMediaModal] = useState({
     isOpen: false,
@@ -289,10 +296,29 @@ export default function PostsPage() {
   const handleViewComments = async (post) => {
     setCommentsModal({ isOpen: true, post });
     setCommentsLoading(true);
+    setReplyingTo(null);
+    setNestedReplies({});
     try {
       const res = await api.get(`/community/chat/${post._id}/comments?limit=1000`);
       if (res.data.status === "ok") {
-        setComments(res.data.data || []);
+        const topComments = res.data.data || [];
+        setComments(topComments);
+
+        // Fetch replies for each top-level comment
+        const repliesObj = {};
+        await Promise.all(
+          topComments.map(async (c) => {
+            try {
+              const replyRes = await api.get(`/community/chat/${c._id}/comments?limit=100`);
+              if (replyRes.data.status === "ok") {
+                repliesObj[c._id] = replyRes.data.data || [];
+              }
+            } catch (err) {
+              // Ignore individual reply fetch errors
+            }
+          })
+        );
+        setNestedReplies(repliesObj);
       }
     } catch (err) {
       console.error("Failed to fetch comments:", err);
@@ -317,6 +343,29 @@ export default function PostsPage() {
       toast.error(err.response?.data?.message || "Failed to delete comment");
     } finally {
       setDeleteCommentLoading(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newCommentText.trim()) return;
+    setAddCommentLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("content", newCommentText);
+      const targetId = replyingTo ? replyingTo._id : commentsModal.post._id;
+      const res = await api.post(`/community/chat/${targetId}/comments`, formData);
+      if (res.data.status === "ok" || res.status === 201) {
+        toast.success(t.commentAddedSuccess || "Comment added successfully");
+        setNewCommentText("");
+        setReplyingTo(null);
+        handleViewComments(commentsModal.post);
+        fetchPosts(); // To update the comment count on the post
+      }
+    } catch (err) {
+      console.error("Failed to add comment:", err);
+      toast.error(err.response?.data?.message || "Failed to add comment");
+    } finally {
+      setAddCommentLoading(false);
     }
   };
 
@@ -775,9 +824,9 @@ export default function PostsPage() {
       {commentsModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-blue-600" />
+            <div className="px-6 py-4 border-b border-[#f0e8d8] flex justify-between items-center bg-[#faf7f2]">
+              <h2 className="text-lg font-bold text-[#3a2a1a] flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-[#8B6914]" />
                 {t.commentsForPost || "Comments for Post"}
               </h2>
               <button
@@ -788,139 +837,150 @@ export default function PostsPage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+            <div className="flex-1 overflow-y-auto p-6 bg-white custom-scrollbar">
               {commentsLoading ? (
                 <div className="flex justify-center items-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-4 border-[#8B6914] border-t-transparent rounded-full animate-spin"></div>
                 </div>
               ) : comments.length > 0 ? (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-5">
                   {comments.map((comment) => (
-                    <div
-                      key={comment._id}
-                      className="bg-white p-4 rounded-lg border border-gray-100 shadow-sm flex gap-3"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold overflow-hidden shrink-0">
-                        {comment.user?.profileImage?.secure_url ? (
-                          <img
-                            src={comment.user.profileImage.secure_url}
-                            alt="author"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          comment.user?.firstName?.charAt(0)?.toUpperCase() ||
-                          "U"
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-sm text-gray-800">
-                            {comment.user?.firstName} {comment.user?.lastName}
-                          </span>
-                          <span className="text-[10px] text-gray-400">
-                            {new Date(comment.createdAt).toLocaleString()}
-                          </span>
-                          <div className="ml-auto flex items-center">
-                            <button
-                              onClick={() => setDeleteCommentModal({ isOpen: true, id: comment._id })}
-                              className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded"
-                              title={t.deleteBtn || "Delete"}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                    <div key={comment._id} className="bg-white p-4 rounded-xl border border-[#efe9e1] flex flex-col gap-3 shadow-sm">
+                      {/* Comment Header */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[#fdfbf7] text-[#8B6914] flex items-center justify-center font-bold overflow-hidden shrink-0 border border-[#e8ddd0]">
+                            {comment.user?.profileImage?.secure_url ? (
+                              <img src={comment.user.profileImage.secure_url} alt="author" className="w-full h-full object-cover" />
+                            ) : (
+                              comment.user?.firstName?.charAt(0)?.toUpperCase() || "U"
+                            )}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm text-[#4a3f35]">
+                              {comment.user?.firstName} {comment.user?.lastName}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </span>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                          {comment.content}
-                        </p>
-                        {comment.media && comment.media.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {comment.media.map((m, idx) => {
-                              const optimizedUrl = m.url?.includes(
-                                "cloudinary.com"
-                              )
-                                ? m.url.replace(
-                                    "/upload/",
-                                    "/upload/w_200,h_200,c_fill/"
-                                  )
-                                : m.url;
-
-                              const mediaItems = comment.media.filter(
-                                (mItem) => mItem.type === "image" || mItem.type === "video"
-                              );
-                              const mediaIndex = mediaItems.findIndex(
-                                (item) => item.url === m.url
-                              );
-
-                              return m.type === "image" ? (
-                                <img
-                                  key={idx}
-                                  src={optimizedUrl}
-                                  alt="media"
-                                  onClick={() =>
-                                    setMediaModal({
-                                      isOpen: true,
-                                      media: mediaItems,
-                                      initialIndex: Math.max(0, mediaIndex),
-                                    })
-                                  }
-                                  className="w-20 h-20 object-cover rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
-                                />
-                              ) : m.type === "video" ? (
-                                <div 
-                                  key={idx}
-                                  onClick={() =>
-                                    setMediaModal({
-                                      isOpen: true,
-                                      media: mediaItems,
-                                      initialIndex: Math.max(0, mediaIndex),
-                                    })
-                                  }
-                                  className="relative w-20 h-20 rounded-md border cursor-pointer hover:opacity-90 transition-opacity bg-black flex items-center justify-center overflow-hidden"
-                                >
-                                  <video
-                                    src={m.url}
-                                    className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
-                                  />
-                                  <PlayCircle className="w-8 h-8 text-white opacity-80 z-10 drop-shadow-md" />
-                                </div>
-                              ) : (
-                                <span
-                                  key={idx}
-                                  className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-600"
-                                >
-                                  {m.type}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
+                        <button
+                          onClick={() => setDeleteCommentModal({ isOpen: true, id: comment._id })}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-md hover:bg-red-50"
+                          title={t.deleteBtn || "Delete"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
+                      
+                      {/* Comment Content */}
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap ml-1">
+                        {comment.content}
+                      </p>
+
+                      {/* Reply Button */}
+                      <button
+                        onClick={() => {
+                          setReplyingTo(comment);
+                          setTimeout(() => commentInputRef.current?.focus(), 10);
+                        }}
+                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#8B6914] font-medium transition-colors w-fit ml-1 mt-1"
+                      >
+                        <CornerDownRight className="w-3.5 h-3.5" />
+                        {t.replyBtn || "Reply"}
+                      </button>
+
+                      {/* Nested Replies */}
+                      {nestedReplies[comment._id] && nestedReplies[comment._id].length > 0 && (
+                        <div className="flex flex-col gap-3 mt-1 pl-4 border-l-2 border-[#efe9e1] ml-2">
+                          {nestedReplies[comment._id].map(reply => (
+                            <div key={reply._id} className="bg-[#faf8f5] rounded-xl border border-[#e8dfd1] p-3 flex flex-col gap-2 relative">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-[#f4ebd8] text-[#8B6914] flex items-center justify-center font-bold text-xs overflow-hidden shrink-0">
+                                    {reply.user?.profileImage?.secure_url ? (
+                                      <img src={reply.user.profileImage.secure_url} alt="author" className="w-full h-full object-cover" />
+                                    ) : (
+                                      reply.user?.firstName?.charAt(0)?.toUpperCase() || "U"
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-xs text-[#4a3f35] leading-tight">
+                                      {reply.user?.firstName} {reply.user?.lastName}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                      {new Date(reply.createdAt).toLocaleString()}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setDeleteCommentModal({ isOpen: true, id: reply._id })}
+                                  className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <p className="text-sm text-gray-700 pl-9">
+                                {reply.content}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <div className="bg-gray-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <MessageCircle className="w-6 h-6 text-gray-400" />
+                  <div className="bg-[#fdfbf7] w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 border border-[#e8ddd0]">
+                    <MessageCircle className="w-6 h-6 text-[#8B6914]/40" />
                   </div>
                   <p className="text-gray-500 font-medium">
                     {t.noCommentsFound || "No comments found."}
-                  </p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    {t.noRepliesYet || "This post has no replies yet."}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="px-6 py-4 border-t bg-white flex justify-end">
-              <button
-                onClick={() => setCommentsModal({ isOpen: false, post: null })}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors text-sm"
-              >
-                {t.closeBtn || "Close"}
-              </button>
+            {/* Input Section */}
+            <div className="px-6 py-4 border-t border-[#efe9e1] bg-white flex flex-col gap-2 relative">
+              {replyingTo && (
+                <div className="absolute -top-10 left-6 right-6 flex items-center justify-between text-xs text-gray-600 bg-[#faf8f5] px-4 py-2 rounded-t-xl border border-b-0 border-[#e8dfd1]">
+                  <span className="flex items-center gap-1.5">
+                    <CornerDownRight className="w-3.5 h-3.5 text-[#8B6914]" />
+                    Replying to <span className="font-bold text-[#4a3f35]">{replyingTo.user?.firstName}</span>
+                  </span>
+                  <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-red-500 p-0.5"><X className="w-4 h-4"/></button>
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <input
+                  ref={commentInputRef}
+                  type="text"
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                  placeholder={t.writeComment || "Write a comment..."}
+                  className={`flex-1 bg-[#fdfbf7] border border-[#e8ddd0] rounded-full px-5 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] ${replyingTo ? 'rounded-tl-none' : ''}`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleAddComment();
+                    }
+                  }}
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={addCommentLoading || !newCommentText.trim()}
+                  className="w-11 h-11 rounded-full bg-[#c2a674] hover:bg-[#a88a53] disabled:bg-gray-300 flex items-center justify-center text-white transition-colors flex-shrink-0 shadow-sm"
+                >
+                  {addCommentLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Send className="w-4 h-4 ml-0.5" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
