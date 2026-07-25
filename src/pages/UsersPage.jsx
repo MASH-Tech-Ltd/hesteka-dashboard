@@ -346,6 +346,11 @@ export default function UsersPage() {
       accessor: "address", 
       cell: (user) => <div className="max-w-[150px] truncate" title={user.address}>{user.address || "N/A"}</div> 
     },
+    { 
+      header: t.lastIp || "LAST IP", 
+      accessor: "lastLoginIp", 
+      cell: (user) => <div className="max-w-[120px] truncate" title={user.lastLoginIp}>{user.lastLoginIp || "N/A"}</div> 
+    },
     {
       header: t.actions,
       align: "right",
@@ -388,7 +393,10 @@ export default function UsersPage() {
     }
   ];
 
-  const getUserFields = (isEditing) => [
+  const getUserFields = (editingUser) => {
+    const isEditing = !!editingUser;
+    const hasLocation = editingUser?.location?.coordinates?.length === 2;
+    return [
     { name: "profileImage", label: "Profile Image / Logo", type: "file" },
     { name: "partnerImage", label: "Cover Image", type: "file" },
     { name: "firstName", label: t.firstName || "First Name", required: !isEditing },
@@ -451,8 +459,13 @@ export default function UsersPage() {
         { value: "", label: t.selectCountry || "Select a country" },
         ...(locations.countries ? locations.countries.map(c => ({ value: c, label: c })) : [])
       ]
-    }
+    },
+    ...(hasLocation ? [
+      { name: "latitude", type: "number", disabled: true },
+      { name: "longitude", type: "number", disabled: true }
+    ] : [])
   ];
+  };
 
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
@@ -527,7 +540,7 @@ export default function UsersPage() {
           setFormErrors([]);
         }}
         title={editingUser ? "User Details" : "Add New User"}
-        fields={getUserFields(!!editingUser)}
+        fields={getUserFields(editingUser)}
         initialData={editingUser}
         onSubmit={handleSubmit}
         loading={modalLoading}

@@ -11,7 +11,7 @@ const mapContainerStyle = {
 
 const libraries = ['places'];
 
-const LocationPicker = ({ lat, lng, onChange }) => {
+const LocationPicker = ({ lat, lng, onChange, readOnly }) => {
   const { t } = useLang();
 
   const isValidCoord = (c) => typeof c === "number" && !isNaN(c);
@@ -41,6 +41,7 @@ const LocationPicker = ({ lat, lng, onChange }) => {
   }, [lat, lng]);
 
   const onMapClick = async (e) => {
+    if (readOnly) return;
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
     setPosition({ lat, lng });
@@ -95,9 +96,10 @@ const LocationPicker = ({ lat, lng, onChange }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative">
-        <input
-          type="text"
+      {!readOnly && (
+        <div className="relative">
+          <input
+            type="text"
           placeholder={t.searchLocationPlaceholder || "Search location..."}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -120,6 +122,7 @@ const LocationPicker = ({ lat, lng, onChange }) => {
           {isSearching ? "..." : t.findBtn || "Find"}
         </button>
       </div>
+      )}
 
       <div className="h-48 w-full rounded-xl overflow-hidden border border-[#e8ddd0] shadow-sm relative z-0">
         {!isLoaded ? (
@@ -129,7 +132,7 @@ const LocationPicker = ({ lat, lng, onChange }) => {
             mapContainerStyle={mapContainerStyle}
             center={position}
             zoom={13}
-            onClick={onMapClick}
+            onClick={readOnly ? undefined : onMapClick}
             onLoad={onLoad}
             onUnmount={onUnmount}
             options={{
@@ -140,9 +143,11 @@ const LocationPicker = ({ lat, lng, onChange }) => {
             {position && <MarkerF position={position} />}
           </GoogleMap>
         )}
-        <div className="absolute bottom-2 right-2 z-[400] bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[8px] font-bold text-[#8B6914] border border-[#e8ddd0] shadow-sm uppercase">
-          {t.clickToPin || "CLICK TO PIN"}
-        </div>
+        {!readOnly && (
+          <div className="absolute bottom-2 right-2 z-[400] bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[8px] font-bold text-[#8B6914] border border-[#e8ddd0] shadow-sm uppercase">
+            {t.clickToPin || "CLICK TO PIN"}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -823,6 +828,7 @@ const CRUDModal = ({
                   lat={formData.latitude}
                   lng={formData.longitude}
                   onChange={handleLocationChange}
+                  readOnly={isViewOnly || !!fields.find(f => f.name === 'latitude')?.disabled}
                 />
               </div>
             )}
