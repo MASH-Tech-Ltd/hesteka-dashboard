@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   GoogleMap,
   MarkerF,
@@ -9,7 +9,7 @@ import {
 } from "@react-google-maps/api";
 import api from "../utils/api";
 import { useLang } from "../context/LanguageContext";
-import { Loader2, Users, Search, MapPin } from "lucide-react";
+import { Loader2, Users, Search, MapPin, X } from "lucide-react";
 
 const libraries = ["places"];
 const mapContainerStyle = {
@@ -99,6 +99,36 @@ const LiveMapPage = () => {
   // Search state
   const [autocomplete, setAutocomplete] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [isUserSearchFocused, setIsUserSearchFocused] = useState(false);
+
+  const filteredUsers = useMemo(() => {
+    if (!userSearchQuery || userSearchQuery.trim() === "") return [];
+    const query = userSearchQuery.toLowerCase().trim();
+    return users
+      .filter((u) => {
+        const fullName = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
+        const email = (u.email || "").toLowerCase();
+        return fullName.includes(query) || email.includes(query);
+      })
+      .slice(0, 10);
+  }, [users, userSearchQuery]);
+
+  const handleSelectUserLocation = (user) => {
+    if (!user || !user.location || !user.location.coordinates) return;
+    const lng = user.location.coordinates[0];
+    const lat = user.location.coordinates[1];
+
+    setSelectedUser(user);
+
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat, lng });
+      mapRef.current.setZoom(14);
+    }
+
+    setUserSearchQuery(`${user.firstName || ""} ${user.lastName || ""}`.trim());
+    setIsUserSearchFocused(false);
+  };
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
@@ -350,24 +380,105 @@ const LiveMapPage = () => {
           {t.liveMap || "Live Map"}
         </h1>
         
-        {/* Search Field */}
-        <div className="flex-1 max-w-2xl relative z-[200]">
-          {isLoaded && (
-            <div className="relative">
-              <Autocomplete
-                onLoad={onLoadAutocomplete}
-                onPlaceChanged={onPlaceChanged}
+        {/* Search Fields Container */}
+        <div className="flex-1 flex items-center justify-end gap-3 max-w-3xl relative z-[200]">
+          {/* 1. Address / City Search */}
+          <div className="flex-1 relative">
+            {isLoaded && (
+              <div className="relative">
+                <Autocomplete
+                  onLoad={onLoadAutocomplete}
+                  onPlaceChanged={onPlaceChanged}
+                >
+                  <input
+                    id="live-map-search-input"
+                    type="text"
+                    placeholder={t.searchLocationPlaceholder || "Search for an address or city..."}
+                    className="w-full bg-white border border-[#e8ddd0] rounded-xl pl-10 pr-4 py-2 text-sm text-[#3a2a1a] outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all shadow-sm"
+                  />
+                </Autocomplete>
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a8a7a] pointer-events-none" />
+              </div>
+            )}
+          </div>
+
+          {/* 2. User Location Search */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              onFocus={() => setIsUserSearchFocused(true)}
+              onBlur={() => setTimeout(() => setIsUserSearchFocused(false), 200)}
+              placeholder={t.searchUserLocationPlaceholder || "Search user location (name, email)..."}
+              className="w-full bg-white border border-[#e8ddd0] rounded-xl pl-10 pr-8 py-2 text-sm text-[#3a2a1a] outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all shadow-sm"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a8a7a] pointer-events-none" />
+            {userSearchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUserSearchQuery("");
+                  setSelectedUser(null);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9a8a7a] hover:text-[#3a2a1a] p-0.5 transition-colors"
+                title="Clear user search"
               >
-                <input
-                  id="live-map-search-input"
-                  type="text"
-                  placeholder={t.searchLocationPlaceholder || "Search for an address or city..."}
-                  className="w-full bg-white border border-[#e8ddd0] rounded-xl pl-10 pr-4 py-2 text-sm text-[#3a2a1a] outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all shadow-sm"
-                />
-              </Autocomplete>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a8a7a] pointer-events-none" />
-            </div>
-          )}
+                <X className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Dropdown Results */}
+            {isUserSearchFocused && userSearchQuery.trim() !== "" && (
+              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl border border-[#e8ddd0] shadow-xl overflow-hidden z-[250] max-h-80 overflow-y-auto">
+                {filteredUsers.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-[#9a8a7a]">
+                    No mapped users found for "{userSearchQuery}"
+                  </div>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <div
+                      key={user._id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectUserLocation(user);
+                      }}
+                      className="p-3 hover:bg-[#fcfaf7] cursor-pointer border-b border-[#e8ddd0] last:border-b-0 flex items-center justify-between transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-[#f5f0e8] flex items-center justify-center text-[#8B6914] font-bold text-xs shrink-0 overflow-hidden border border-[#e8ddd0]">
+                          {user.profileImage?.secure_url ? (
+                            <img
+                              src={user.profileImage.secure_url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            user.firstName?.charAt(0) || "U"
+                          )}
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <p className="text-sm font-bold text-[#3a2a1a] truncate">
+                            {user.firstName} {user.lastName}
+                          </p>
+                          <p className="text-xs text-[#9a8a7a] truncate">{user.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <span
+                          className="w-2 h-2 rounded-full shadow-sm"
+                          style={{ backgroundColor: getUserCategory(user).color }}
+                        ></span>
+                        <span className="text-[10px] font-bold text-[#5a4a3a] uppercase">
+                          {getUserCategory(user).label}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-white px-4 py-2 rounded-lg border border-[#e8ddd0] shadow-sm flex items-center gap-2 shrink-0">
