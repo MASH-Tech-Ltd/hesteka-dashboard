@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLang } from "../context/LanguageContext";
-import { Users, Smartphone, Lock, Save, Plus } from "lucide-react";
+import { Users, Smartphone, Lock, Save, Plus, Database, Clock } from "lucide-react";
 import api from "../utils/api";
 import ProfileModal from "../components/dashboard/ProfileModal";
 import { toast } from "react-toastify";
@@ -18,6 +18,37 @@ export default function SettingsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [admins, setAdmins] = useState([]);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [backupLogs, setBackupLogs] = useState([]);
+
+  const fetchBackupLogs = async () => {
+    try {
+      const res = await api.get("/settings/backup-logs");
+      if (res.data.status === "ok") {
+        setBackupLogs(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch backup logs", err);
+    }
+  };
+
+  const handleSyncData = async () => {
+    setSyncing(true);
+    try {
+      const res = await api.post("/settings/sync");
+      if (res.data.status === "ok" || res.data.success) {
+        toast.success(res.data.message || "Database synchronization completed successfully");
+        fetchBackupLogs();
+      } else {
+        toast.error(res.data.message || "Failed to sync database");
+      }
+    } catch (err) {
+      console.error("Failed to sync database", err);
+      toast.error("An error occurred during database synchronization");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchAdmins = async () => {
     try {
@@ -56,6 +87,7 @@ export default function SettingsPage() {
     fetchAdmins();
     fetchSettings();
     fetchSupportLink();
+    fetchBackupLogs();
   }, []);
 
   const handleSaveSettings = async () => {
@@ -98,41 +130,108 @@ export default function SettingsPage() {
 
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Admin Team Card */}
-        <div className="bg-white rounded-xl border border-[#e8ddd0] p-6 flex flex-col gap-5">
-           <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
-             <Users className="w-4 h-4 text-[#8B6914]" /> {t.adminTeam}
-           </h3>
-           <div className="flex flex-col gap-4">
-              {admins.map((admin, i) => (
-                <div 
-                  key={i} 
-                  onClick={() => setSelectedAdmin(admin)}
-                  className="flex items-center justify-between border border-[#e8ddd0] rounded-xl p-3 bg-[#fcfaf7] cursor-pointer hover:border-[#8B6914] transition-colors"
-                >
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#8B6914] flex items-center justify-center text-white font-bold overflow-hidden">
-                        {admin.profileImage?.secure_url ? (
-                          <img src={admin.profileImage.secure_url} alt="Admin" className="w-full h-full object-cover" />
-                        ) : (
-                          (admin.firstName?.charAt(0) || "A").toUpperCase()
-                        )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        {/* Column 1: Admin Team & Database Backup History */}
+        <div className="flex flex-col gap-4">
+           {/* Admin Team Card */}
+           <div className="bg-white rounded-xl border border-[#e8ddd0] p-6 flex flex-col gap-5 w-full">
+              <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#8B6914]" /> {t.adminTeam}
+              </h3>
+              <div className="flex flex-col gap-4">
+                 {admins.map((admin, i) => (
+                   <div 
+                     key={i} 
+                     onClick={() => setSelectedAdmin(admin)}
+                     className="flex items-center justify-between border border-[#e8ddd0] rounded-xl p-3 bg-[#fcfaf7] cursor-pointer hover:border-[#8B6914] transition-colors"
+                   >
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-full bg-[#8B6914] flex items-center justify-center text-white font-bold overflow-hidden">
+                           {admin.profileImage?.secure_url ? (
+                             <img src={admin.profileImage.secure_url} alt="Admin" className="w-full h-full object-cover" />
+                           ) : (
+                             (admin.firstName?.charAt(0) || "A").toUpperCase()
+                           )}
+                         </div>
+                         <div>
+                            <p className="text-xs font-bold text-[#3a2a1a]">{admin.firstName} {admin.lastName}</p>
+                            <p className="text-[9px] text-[#9a8a7a]">{admin.email}</p>
+                         </div>
                       </div>
-                      <div>
-                         <p className="text-xs font-bold text-[#3a2a1a]">{admin.firstName} {admin.lastName}</p>
-                         <p className="text-[9px] text-[#9a8a7a]">{admin.email}</p>
-                      </div>
+                      <span className="bg-green-100 text-green-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                        {admin.role?.replace('_', ' ')}
+                      </span>
                    </div>
-                   <span className="bg-green-100 text-green-600 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-                     {admin.role?.replace('_', ' ')}
-                   </span>
-                </div>
-              ))}
-              <button className="bg-[#f5f0e8] text-[#8B6914] text-[11px] font-bold py-3 rounded-xl border border-dashed border-[#8B6914] hover:bg-[#e8d5b0] transition-colors">
-                  <Plus className="w-4 h-4 inline-block mr-1" /> {t.inviteAdmin}
-              </button>
+                 ))}
+                 <button className="bg-[#f5f0e8] text-[#8B6914] text-[11px] font-bold py-3 rounded-xl border border-dashed border-[#8B6914] hover:bg-[#e8d5b0] transition-colors">
+                     <Plus className="w-4 h-4 inline-block mr-1" /> {t.inviteAdmin}
+                 </button>
+              </div>
+           </div>
+
+           {/* Backup History Card (Read-Only) */}
+           <div className="bg-white rounded-xl border border-[#e8ddd0] p-6 flex flex-col gap-4 w-full">
+              <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
+                 <Database className="w-4 h-4 text-[#8B6914]" /> Sync & Backup History
+              </h3>
+              <p className="text-[10px] text-[#9a8a7a] leading-normal -mt-2">
+                 Read-only logs of database synchronization events.
+              </p>
+              
+              <div className="max-h-[350px] overflow-y-auto flex flex-col gap-3 pr-1">
+                 {backupLogs.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-[#9a8a7a] italic bg-[#fcfaf7] border border-dashed border-[#e8ddd0] rounded-xl">
+                       No synchronization logs found.
+                    </div>
+                 ) : (
+                    backupLogs.map((log, index) => (
+                       <div key={index} className="border border-[#e8ddd0] rounded-xl p-3 bg-[#fcfaf7] flex flex-col gap-2 shadow-sm">
+                          <div className="flex justify-between items-start">
+                             <div className="flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5 text-[#9a8a7a]" />
+                                <span className="text-[10px] font-bold text-[#3a2a1a]">
+                                   {new Date(log.timestamp).toLocaleString()}
+                                </span>
+                             </div>
+                             <div className="flex gap-1 items-center">
+                                <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                   log.status === "success" 
+                                      ? "bg-green-100 text-green-600" 
+                                      : log.status === "bypassed" 
+                                      ? "bg-orange-100 text-orange-600" 
+                                      : "bg-red-100 text-red-600"
+                                }`}>
+                                   {log.status}
+                                </span>
+                                <span className="text-[8px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full uppercase font-semibold">
+                                   {log.triggerType}
+                                </span>
+                             </div>
+                          </div>
+                          
+                          {log.message && (
+                             <p className="text-[9px] text-[#5a4a3a] leading-relaxed bg-[#f5f0e8] p-1.5 rounded-lg border border-[#e8ddd0]">
+                                {log.message}
+                             </p>
+                          )}
+
+                          {log.recordsDetail && Object.keys(log.recordsDetail).length > 0 && (
+                             <div className="flex flex-col gap-1 mt-1">
+                                <span className="text-[8px] font-bold text-[#9a8a7a] uppercase">Synchronized Collections:</span>
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 bg-white border border-[#e8ddd0] rounded-lg p-2.5 max-h-[120px] overflow-y-auto">
+                                   {Object.entries(log.recordsDetail).map(([model, count]) => (
+                                      <div key={model} className="flex justify-between text-[8px] text-[#5a4a3a] border-b border-gray-50 pb-0.5 last:border-b-0">
+                                         <span className="font-semibold">{model}</span>
+                                         <span>{count} records</span>
+                                      </div>
+                                   ))}
+                                </div>
+                             </div>
+                          )}
+                       </div>
+                    ))
+                 )}
+              </div>
            </div>
         </div>
 
@@ -235,6 +334,20 @@ export default function SettingsPage() {
                     <span className="text-xs text-[#9a8a7a]">km</span>
                  </div>
               </div>
+              
+              <div className="border-t border-[#e8ddd0] pt-4 flex flex-col gap-2">
+                  <div>
+                    <p className="text-xs font-bold text-[#3a2a1a]">Database Synchronization</p>
+                    <p className="text-[9px] text-[#9a8a7a]">Synchronizes local database records to the backup MongoDB cluster.</p>
+                  </div>
+                  <button 
+                    onClick={handleSyncData}
+                    disabled={syncing}
+                    className="w-full mt-1 bg-[#8B6914] text-white text-[11px] font-bold py-2.5 rounded-xl hover:bg-[#6a5010] transition-colors disabled:opacity-50"
+                  >
+                    {syncing ? "Synchronizing..." : "Sync Data Now"}
+                  </button>
+               </div>
            </div>
         </div>
       </div>
