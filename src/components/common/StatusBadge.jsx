@@ -20,6 +20,8 @@ const StatusBadge = ({ status, config = {} }) => {
     resolved: { label: t.resolved || 'Resolved', color: 'bg-blue-100 text-blue-600' },
     found: { label: t.found || 'Found', color: 'bg-blue-100 text-blue-600' },
     rescued: { label: t.rescued || 'Rescued', color: 'bg-green-100 text-green-600' },
+    recovered: { label: t.recovered || 'Recovered', color: 'bg-teal-100 text-teal-600' },
+    recoverd: { label: t.recovered || 'Recovered', color: 'bg-teal-100 text-teal-600' },
     
     // Redemptions / Donations
     shipped: { label: t.shipped || 'Shipped', color: 'bg-green-100 text-green-600' },

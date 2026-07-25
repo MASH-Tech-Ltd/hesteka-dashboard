@@ -22,6 +22,7 @@ import {
   HelpCircle,
   MessageSquare,
   Settings,
+  ShieldAlert,
   LogOut,
   X,
 } from "lucide-react";
@@ -192,6 +193,7 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
           badgeColor: "bg-red-600",
         },
         { icon: HelpCircle, key: "faq", path: "/faq", badge: null },
+        { icon: ShieldAlert, key: "security", path: "/security", badge: null },
         { icon: Settings, key: "settings", path: "/settings", badge: null },
       ],
     },

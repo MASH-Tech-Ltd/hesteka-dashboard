@@ -503,6 +503,7 @@ export default function ReportsPage() {
         { label: t.found || "Found", value: "found" },
         { label: t.rescued || "Rescued", value: "rescued" },
         { label: t.sighted || "Sighted", value: "sighted" },
+        { label: t.recovered || "Recovered", value: "recovered" },
       ],
     },
     {
@@ -613,6 +614,7 @@ export default function ReportsPage() {
           found: "bg-blue-100 text-blue-600",
           rescued: "bg-green-100 text-green-600",
           sighted: "bg-purple-100 text-purple-600",
+          recovered: "bg-teal-100 text-teal-600",
         };
         return (
           <span
@@ -808,6 +810,7 @@ export default function ReportsPage() {
                 { label: t.found || "Found", value: "found" },
                 { label: t.sighted || "Sighted", value: "sighted" },
                 { label: t.rescued || "Rescued", value: "rescued" },
+                { label: t.recovered || "Recovered", value: "recovered" },
               ],
             },
             {

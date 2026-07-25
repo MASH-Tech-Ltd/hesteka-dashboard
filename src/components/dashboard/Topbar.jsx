@@ -92,6 +92,7 @@ const Topbar = React.memo(({ onToggleSidebar }) => {
     "/contacts": { title: t.contacts, sub: contactsStats ? `${(contactsStats.all || 0).toLocaleString()} ${t.contacts?.toLowerCase()} · ${(contactsStats.active || 0).toLocaleString()} ${t.active?.toLowerCase()}` : "Manage contacts" },
     "/shopify-products": { title: t.shopifyProducts, sub: "Manage Shopify products" },
     "/faq": { title: t.faqTitle || "FAQ", sub: t.faqSub || "Manage FAQ content" },
+    "/security": { title: t.security || "Security & IPs", sub: t.securitySub || "Manage blocked IPs, users, and security logs" },
     "/posts": { title: t.posts || "Posts (Temporary)", sub: t.managePostsDesc || "Manage community posts (chat messages)." },
     "/live-map": { title: t.liveMap || "Live Map", sub: "Real-time user locations" },
   };
