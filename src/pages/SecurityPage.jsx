@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   X,
   Terminal,
+  Eye,
 } from "lucide-react";
 
 const BlockIpModal = ({ isOpen, onClose, onSuccess }) => {
@@ -158,6 +159,107 @@ const BlockIpModal = ({ isOpen, onClose, onSuccess }) => {
   );
 };
 
+const LogDetailsModal = ({ isOpen, onClose, log }) => {
+  const { t } = useLang();
+  if (!isOpen || !log) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
+        <div className="bg-gradient-to-r from-[#3a2a1a] to-[#2a1a0a] p-5 text-white flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Terminal className="w-5 h-5 text-amber-400" />
+            <h3 className="font-bold text-lg">{t.securityLogDetails || "Security Log Details"}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto space-y-4 text-sm text-[#5a4a3a]">
+          <div className="bg-[#fcfaf7] p-4 rounded-xl border border-[#ede7df] space-y-3">
+            <div>
+              <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
+                {t.incidentType || "Endpoint / Action"} (Full URL)
+              </span>
+              <div className="flex items-start gap-2 bg-white p-2.5 rounded-lg border border-[#e5ded5] font-mono text-xs break-all">
+                <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold shrink-0">
+                  {log.method || "GET"}
+                </span>
+                <span className="text-[#3a2a1a] font-semibold">{log.endpoint || "Unknown"}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              <div>
+                <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
+                  {t.ipAddressLabel || "IP Address"}
+                </span>
+                <span className="font-mono text-xs bg-white px-2.5 py-1.5 rounded-lg border border-[#e5ded5] block text-[#3a2a1a] font-bold">
+                  {log.ip || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
+                  {t.dateLabel || "Timestamp"}
+                </span>
+                <span className="text-xs bg-white px-2.5 py-1.5 rounded-lg border border-[#e5ded5] block text-[#3a2a1a]">
+                  {new Date(log.createdAt).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
+                {t.users || "Associated User"}
+              </span>
+              <div className="bg-white p-2.5 rounded-lg border border-[#e5ded5] text-xs">
+                {log.userId ? (
+                  <span className="font-semibold text-[#3a2a1a]">
+                    {log.userId.firstName || ""} {log.userId.lastName || ""} ({log.userId.email || ""})
+                  </span>
+                ) : (
+                  <span className="text-gray-500 italic">Anonymous / Guest</span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
+                {t.reasonLabel || "Reason / Details"}
+              </span>
+              <div className="bg-white p-3 rounded-lg border border-[#e5ded5] text-xs font-medium text-red-700 leading-relaxed break-words">
+                {log.reason || "Security violation detected"}
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
+                User Agent / Browser
+              </span>
+              <div className="bg-white p-2.5 rounded-lg border border-[#e5ded5] font-mono text-[11px] text-gray-600 break-all max-h-24 overflow-y-auto">
+                {log.userAgent || "N/A"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-[#3a2a1a] text-white text-xs font-bold hover:bg-[#2a1a0a] transition-colors"
+          >
+            {t.close || "Close"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function SecurityPage() {
   const { t } = useLang();
   const [activeTab, setActiveTab] = useState("ips"); // 'ips' | 'users' | 'logs'
@@ -166,6 +268,7 @@ export default function SecurityPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   // Query state
   const [page, setPage] = useState(1);
@@ -424,7 +527,7 @@ export default function SecurityPage() {
                 {row.method || "GET"}
               </span>
               <span className="text-xs font-bold font-mono text-[#3a2a1a]">
-                {row.endpoint || "Unknown"}
+                {row.endpoint ? row.endpoint.split("?")[0] : "Unknown"}
               </span>
             </div>
           ),
@@ -474,6 +577,20 @@ export default function SecurityPage() {
             <span className="text-xs text-[#9a8a7a]">
               {new Date(row.createdAt).toLocaleString()}
             </span>
+          ),
+        },
+        {
+          header: "Actions",
+          accessor: "_id",
+          align: "center",
+          cell: (row) => (
+            <button
+              onClick={() => setSelectedLog(row)}
+              className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs font-bold transition-all flex items-center gap-1.5 mx-auto shadow-sm"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              Details
+            </button>
           ),
         },
       ];
@@ -622,6 +739,13 @@ export default function SecurityPage() {
           if (activeTab === "ips") fetchData();
           else handleTabChange("ips");
         }}
+      />
+
+      {/* Modal for Log Details */}
+      <LogDetailsModal
+        isOpen={!!selectedLog}
+        onClose={() => setSelectedLog(null)}
+        log={selectedLog}
       />
     </div>
   );
