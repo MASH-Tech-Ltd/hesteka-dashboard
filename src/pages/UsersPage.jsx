@@ -351,6 +351,15 @@ export default function UsersPage() {
       accessor: "lastLoginIp", 
       cell: (user) => <div className="max-w-[120px] truncate" title={user.lastLoginIp}>{user.lastLoginIp || "N/A"}</div> 
     },
+    { 
+      header: t.joinDate || "JOIN DATE", 
+      accessor: "createdAt", 
+      cell: (user) => (
+        <span className="text-xs text-[#5a4a3a] font-medium whitespace-nowrap" title={user.createdAt ? new Date(user.createdAt).toLocaleString() : ""}>
+          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+        </span>
+      ) 
+    },
     {
       header: t.actions,
       align: "right",
