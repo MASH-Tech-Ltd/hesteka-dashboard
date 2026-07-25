@@ -221,6 +221,47 @@ export default function PointsPage() {
     }
   };
 
+  const handleDeductCustomPoints = async () => {
+    if (!selectedUser || !customPoints || parseInt(customPoints) <= 0) {
+      toast.error(t.fillAllFields || "Please fill all fields properly");
+      return;
+    }
+    setIsAssigning(true);
+    try {
+      const res = await api.post("/points/admin/deduct-points", {
+        userId: selectedUser._id,
+        points: parseInt(customPoints),
+        note: customPointsNote || undefined,
+      });
+      if (res.data.status === "ok" || res.data.success) {
+        toast.success("Points successfully deducted!");
+        setSelectedUser(null);
+        setUserSearchQuery("");
+        setCustomPoints("");
+        setCustomPointsNote("");
+        const statsRes = await api.get("/points/admin/stats");
+        if (statsRes.data.status === "ok" || statsRes.data.success) {
+          setStats(statsRes.data.data);
+        }
+        fetchHistory(); // Refresh history table
+      }
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message ||
+          "Failed to deduct points",
+      );
+      if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
+        err.response.data.data.forEach(e => toast.error(`Cause: ${e.message || JSON.stringify(e)}`));
+      } else if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        err.response.data.errors.forEach(e => toast.error(`Cause: ${e.message || JSON.stringify(e)}`));
+      } else if (err.response?.data?.error) {
+        toast.error(`Cause: ${typeof err.response.data.error === 'string' ? err.response.data.error : JSON.stringify(err.response.data.error)}`);
+      }
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   const handleAssignAllCustomPoints = () => {
     if (!customPoints || parseInt(customPoints) <= 0) {
       toast.error(t.fillAllFields || "Please fill all fields properly");
@@ -615,14 +656,32 @@ export default function PointsPage() {
             </div>
             <div className="flex bg-white/10 p-0.5 rounded-lg border border-white/20">
               <button
-                onClick={() => setAssignMode("single")}
-                className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${assignMode === "single" ? "bg-white text-[#3a2a1a] shadow-sm" : "text-white/70 hover:text-white"}`}
+                onClick={() => {
+                  setAssignMode("single");
+                  setSelectedUser(null);
+                  setUserSearchQuery("");
+                }}
+                className={`px-2 py-1 text-[9px] font-bold rounded-md transition-all ${assignMode === "single" ? "bg-white text-[#3a2a1a] shadow-sm" : "text-white/70 hover:text-white"}`}
               >
-                Single User
+                Add Points
               </button>
               <button
-                onClick={() => setAssignMode("all")}
-                className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${assignMode === "all" ? "bg-white text-[#3a2a1a] shadow-sm" : "text-white/70 hover:text-white"}`}
+                onClick={() => {
+                  setAssignMode("deduct");
+                  setSelectedUser(null);
+                  setUserSearchQuery("");
+                }}
+                className={`px-2 py-1 text-[9px] font-bold rounded-md transition-all ${assignMode === "deduct" ? "bg-white text-[#3a2a1a] shadow-sm" : "text-white/70 hover:text-white"}`}
+              >
+                Deduct Points
+              </button>
+              <button
+                onClick={() => {
+                  setAssignMode("all");
+                  setSelectedUser(null);
+                  setUserSearchQuery("");
+                }}
+                className={`px-2 py-1 text-[9px] font-bold rounded-md transition-all ${assignMode === "all" ? "bg-white text-[#3a2a1a] shadow-sm" : "text-white/70 hover:text-white"}`}
               >
                 All Users
               </button>
@@ -632,18 +691,22 @@ export default function PointsPage() {
           <h4 className="text-lg font-black leading-tight tracking-tight mt-1">
             {assignMode === "single"
               ? t.giveCustomPointsTitle || "Assign Custom Points"
-              : "Assign to All Users"}
+              : assignMode === "deduct"
+                ? "Deduct Custom Points"
+                : "Assign to All Users"}
           </h4>
           <p className="text-[10px] text-white/60 font-bold leading-relaxed">
             {assignMode === "single"
               ? t.giveCustomPointsDesc ||
                 "Search for a user and directly assign points to their balance."
-              : "Assign points to all registered users simultaneously."}
+              : assignMode === "deduct"
+                ? "Search for a user and directly deduct points from their balance."
+                : "Assign points to all registered users simultaneously."}
           </p>
 
           <div className="flex flex-col gap-2 mt-2 bg-white/10 p-3 rounded-xl relative z-10">
             {/* User Search */}
-            {assignMode === "single" && (
+            {(assignMode === "single" || assignMode === "deduct") && (
               <div className="flex flex-col gap-1 relative">
                 <label className="text-[9px] font-bold text-white/80">
                   {t.searchUser || "Search User"}
@@ -744,11 +807,13 @@ export default function PointsPage() {
             onClick={
               assignMode === "single"
                 ? handleAssignCustomPoints
-                : handleAssignAllCustomPoints
+                : assignMode === "deduct"
+                  ? handleDeductCustomPoints
+                  : handleAssignAllCustomPoints
             }
             disabled={
               isAssigning ||
-              (assignMode === "single" && !selectedUser) ||
+              ((assignMode === "single" || assignMode === "deduct") && !selectedUser) ||
               !customPoints
             }
             className="mt-2 bg-[#8B6914] text-white text-[10px] font-black py-3 rounded-xl hover:bg-[#6a5010] transition-all active:scale-95 shadow-lg uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -758,7 +823,11 @@ export default function PointsPage() {
             ) : (
               <User className="w-3 h-3" />
             )}
-            {t.assignPoints || "ASSIGN POINTS"}
+            {assignMode === "single"
+              ? (t.assignPoints || "ASSIGN POINTS")
+              : assignMode === "deduct"
+                ? "DEDUCT POINTS"
+                : "ASSIGN TO ALL"}
           </button>
         </div>
       </div>
