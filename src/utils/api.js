@@ -27,6 +27,35 @@ api.interceptors.request.use(
   }
 );
 
+let refreshPromise = null;
+
+const requestNewTokenWithRetry = async (refreshToken) => {
+  let attempts = 0;
+  while (attempts < 3) {
+    attempts++;
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/auth/generate-access-token`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${refreshToken}` },
+          withCredentials: true,
+        }
+      );
+
+      if (res.data && res.data.status === 'ok') {
+        return res.data.data.accessToken;
+      }
+    } catch (refreshError) {
+      console.error(`Token refresh attempt ${attempts} of 3 failed:`, refreshError?.response?.data || refreshError.message);
+      if (attempts < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+  }
+  return null;
+};
+
 // Response interceptor for handling 401s
 api.interceptors.response.use(
   (response) => response,
@@ -39,32 +68,24 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('adminRefreshToken');
 
       if (refreshToken) {
-        try {
-          // Call the refresh token endpoint
-          // Note: Backend expects refresh token in Authorization: Bearer <refreshToken>
-          const res = await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/auth/generate-access-token`,
-            {},
-            {
-              headers: { Authorization: `Bearer ${refreshToken}` },
-              withCredentials: true,
-            }
-          );
+        if (!refreshPromise) {
+          refreshPromise = requestNewTokenWithRetry(refreshToken).finally(() => {
+            refreshPromise = null;
+          });
+        }
 
-          if (res.data.status === 'ok') {
-            const { accessToken } = res.data.data;
-            localStorage.setItem('adminAccessToken', accessToken);
-            
-            // Update the original request's header and retry
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-            return api(originalRequest);
-          }
-        } catch (refreshError) {
-          console.error('Token refresh failed', refreshError);
+        const newAccessToken = await refreshPromise;
+
+        if (newAccessToken) {
+          localStorage.setItem('adminAccessToken', newAccessToken);
+          
+          // Update the original request's header and retry
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return api(originalRequest);
         }
       }
 
-      // If no refresh token or refresh failed, logout
+      // If no refresh token or not able to generate token after 3 attempts, logout & clear storage
       localStorage.removeItem('adminAccessToken');
       localStorage.removeItem('adminRefreshToken');
       localStorage.removeItem('adminUser');
