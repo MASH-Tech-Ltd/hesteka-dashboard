@@ -39,7 +39,11 @@ const requestNewTokenWithRetry = async (refreshToken) => {
         `${import.meta.env.VITE_API_BASE_URL}/auth/generate-access-token`,
         {},
         {
-          headers: { Authorization: `Bearer ${refreshToken}` },
+          headers: {
+            Authorization: `Bearer ${refreshToken}`,
+            'X-Requested-From': 'web/admin',
+            'X-Admin-Dashboard': 'true',
+          },
           withCredentials: true,
         }
       );
