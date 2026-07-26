@@ -105,7 +105,8 @@ const FilterBar = ({
   sortOptions = [],
   placeholder,
   actionButton,
-  related = false
+  related = false,
+  extraLeftElement,
 }) => {
   const { t } = useLang();
   const [searchTerm, setSearchTerm] = useState("");
@@ -148,6 +149,13 @@ const FilterBar = ({
             onChange={(e) => onFilterChange(filter.name, e.target.value)}
           />
         ))}
+
+        {/* Extra Left Element */}
+        {extraLeftElement && (
+          <div className="flex items-center">
+            {extraLeftElement}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">

@@ -9,11 +9,50 @@ import FilterBar from "../components/common/FilterBar";
 import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
-import { Target, Plus, X, MapPin, Users, Check } from "lucide-react";
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import { Target, Plus, X, MapPin, Users, Check, Loader2 } from "lucide-react";
+import {
+  GoogleMap,
+  MarkerF,
+  InfoWindowF,
+  useJsApiLoader,
+} from "@react-google-maps/api";
 
 const mapContainerStyle = { width: "100%", height: "100%" };
-const libraries = ['places'];
+const libraries = ["places"];
+
+const isMissionPassed = (mission) => {
+  if (!mission) return false;
+  if (
+    mission.status === "completed" ||
+    mission.status === "passed" ||
+    mission.status === "inactive" ||
+    mission.status === "cancelled"
+  ) {
+    return true;
+  }
+  if (mission.missionDate) {
+    const missionDay = new Date(mission.missionDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return missionDay < today;
+  }
+  return false;
+};
+
+const getMissionPinIcon = (mission) => {
+  if (!window.google || !window.google.maps) return undefined;
+  const passed = isMissionPassed(mission);
+  const color = passed ? "#ef4444" : "#22c55e"; // Red for passed, Green for upcoming
+  return {
+    path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+    fillColor: color,
+    fillOpacity: 1,
+    strokeColor: "#ffffff",
+    strokeWeight: 2,
+    scale: 1.8,
+    anchor: new window.google.maps.Point(12, 22),
+  };
+};
 
 export default function MissionsPage() {
   const { t } = useLang();
@@ -44,13 +83,19 @@ export default function MissionsPage() {
   });
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [locations, setLocations] = useState({ regions: [], departments: [] });
-  
+
   const [participantsModal, setParticipantsModal] = useState({
     isOpen: false,
     loading: false,
     missionTitle: "",
     data: [],
   });
+
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [mapMissions, setMapMissions] = useState([]);
+  const [mapLoading, setMapLoading] = useState(false);
+  const [activeMarkerId, setActiveMarkerId] = useState(null);
+  const [mapType, setMapType] = useState("roadmap");
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -102,6 +147,70 @@ export default function MissionsPage() {
     fetchLocations();
   }, []);
 
+  const fetchMapMissions = useCallback(async () => {
+    setMapLoading(true);
+    try {
+      const q = { ...queryParams };
+      delete q.page;
+      delete q.limit;
+      delete q.sortBy;
+      delete q.sort;
+      const queryString = new URLSearchParams(q).toString();
+      const res = await api.get(`/admin/missions/coordinates?${queryString}`);
+      if (res.data.status === "ok" || res.data.success) {
+        setMapMissions(res.data.data || []);
+      } else if (Array.isArray(res.data)) {
+        setMapMissions(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch map missions", err);
+      toast.error("Failed to load map coordinates");
+    } finally {
+      setMapLoading(false);
+    }
+  }, [queryParams]);
+
+  useEffect(() => {
+    if (isMapModalOpen) {
+      fetchMapMissions();
+    }
+  }, [isMapModalOpen, fetchMapMissions]);
+
+  const onMapLoad = useCallback(
+    (map) => {
+      if (!mapMissions || mapMissions.length === 0) return;
+      const valid = mapMissions.filter(
+        (p) =>
+          Array.isArray(p.location?.coordinates) &&
+          p.location.coordinates.length === 2,
+      );
+      if (valid.length === 0) return;
+      if (valid.length === 1) {
+        map.setCenter({
+          lat: valid[0].location.coordinates[1],
+          lng: valid[0].location.coordinates[0],
+        });
+        map.setZoom(12);
+        return;
+      }
+
+      const bounds = new window.google.maps.LatLngBounds();
+      valid.forEach((p) => {
+        bounds.extend({
+          lat: p.location.coordinates[1],
+          lng: p.location.coordinates[0],
+        });
+      });
+      map.fitBounds(bounds);
+
+      const listener = window.google.maps.event.addListener(map, "idle", () => {
+        if (map.getZoom() > 14) map.setZoom(14);
+        window.google.maps.event.removeListener(listener);
+      });
+    },
+    [mapMissions],
+  );
+
   const handleOpenAdd = () => {
     setEditingMission(null);
     setIsModalOpen(true);
@@ -131,47 +240,72 @@ export default function MissionsPage() {
   };
 
   const handleOpenParticipants = async (m) => {
-    setParticipantsModal({ isOpen: true, loading: true, missionTitle: m.title, data: [] });
+    setParticipantsModal({
+      isOpen: true,
+      loading: true,
+      missionTitle: m.title,
+      data: [],
+    });
     try {
-      const res = await api.get(`/local-missions/get-local-mission-participants/${m._id}`);
+      const res = await api.get(
+        `/local-missions/get-local-mission-participants/${m._id}`,
+      );
       if (res.data.status === "ok") {
-        setParticipantsModal(prev => ({ ...prev, loading: false, data: res.data.data }));
+        setParticipantsModal((prev) => ({
+          ...prev,
+          loading: false,
+          data: res.data.data,
+        }));
       }
     } catch (err) {
       toast.error(t.errorFetchingParticipants || "Failed to load participants");
-      setParticipantsModal(prev => ({ ...prev, loading: false }));
+      setParticipantsModal((prev) => ({ ...prev, loading: false }));
     }
   };
 
   const handleApproveParticipant = async (participationId) => {
     try {
-      const res = await api.patch(`/local-missions/approve-local-mission/${participationId}`);
+      const res = await api.patch(
+        `/local-missions/approve-local-mission/${participationId}`,
+      );
       if (res.data.status === "ok") {
-        toast.success(t.participantApproved || "Participant approved and points awarded");
-        setParticipantsModal(prev => ({
+        toast.success(
+          t.participantApproved || "Participant approved and points awarded",
+        );
+        setParticipantsModal((prev) => ({
           ...prev,
-          data: prev.data.map(p => p._id === participationId ? { ...p, status: "completed" } : p)
+          data: prev.data.map((p) =>
+            p._id === participationId ? { ...p, status: "completed" } : p,
+          ),
         }));
         fetchData();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to approve participant");
+      toast.error(
+        err.response?.data?.message || "Failed to approve participant",
+      );
     }
   };
 
   const handleRejectParticipant = async (participationId) => {
     try {
-      const res = await api.patch(`/local-missions/reject-local-mission/${participationId}`);
+      const res = await api.patch(
+        `/local-missions/reject-local-mission/${participationId}`,
+      );
       if (res.data.status === "ok") {
         toast.success(t.participantRejected || "Participant rejected");
-        setParticipantsModal(prev => ({
+        setParticipantsModal((prev) => ({
           ...prev,
-          data: prev.data.map(p => p._id === participationId ? { ...p, status: "rejected" } : p)
+          data: prev.data.map((p) =>
+            p._id === participationId ? { ...p, status: "rejected" } : p,
+          ),
         }));
         fetchData();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to reject participant");
+      toast.error(
+        err.response?.data?.message || "Failed to reject participant",
+      );
     }
   };
 
@@ -281,23 +415,23 @@ export default function MissionsPage() {
       indefiniteKey: "isIndefiniteDate",
     },
     { name: "address", label: t.address || "Address", required: true },
-    { 
-      name: "region", 
+    {
+      name: "region",
       label: t.regionLabel || "Region",
       type: "select",
       options: [
         { value: "", label: t.selectRegion || "Select a region" },
-        ...locations.regions.map(r => ({ value: r, label: r }))
-      ]
+        ...locations.regions.map((r) => ({ value: r, label: r })),
+      ],
     },
-    { 
-      name: "department", 
+    {
+      name: "department",
       label: t.departmentLabel || "Department",
       type: "select",
       options: [
         { value: "", label: t.selectDepartment || "Select a department" },
-        ...locations.departments.map(d => ({ value: d, label: d }))
-      ]
+        ...locations.departments.map((d) => ({ value: d, label: d })),
+      ],
     },
     {
       name: "latitude",
@@ -319,12 +453,16 @@ export default function MissionsPage() {
     },
     { name: "duration", label: t.durationLabel || "Duration", required: true },
     { name: "image", label: t.missionPhoto || "Mission Photo", type: "file" },
-    ...(!editingMission ? [{
-      name: "notifyAllFrance",
-      label: t.notifyAllFranceLabel || "Notify all users in France",
-      type: "checkbox",
-      fullWidth: true,
-    }] : []),
+    ...(!editingMission
+      ? [
+          {
+            name: "notifyAllFrance",
+            label: t.notifyAllFranceLabel || "Notify all users in France",
+            type: "checkbox",
+            fullWidth: true,
+          },
+        ]
+      : []),
   ];
 
   const columns = [
@@ -360,12 +498,20 @@ export default function MissionsPage() {
       width: "15%",
       cell: (m) => (
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
-            {(
-              m.partner?.company?.[0] ||
-              m.partner?.firstName?.[0] ||
-              "P"
-            ).toUpperCase()}
+          <div className="w-6 h-6 rounded-full bg-[#8B6914] text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0 border border-[#e8ddd0]">
+            {m.partner?.profileImage?.secure_url || m.partner?.logo?.secure_url ? (
+              <img
+                src={m.partner?.profileImage?.secure_url || m.partner?.logo?.secure_url}
+                alt={m.partner?.company || m.partner?.firstName || "Partner"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              (
+                m.partner?.company?.[0] ||
+                m.partner?.firstName?.[0] ||
+                "P"
+              ).toUpperCase()
+            )}
           </div>
           <span className="text-xs text-[#3a2a1a] font-medium truncate max-w-[100px]">
             {m.partner?.company || m.partner?.firstName || "N/A"}
@@ -376,7 +522,10 @@ export default function MissionsPage() {
     {
       header: t.dateLabel || "DATE",
       width: "10%",
-      cell: (m) => m.missionDate ? new Date(m.missionDate).toLocaleDateString() : (t.indefiniteDuration || "No set date"),
+      cell: (m) =>
+        m.missionDate
+          ? new Date(m.missionDate).toLocaleDateString()
+          : t.indefiniteDuration || "No set date",
     },
     {
       header: t.points || "POINTS",
@@ -389,15 +538,14 @@ export default function MissionsPage() {
       header: t.requestedLabel || "REQUESTED",
       align: "center",
       width: "10%",
-      cell: (m) => (
+      cell: (m) =>
         m.pendingRequestsCount > 0 ? (
           <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">
             {m.pendingRequestsCount}
           </span>
         ) : (
           <span className="font-bold">0</span>
-        )
-      ),
+        ),
     },
     {
       header: t.participants || "PARTICIPANTS",
@@ -519,6 +667,15 @@ export default function MissionsPage() {
               ],
             },
           ]}
+          extraLeftElement={
+            <button
+              onClick={() => setIsMapModalOpen(true)}
+              className="bg-[#fcfaf7] border border-[#e8ddd0] text-[#3a2a1a] text-xs font-medium px-4 py-2.5 rounded-xl hover:bg-white hover:border-[#8B6914] transition-all flex items-center gap-2 shadow-sm cursor-pointer select-none"
+            >
+              <MapPin className="w-4 h-4 text-[#8B6914]" />
+              <span>{t.viewAllInMap || "View all in map"}</span>
+            </button>
+          }
           sortOptions={[
             { label: t.dateDesc || "Date (Newest)", value: "date:descending" },
             { label: t.dateAsc || "Date (Oldest)", value: "date:ascending" },
@@ -561,11 +718,12 @@ export default function MissionsPage() {
         initialData={editingMission}
         onSubmit={handleSubmit}
         loading={modalLoading}
+        maxWidth="max-w-4xl"
       />
 
       {isViewModalOpen && selectedMission && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center sticky top-0 bg-white z-10">
               <h2 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
                 <Target className="w-5 h-5 text-[#8B6914]" /> {t.viewBtn}:{" "}
@@ -586,7 +744,9 @@ export default function MissionsPage() {
                     {t.generalInfo || "General Information"}
                   </h3>
                   <div className="grid grid-cols-2 gap-y-2 text-sm">
-                    <span className="text-[#9a8a7a]">{t.titleLabel || "Title"}:</span>
+                    <span className="text-[#9a8a7a]">
+                      {t.titleLabel || "Title"}:
+                    </span>
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedMission.title}
                     </span>
@@ -596,32 +756,48 @@ export default function MissionsPage() {
                     <span className="font-bold uppercase text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full w-fit">
                       {selectedMission.status}
                     </span>
-                    <span className="text-[#9a8a7a]">{t.address || "Address"}:</span>
+                    <span className="text-[#9a8a7a]">
+                      {t.address || "Address"}:
+                    </span>
                     <span
                       className="font-medium text-[#3a2a1a] truncate"
                       title={selectedMission.address}
                     >
                       {selectedMission.address}
                     </span>
-                    <span className="text-[#9a8a7a]">{t.durationLabel || "Duration"}:</span>
+                    <span className="text-[#9a8a7a]">
+                      {t.durationLabel || "Duration"}:
+                    </span>
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedMission.duration || "N/A"}
                     </span>
-                    <span className="text-[#9a8a7a]">{t.points || "Points"}:</span>
+                    <span className="text-[#9a8a7a]">
+                      {t.points || "Points"}:
+                    </span>
                     <span className="font-bold text-orange-600">
                       +{selectedMission.points} pts
                     </span>
-                    <span className="text-[#9a8a7a]">{t.regionLabel || "Region"}:</span>
+                    <span className="text-[#9a8a7a]">
+                      {t.regionLabel || "Region"}:
+                    </span>
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedMission.region || "N/A"}
                     </span>
-                    <span className="text-[#9a8a7a]">{t.departmentLabel || "Department"}:</span>
+                    <span className="text-[#9a8a7a]">
+                      {t.departmentLabel || "Department"}:
+                    </span>
                     <span className="font-medium text-[#3a2a1a]">
                       {selectedMission.department || "N/A"}
                     </span>
-                    <span className="text-[#9a8a7a]">{t.dateLabel || "Date"}:</span>
+                    <span className="text-[#9a8a7a]">
+                      {t.dateLabel || "Date"}:
+                    </span>
                     <span className="font-medium text-[#3a2a1a]">
-                      {selectedMission.missionDate ? new Date(selectedMission.missionDate).toLocaleDateString() : (t.indefiniteDuration || "No set date")}
+                      {selectedMission.missionDate
+                        ? new Date(
+                            selectedMission.missionDate,
+                          ).toLocaleDateString()
+                        : t.indefiniteDuration || "No set date"}
                     </span>
                   </div>
                 </div>
@@ -632,11 +808,19 @@ export default function MissionsPage() {
                   </h3>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 rounded-full bg-[#8B6914] text-white flex items-center justify-center font-bold overflow-hidden border border-[#e8ddd0]">
-                      {(
-                        selectedMission.partner?.company?.[0] ||
-                        selectedMission.partner?.firstName?.[0] ||
-                        "P"
-                      ).toUpperCase()}
+                      {selectedMission.partner?.profileImage?.secure_url || selectedMission.partner?.logo?.secure_url ? (
+                        <img
+                          src={selectedMission.partner?.profileImage?.secure_url || selectedMission.partner?.logo?.secure_url}
+                          alt={selectedMission.partner?.company || selectedMission.partner?.firstName || "Partner"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        (
+                          selectedMission.partner?.company?.[0] ||
+                          selectedMission.partner?.firstName?.[0] ||
+                          "P"
+                        ).toUpperCase()
+                      )}
                     </div>
                     <div className="flex flex-col">
                       <span className="font-bold text-sm text-[#3a2a1a]">
@@ -664,7 +848,8 @@ export default function MissionsPage() {
                 selectedMission.location.coordinates.length === 2 && (
                   <div className="flex flex-col gap-3">
                     <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[#8B6914]" /> {t.localisationLabel || "Location"}
+                      <MapPin className="w-4 h-4 text-[#8B6914]" />{" "}
+                      {t.localisationLabel || "Location"}
                     </h3>
                     <div className="h-64 rounded-xl overflow-hidden shadow-inner border border-[#e8ddd0]">
                       {!isLoaded ? (
@@ -680,13 +865,15 @@ export default function MissionsPage() {
                           options={{
                             disableDefaultUI: true,
                             zoomControl: true,
+                            gestureHandling: "greedy",
                           }}
                         >
-                          <Marker
+                          <MarkerF
                             position={{
                               lat: selectedMission.location.coordinates[1],
                               lng: selectedMission.location.coordinates[0],
                             }}
+                            icon={getMissionPinIcon(selectedMission)}
                           />
                         </GoogleMap>
                       )}
@@ -694,7 +881,7 @@ export default function MissionsPage() {
                   </div>
                 )}
 
-              {selectedMission.photo?.secure_url && (
+              {selectedMission.photo?.secure_url ? (
                 <div className="flex flex-col gap-3">
                   <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
                     {t.missionPhoto || "Mission Photo"}
@@ -702,10 +889,21 @@ export default function MissionsPage() {
                   <img
                     src={selectedMission.photo.secure_url}
                     alt="Mission"
-                    className="w-full max-h-64 object-cover rounded-lg border border-[#e8ddd0] shadow-sm"
+                    className="w-full max-w-md aspect-square object-cover rounded-lg border border-[#e8ddd0] shadow-sm mx-auto"
                   />
                 </div>
-              )}
+              ) : selectedMission.partner?.profileImage?.secure_url ? (
+                <div className="flex flex-col gap-3">
+                  <h3 className="font-bold text-[#3a2a1a] border-b pb-2">
+                    {t.missionPhoto || "Mission Photo"}
+                  </h3>
+                  <img
+                    src={selectedMission.partner.profileImage.secure_url}
+                    alt="Mission Partner"
+                    className="w-full max-w-md aspect-square object-cover rounded-lg border border-[#e8ddd0] shadow-sm mx-auto"
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -728,10 +926,14 @@ export default function MissionsPage() {
           <div className="bg-white rounded-2xl w-full max-w-4xl min-h-[500px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center bg-white z-10">
               <h2 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#8B6914]" /> {t.participantsOf || "Participants:"} {participantsModal.missionTitle}
+                <Users className="w-5 h-5 text-[#8B6914]" />{" "}
+                {t.participantsOf || "Participants:"}{" "}
+                {participantsModal.missionTitle}
               </h2>
               <button
-                onClick={() => setParticipantsModal(prev => ({ ...prev, isOpen: false }))}
+                onClick={() =>
+                  setParticipantsModal((prev) => ({ ...prev, isOpen: false }))
+                }
                 className="text-[#9a8a7a] hover:text-[#3a2a1a] transition-colors p-1"
               >
                 <X className="w-6 h-6" />
@@ -739,83 +941,147 @@ export default function MissionsPage() {
             </div>
             <div className="p-0 overflow-y-auto custom-scrollbar flex-1 bg-[#fcfaf7]">
               {participantsModal.loading ? (
-                <div className="p-8 text-center text-[#9a8a7a]">{t.loading || "Loading..."}</div>
+                <div className="p-8 text-center text-[#9a8a7a]">
+                  {t.loading || "Loading..."}
+                </div>
               ) : participantsModal.data.length === 0 ? (
-                <div className="p-8 text-center text-[#9a8a7a]">{t.noParticipants || "No participants found for this mission."}</div>
+                <div className="p-8 text-center text-[#9a8a7a]">
+                  {t.noParticipants ||
+                    "No participants found for this mission."}
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead className="bg-white sticky top-0 border-b border-[#e8ddd0]">
                       <tr>
-                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">{t.user || "User"}</th>
-                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">{t.email || "Email"}</th>
-                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">{t.dateLabel || "Date"}</th>
-                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">{t.statusLabel || "Status"}</th>
-                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider text-right">{t.actionsLabel || "Actions"}</th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">
+                          {t.user || "User"}
+                        </th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">
+                          {t.email || "Email"}
+                        </th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">
+                          {t.dateLabel || "Date"}
+                        </th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider">
+                          {t.statusLabel || "Status"}
+                        </th>
+                        <th className="p-4 text-[10px] font-bold text-[#8a7a6a] uppercase tracking-wider text-right">
+                          {t.actionsLabel || "Actions"}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#f0e8d8]">
-                      {participantsModal.data.map(p => (
-                        <tr key={p._id} className="hover:bg-white transition-colors">
+                      {participantsModal.data.map((p) => (
+                        <tr
+                          key={p._id}
+                          className="hover:bg-white transition-colors"
+                        >
                           <td className="p-4">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-[#f5f0e8] overflow-hidden flex items-center justify-center shrink-0 border border-[#e8ddd0]">
                                 {p.user?.profileImage?.secure_url ? (
-                                  <img src={p.user.profileImage.secure_url} alt="" className="w-full h-full object-cover" />
+                                  <img
+                                    src={p.user.profileImage.secure_url}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                  />
                                 ) : (
                                   <div className="text-[#8B6914] font-bold text-xs">
-                                    {(p.user?.firstName?.[0] || 'U').toUpperCase()}
+                                    {(
+                                      p.user?.firstName?.[0] || "U"
+                                    ).toUpperCase()}
                                   </div>
                                 )}
                               </div>
                               <div className="flex flex-col">
-                                <span className="font-bold text-[#3a2a1a] text-sm truncate max-w-[250px]">{p.user?.firstName} {p.user?.lastName}</span>
+                                <span className="font-bold text-[#3a2a1a] text-sm truncate max-w-[250px]">
+                                  {p.user?.firstName} {p.user?.lastName}
+                                </span>
                                 {p.user?.phone && (
-                                  <span className="text-xs text-[#9a8a7a] mt-0.5">{p.user.phone}</span>
+                                  <span className="text-xs text-[#9a8a7a] mt-0.5">
+                                    {p.user.phone}
+                                  </span>
                                 )}
                               </div>
                             </div>
                           </td>
                           <td className="p-4">
                             <div className="flex flex-col">
-                              <span className="text-sm text-[#5a4a3a] truncate max-w-[250px]" title={p.user?.email}>{p.user?.email}</span>
-                              {(p.user?.address || p.user?.postalCode || p.user?.country) && (
-                                <span className="text-xs text-[#9a8a7a] truncate max-w-[300px] mt-0.5" title={[p.user?.address, p.user?.postalCode, p.user?.country].filter(Boolean).join(', ')}>
-                                  {[p.user?.address, p.user?.postalCode, p.user?.country].filter(Boolean).join(', ')}
+                              <span
+                                className="text-sm text-[#5a4a3a] truncate max-w-[250px]"
+                                title={p.user?.email}
+                              >
+                                {p.user?.email}
+                              </span>
+                              {(p.user?.address ||
+                                p.user?.postalCode ||
+                                p.user?.country) && (
+                                <span
+                                  className="text-xs text-[#9a8a7a] truncate max-w-[300px] mt-0.5"
+                                  title={[
+                                    p.user?.address,
+                                    p.user?.postalCode,
+                                    p.user?.country,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ")}
+                                >
+                                  {[
+                                    p.user?.address,
+                                    p.user?.postalCode,
+                                    p.user?.country,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ")}
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="p-4 text-sm text-[#5a4a3a] whitespace-nowrap">{new Date(p.createdAt).toLocaleDateString()}</td>
+                          <td className="p-4 text-sm text-[#5a4a3a] whitespace-nowrap">
+                            {new Date(p.createdAt).toLocaleDateString()}
+                          </td>
                           <td className="p-4">
-                            <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase whitespace-nowrap ${
-                              p.status === 'completed' ? 'bg-green-100 text-green-600' : 
-                              p.status === 'rejected' ? 'bg-red-100 text-red-600' : 
-                              'bg-orange-100 text-orange-600'
-                            }`}>
-                              {p.status === 'completed' ? t.completed || 'Completed' : 
-                               p.status === 'rejected' ? t.rejected || 'Rejected' : 
-                               t.pending || 'Pending'}
+                            <span
+                              className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase whitespace-nowrap ${
+                                p.status === "completed"
+                                  ? "bg-green-100 text-green-600"
+                                  : p.status === "rejected"
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-orange-100 text-orange-600"
+                              }`}
+                            >
+                              {p.status === "completed"
+                                ? t.completed || "Completed"
+                                : p.status === "rejected"
+                                  ? t.rejected || "Rejected"
+                                  : t.pending || "Pending"}
                             </span>
                           </td>
                           <td className="p-4 text-right">
-                            {p.status === 'pending' ? (
+                            {p.status === "pending" ? (
                               <div className="flex gap-2 justify-end">
                                 <button
                                   onClick={() => handleRejectParticipant(p._id)}
                                   className="bg-white border border-red-200 text-red-600 text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors inline-flex items-center gap-1"
                                 >
-                                  <X className="w-3 h-3" /> {t.rejectBtn || "Reject"}
+                                  <X className="w-3 h-3" />{" "}
+                                  {t.rejectBtn || "Reject"}
                                 </button>
                                 <button
-                                  onClick={() => handleApproveParticipant(p._id)}
+                                  onClick={() =>
+                                    handleApproveParticipant(p._id)
+                                  }
                                   className="bg-[#8B6914] text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#6a5010] transition-colors inline-flex items-center gap-1"
                                 >
-                                  <Check className="w-3 h-3" /> {t.approveBtn || "Approve"}
+                                  <Check className="w-3 h-3" />{" "}
+                                  {t.approveBtn || "Approve"}
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-[#9a8a7a] text-[10px] font-medium">-</span>
+                              <span className="text-[#9a8a7a] text-[10px] font-medium">
+                                -
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -824,6 +1090,239 @@ export default function MissionsPage() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View All In Map Modal */}
+      {isMapModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl border border-[#e8ddd0] shadow-2xl w-[95vw] max-w-7xl h-[88vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="p-5 border-b border-[#e8ddd0] bg-[#fcfaf7] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#8B6914] text-white flex items-center justify-center font-bold">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-[#3a2a1a] text-base">
+                    {t.localMissionsMap || "Local Missions Map View"}
+                  </h2>
+                  <p className="text-xs text-[#9a8a7a]">
+                    {mapMissions.length}{" "}
+                    {t.missionsWithCoordinates ||
+                      "missions with GPS coordinates"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsMapModalOpen(false);
+                  setActiveMarkerId(null);
+                }}
+                className="w-8 h-8 rounded-full bg-white border border-[#e8ddd0] flex items-center justify-center text-[#9a8a7a] hover:text-[#3a2a1a] hover:bg-[#f5f0e8] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Map Container */}
+            <div className="flex-1 relative bg-[#f5f0e8]">
+              {mapLoading && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm gap-3">
+                  <div className="w-10 h-10 border-4 border-[#8B6914] border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs font-bold text-[#3a2a1a]">
+                    {t.loadingMapData || "Loading map coordinates..."}
+                  </span>
+                </div>
+              )}
+              {!isLoaded ? (
+                <div className="w-full h-full flex items-center justify-center bg-[#f5f0e8]">
+                  <span className="text-xs font-bold text-[#9a8a7a]">
+                    {t.loadingGoogleMaps || "Loading Google Maps..."}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  {/* Custom Map Type Toggle */}
+                  <button
+                    onClick={() =>
+                      setMapType((prev) =>
+                        prev === "roadmap" ? "hybrid" : "roadmap",
+                      )
+                    }
+                    className="absolute top-4 left-4 z-[10] w-10 h-10 bg-white rounded-lg shadow-lg border border-[#e8ddd0] flex flex-col items-center justify-center overflow-hidden hover:border-[#8B6914] transition-all group cursor-pointer"
+                    title={
+                      mapType === "roadmap"
+                        ? "Switch to Satellite"
+                        : "Switch to Map"
+                    }
+                  >
+                    {mapType === "roadmap" ? (
+                      <div className="w-full h-full bg-[#3a2a1a] flex flex-col items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-white mb-0.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          ></path>
+                        </svg>
+                        <span className="text-[7px] font-bold text-white leading-none">
+                          SAT
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="w-full h-full bg-[#f5f0e8] flex flex-col items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-[#8B6914] mb-0.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                          ></path>
+                        </svg>
+                        <span className="text-[7px] font-bold text-[#8B6914] leading-none">
+                          MAP
+                        </span>
+                      </div>
+                    )}
+                  </button>
+
+                  <GoogleMap
+                    mapContainerStyle={mapContainerStyle}
+                    center={{ lat: 46.2276, lng: 2.2137 }}
+                    zoom={6}
+                    mapTypeId={mapType}
+                    onLoad={onMapLoad}
+                    options={{
+                      disableDefaultUI: false,
+                      zoomControl: true,
+                      mapTypeControl: false,
+                      streetViewControl: false,
+                      gestureHandling: "greedy",
+                    }}
+                  >
+                    {mapMissions
+                      .filter(
+                        (p) =>
+                          Array.isArray(p.location?.coordinates) &&
+                          p.location.coordinates.length === 2,
+                      )
+                      .map((p) => (
+                        <MarkerF
+                          key={p._id}
+                          position={{
+                            lat: p.location.coordinates[1],
+                            lng: p.location.coordinates[0],
+                          }}
+                          icon={getMissionPinIcon(p)}
+                          onClick={() => setActiveMarkerId(p._id)}
+                        >
+                          {activeMarkerId === p._id && (
+                            <InfoWindowF
+                              onCloseClick={() => setActiveMarkerId(null)}
+                            >
+                              <div className="p-1 max-w-[240px] text-left">
+                                {p.photo?.secure_url ? (
+                                  <img
+                                    src={p.photo.secure_url}
+                                    alt={p.title}
+                                    className="w-full aspect-square object-cover rounded-lg mb-2 border border-[#e8ddd0]"
+                                  />
+                                ) : p.partner?.profileImage?.secure_url ? (
+                                  <img
+                                    src={p.partner.profileImage.secure_url}
+                                    alt={p.title}
+                                    className="w-full aspect-square object-cover rounded-lg mb-2 border border-[#e8ddd0]"
+                                  />
+                                ) : (
+                                  <div className="w-full aspect-square bg-[#f5f0e8] rounded-lg mb-2 flex items-center justify-center border border-[#e8ddd0] text-[#8B6914]">
+                                    <MapPin className="w-8 h-8 opacity-50" />
+                                  </div>
+                                )}
+                                <div className="font-bold text-xs text-[#3a2a1a] truncate">
+                                  {p.title}
+                                </div>
+                                {p.address && (
+                                  <div className="text-[10px] text-[#9a8a7a] mt-1 line-clamp-2">
+                                    {p.address}
+                                  </div>
+                                )}
+                                {p.partner?.company && (
+                                  <div className="text-[10px] text-[#8B6914] mt-1 font-bold">
+                                    {p.partner.company}
+                                  </div>
+                                )}
+                                <div className="mt-2 pt-2 border-t border-[#e8ddd0]">
+                                  <span className="text-xs font-extrabold text-orange-600">
+                                    +{p.points || 0} pts
+                                  </span>
+                                </div>
+                              </div>
+                            </InfoWindowF>
+                          )}
+                        </MarkerF>
+                      ))}
+                  </GoogleMap>
+
+                  {/* Legend Overlay */}
+                  <div className="absolute bottom-4 left-4 z-[10] bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-[#e8ddd0]">
+                    <h3 className="text-[10px] font-bold text-[#3a2a1a] mb-2 uppercase tracking-wider">
+                      {t.missionStatusLegend || "Mission Status Legend"}
+                    </h3>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-[#22c55e] border-2 border-white shadow-sm ring-1 ring-[#22c55e]/20"></span>
+                        <span className="text-[11px] text-[#5a4a3a] font-medium">
+                          {t.upcomingMissions || "Upcoming / Active"} (
+                          {
+                            mapMissions.filter((p) => !isMissionPassed(p))
+                              .length
+                          }
+                          )
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-[#ef4444] border-2 border-white shadow-sm ring-1 ring-[#ef4444]/20"></span>
+                        <span className="text-[11px] text-[#5a4a3a] font-medium">
+                          {t.passedMissions || "Passed / Inactive"} (
+                          {mapMissions.filter((p) => isMissionPassed(p)).length}
+                          )
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-[#e8ddd0] bg-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 text-xs text-[#5a4a3a]">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block animate-pulse"></span>
+                <span>
+                  {t.mapFilterNotice ||
+                    "Showing missions matching your current filter settings"}
+                </span>
+              </div>
+              <button
+                onClick={() => setIsMapModalOpen(false)}
+                className="bg-[#fcfaf7] border border-[#e8ddd0] text-[#3a2a1a] text-xs font-bold px-5 py-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
+              >
+                {t.closeBtn || "Close"}
+              </button>
             </div>
           </div>
         </div>
