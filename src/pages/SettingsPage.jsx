@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLang } from "../context/LanguageContext";
-import { Users, Smartphone, Lock, Save, Plus, Database, Clock } from "lucide-react";
+import { Users, Smartphone, Lock, Save, Plus, Database, Clock, Download, FileArchive, HardDrive } from "lucide-react";
 import api from "../utils/api";
 import ProfileModal from "../components/dashboard/ProfileModal";
 import { toast } from "react-toastify";
@@ -20,6 +20,9 @@ export default function SettingsPage() {
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [backupLogs, setBackupLogs] = useState([]);
+  const [backupFiles, setBackupFiles] = useState([]);
+  const [downloadingFile, setDownloadingFile] = useState(null);
+  const [activeBackupTab, setActiveBackupTab] = useState("files");
 
   const fetchBackupLogs = async () => {
     try {
@@ -32,6 +35,40 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchBackupFiles = async () => {
+    try {
+      const res = await api.get("/settings/backup-files");
+      if (res.data.status === "ok") {
+        setBackupFiles(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch backup files", err);
+    }
+  };
+
+  const handleDownloadBackup = async (filename) => {
+    setDownloadingFile(filename);
+    try {
+      const res = await api.get(`/settings/download-backup/${filename}`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Downloaded ${filename}`);
+    } catch (err) {
+      console.error("Failed to download backup", err);
+      toast.error("Failed to download backup file");
+    } finally {
+      setDownloadingFile(null);
+    }
+  };
+
   const handleSyncData = async () => {
     setSyncing(true);
     try {
@@ -39,6 +76,7 @@ export default function SettingsPage() {
       if (res.data.status === "ok" || res.data.success) {
         toast.success(res.data.message || "Database synchronization completed successfully");
         fetchBackupLogs();
+        fetchBackupFiles();
       } else {
         toast.error(res.data.message || "Failed to sync database");
       }
@@ -88,6 +126,7 @@ export default function SettingsPage() {
     fetchSettings();
     fetchSupportLink();
     fetchBackupLogs();
+    fetchBackupFiles();
   }, []);
 
   const handleSaveSettings = async () => {
@@ -169,69 +208,145 @@ export default function SettingsPage() {
               </div>
            </div>
 
-           {/* Backup History Card (Read-Only) */}
+           {/* Backup Archives & Sync History Card */}
            <div className="bg-white rounded-xl border border-[#e8ddd0] p-6 flex flex-col gap-4 w-full">
-              <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
-                 <Database className="w-4 h-4 text-[#8B6914]" /> Sync & Backup History
-              </h3>
-              <p className="text-[10px] text-[#9a8a7a] leading-normal -mt-2">
-                 Read-only logs of database synchronization events.
-              </p>
-              
-              <div className="max-h-[350px] overflow-y-auto flex flex-col gap-3 pr-1">
-                 {backupLogs.length === 0 ? (
-                    <div className="text-center py-8 text-xs text-[#9a8a7a] italic bg-[#fcfaf7] border border-dashed border-[#e8ddd0] rounded-xl">
-                       No synchronization logs found.
-                    </div>
-                 ) : (
-                    backupLogs.map((log, index) => (
-                       <div key={index} className="border border-[#e8ddd0] rounded-xl p-3 bg-[#fcfaf7] flex flex-col gap-2 shadow-sm">
-                          <div className="flex justify-between items-start">
-                             <div className="flex items-center gap-1.5">
-                                <Clock className="w-3.5 h-3.5 text-[#9a8a7a]" />
-                                <span className="text-[10px] font-bold text-[#3a2a1a]">
-                                   {new Date(log.timestamp).toLocaleString()}
-                                </span>
-                             </div>
-                             <div className="flex gap-1 items-center">
-                                <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                                   log.status === "success" 
-                                      ? "bg-green-100 text-green-600" 
-                                      : log.status === "bypassed" 
-                                      ? "bg-orange-100 text-orange-600" 
-                                      : "bg-red-100 text-red-600"
-                                }`}>
-                                   {log.status}
-                                </span>
-                                <span className="text-[8px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full uppercase font-semibold">
-                                   {log.triggerType}
-                                </span>
-                             </div>
-                          </div>
-                          
-                          {log.message && (
-                             <p className="text-[9px] text-[#5a4a3a] leading-relaxed bg-[#f5f0e8] p-1.5 rounded-lg border border-[#e8ddd0]">
-                                {log.message}
-                             </p>
-                          )}
-
-                          {log.recordsDetail && Object.keys(log.recordsDetail).length > 0 && (
-                             <div className="flex flex-col gap-1 mt-1">
-                                <span className="text-[8px] font-bold text-[#9a8a7a] uppercase">Synchronized Collections:</span>
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 bg-white border border-[#e8ddd0] rounded-lg p-2.5 max-h-[120px] overflow-y-auto">
-                                   {Object.entries(log.recordsDetail).map(([model, count]) => (
-                                      <div key={model} className="flex justify-between text-[8px] text-[#5a4a3a] border-b border-gray-50 pb-0.5 last:border-b-0">
-                                         <span className="font-semibold">{model}</span>
-                                         <span>{count} records</span>
-                                      </div>
-                                   ))}
-                                </div>
-                             </div>
-                          )}
-                       </div>
-                    ))
-                 )}
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
+                   <Database className="w-4 h-4 text-[#8B6914]" /> Database Backups
+                </h3>
+                <div className="flex bg-[#fcfaf7] border border-[#e8ddd0] rounded-lg p-0.5">
+                  <button
+                    onClick={() => setActiveBackupTab("files")}
+                    className={`px-2.5 py-1 text-[9px] font-bold rounded-md transition-all ${
+                      activeBackupTab === "files"
+                        ? "bg-[#8B6914] text-white shadow-sm"
+                        : "text-[#9a8a7a] hover:text-[#3a2a1a]"
+                    }`}
+                  >
+                    Backup Archives ({backupFiles.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveBackupTab("logs")}
+                    className={`px-2.5 py-1 text-[9px] font-bold rounded-md transition-all ${
+                      activeBackupTab === "logs"
+                        ? "bg-[#8B6914] text-white shadow-sm"
+                        : "text-[#9a8a7a] hover:text-[#3a2a1a]"
+                    }`}
+                  >
+                    Sync Logs ({backupLogs.length})
+                  </button>
+                </div>
               </div>
+
+              {activeBackupTab === "files" ? (
+                <>
+                  <p className="text-[10px] text-[#9a8a7a] leading-normal -mt-1">
+                     Compressed JSON backup archives (.json.gz) stored on the server disk. Click download to save locally.
+                  </p>
+                  <div className="max-h-[350px] overflow-y-auto flex flex-col gap-2.5 pr-1">
+                    {backupFiles.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-[#9a8a7a] italic bg-[#fcfaf7] border border-dashed border-[#e8ddd0] rounded-xl">
+                        No backup archives found in 'backups/' directory.
+                      </div>
+                    ) : (
+                      backupFiles.map((file, idx) => (
+                        <div key={idx} className="border border-[#e8ddd0] rounded-xl p-3 bg-[#fcfaf7] flex items-center justify-between gap-3 hover:border-[#8B6914] transition-all shadow-sm">
+                          <div className="flex items-center gap-2.5 overflow-hidden">
+                            <div className="w-8 h-8 rounded-lg bg-[#f5f0e8] border border-[#e8ddd0] flex items-center justify-center text-[#8B6914] shrink-0">
+                              <FileArchive className="w-4 h-4" />
+                            </div>
+                            <div className="overflow-hidden">
+                              <p className="text-xs font-bold text-[#3a2a1a] truncate" title={file.filename}>
+                                {file.filename}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[9px] font-semibold text-[#8B6914] bg-[#f5f0e8] px-1.5 py-0.5 rounded border border-[#e8ddd0]">
+                                  {file.sizeMB > 0.1 ? `${file.sizeMB} MB` : `${file.sizeKB} KB`}
+                                </span>
+                                <span className="text-[9px] text-[#9a8a7a] flex items-center gap-1">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  {new Date(file.createdAt).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDownloadBackup(file.filename)}
+                            disabled={downloadingFile === file.filename}
+                            className="bg-[#8B6914] text-white hover:bg-[#6a5010] p-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0 disabled:opacity-50 shadow-sm"
+                            title="Download backup file"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span className="text-[10px] hidden sm:inline">
+                              {downloadingFile === file.filename ? "Downloading..." : "Download"}
+                            </span>
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-[10px] text-[#9a8a7a] leading-normal -mt-1">
+                     Read-only logs of database synchronization events.
+                  </p>
+                  <div className="max-h-[350px] overflow-y-auto flex flex-col gap-3 pr-1">
+                     {backupLogs.length === 0 ? (
+                        <div className="text-center py-8 text-xs text-[#9a8a7a] italic bg-[#fcfaf7] border border-dashed border-[#e8ddd0] rounded-xl">
+                           No synchronization logs found.
+                        </div>
+                     ) : (
+                        backupLogs.map((log, index) => (
+                           <div key={index} className="border border-[#e8ddd0] rounded-xl p-3 bg-[#fcfaf7] flex flex-col gap-2 shadow-sm">
+                              <div className="flex justify-between items-start">
+                                 <div className="flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-[#9a8a7a]" />
+                                    <span className="text-[10px] font-bold text-[#3a2a1a]">
+                                       {new Date(log.timestamp).toLocaleString()}
+                                    </span>
+                                 </div>
+                                 <div className="flex gap-1 items-center">
+                                    <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                       log.status === "success" 
+                                          ? "bg-green-100 text-green-600" 
+                                          : log.status === "bypassed" 
+                                          ? "bg-orange-100 text-orange-600" 
+                                          : "bg-red-100 text-red-600"
+                                    }`}>
+                                       {log.status}
+                                    </span>
+                                    <span className="text-[8px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full uppercase font-semibold">
+                                       {log.triggerType}
+                                    </span>
+                                 </div>
+                              </div>
+                              
+                              {log.message && (
+                                 <p className="text-[9px] text-[#5a4a3a] leading-relaxed bg-[#f5f0e8] p-1.5 rounded-lg border border-[#e8ddd0]">
+                                    {log.message}
+                                 </p>
+                              )}
+
+                              {log.recordsDetail && Object.keys(log.recordsDetail).length > 0 && (
+                                 <div className="flex flex-col gap-1 mt-1">
+                                    <span className="text-[8px] font-bold text-[#9a8a7a] uppercase">Synchronized Collections:</span>
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 bg-white border border-[#e8ddd0] rounded-lg p-2.5 max-h-[120px] overflow-y-auto">
+                                       {Object.entries(log.recordsDetail).map(([model, count]) => (
+                                          <div key={model} className="flex justify-between text-[8px] text-[#5a4a3a] border-b border-gray-50 pb-0.5 last:border-b-0">
+                                             <span className="font-semibold">{model}</span>
+                                             <span>{count} records</span>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 </div>
+                              )}
+                           </div>
+                        ))
+                     )}
+                  </div>
+                </>
+              )}
            </div>
         </div>
 
