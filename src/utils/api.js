@@ -17,8 +17,9 @@ api.interceptors.request.use(
     const lang = localStorage.getItem('adminLang') || 'en';
     config.headers['Accept-Language'] = lang;
     
-    // Explicitly identify requests as coming from the Admin Dashboard for higher rate limiting
+    // Explicitly identify requests as coming from the Admin Dashboard for higher rate limiting and source tracking
     config.headers['X-Admin-Dashboard'] = 'true';
+    config.headers['X-Requested-From'] = 'web/admin';
     
     return config;
   },

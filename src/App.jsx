@@ -37,6 +37,7 @@ const FAQPage = lazy(() => import("./pages/FAQPage"));
 const SupportMessagesPage = lazy(() => import("./pages/SupportMessagesPage"));
 const PostsPage = lazy(() => import("./pages/PostsPage"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
+const SavedLocationsPage = lazy(() => import("./pages/SavedLocationsPage"));
 
 // Helper: is admin logged in?
 const isAdmin = () => {
@@ -125,6 +126,10 @@ const App = () => {
               <Route
                 path="collection-points"
                 element={<CollectionPointsPage />}
+              />
+              <Route
+                path="saved-locations"
+                element={<SavedLocationsPage />}
               />
               <Route path="points" element={<PointsPage />} />
               <Route path="items" element={<PhysicalItemsPage />} />

@@ -23,6 +23,49 @@ import {
   Eye,
 } from "lucide-react";
 
+const getRequestedFromBadge = (sourceStr) => {
+  const source = (sourceStr || "unknown").toLowerCase();
+  let bgClass = "bg-gray-100 text-gray-700 border-gray-200";
+  let icon = "🌐";
+  if (source === "web/admin") {
+    bgClass = "bg-purple-100 text-purple-800 border-purple-200";
+    icon = "🛡️";
+  } else if (source === "web/partner") {
+    bgClass = "bg-cyan-100 text-cyan-800 border-cyan-200";
+    icon = "🤝";
+  } else if (source === "mobile app") {
+    bgClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
+    icon = "📱";
+  } else if (source === "web/charity") {
+    bgClass = "bg-amber-100 text-amber-800 border-amber-200";
+    icon = "❤️";
+  } else if (source === "web/user") {
+    bgClass = "bg-blue-100 text-blue-800 border-blue-200";
+    icon = "💻";
+  } else if (source === "curl") {
+    bgClass = "bg-slate-100 text-slate-800 border-slate-300";
+    icon = "⌨️";
+  } else if (source === "postman") {
+    bgClass = "bg-orange-100 text-orange-800 border-orange-200";
+    icon = "🚀";
+  } else if (source === "insomnia") {
+    bgClass = "bg-indigo-100 text-indigo-800 border-indigo-200";
+    icon = "🌙";
+  } else if (source === "script / tool") {
+    bgClass = "bg-teal-100 text-teal-800 border-teal-200";
+    icon = "🤖";
+  } else if (source === "system") {
+    bgClass = "bg-red-100 text-red-800 border-red-200";
+    icon = "⚡";
+  }
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border shadow-xs whitespace-nowrap ${bgClass}`}>
+      <span>{icon}</span>
+      <span className="capitalize">{sourceStr || "unknown"}</span>
+    </span>
+  );
+};
+
 const BlockIpModal = ({ isOpen, onClose, onSuccess }) => {
   const { t } = useLang();
   const [ip, setIp] = useState("");
@@ -212,18 +255,28 @@ const LogDetailsModal = ({ isOpen, onClose, log }) => {
               </div>
             </div>
 
-            <div>
-              <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
-                {t.users || "Associated User"}
-              </span>
-              <div className="bg-white p-2.5 rounded-lg border border-[#e5ded5] text-xs">
-                {log.userId ? (
-                  <span className="font-semibold text-[#3a2a1a]">
-                    {log.userId.firstName || ""} {log.userId.lastName || ""} ({log.userId.email || ""})
-                  </span>
-                ) : (
-                  <span className="text-gray-500 italic">Anonymous / Guest</span>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div>
+                <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
+                  {t.requestedFromLabel || "Requested From"}
+                </span>
+                <div className="bg-white p-2 rounded-lg border border-[#e5ded5] flex items-center">
+                  {getRequestedFromBadge(log.requestedFrom)}
+                </div>
+              </div>
+              <div>
+                <span className="text-xs font-bold uppercase text-[#9a8a7a] block mb-1">
+                  {t.users || "Associated User"}
+                </span>
+                <div className="bg-white p-2.5 rounded-lg border border-[#e5ded5] text-xs truncate">
+                  {log.userId ? (
+                    <span className="font-semibold text-[#3a2a1a]">
+                      {log.userId.firstName || ""} {log.userId.lastName || ""} ({log.userId.email || ""})
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 italic">Anonymous / Guest</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -559,6 +612,11 @@ export default function SecurityPage() {
               </div>
             );
           },
+        },
+        {
+          header: t.requestedFromLabel || "Requested From",
+          accessor: "requestedFrom",
+          cell: (row) => getRequestedFromBadge(row.requestedFrom),
         },
         {
           header: t.users || "Associated User",

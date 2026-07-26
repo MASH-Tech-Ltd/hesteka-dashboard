@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
-import axios from "axios";
+import api from "../../utils/api";
 import { useLang } from "../../context/LanguageContext";
-import { Search, X, Image as ImageIcon, Pencil, MapPin } from "lucide-react";
+import { Search, X, Image as ImageIcon, Pencil, MapPin, Loader2 } from "lucide-react";
 
 const mapContainerStyle = {
   width: "100%",
@@ -23,6 +23,9 @@ const LocationPicker = ({ lat, lng, onChange, readOnly }) => {
   const [position, setPosition] = useState(initialPos);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [isFocused, setIsFocused] = useState(false);
+  const searchTimeoutRef = useRef(null);
   const mapRef = useRef(null);
 
   const { isLoaded } = useJsApiLoader({
@@ -46,10 +49,10 @@ const LocationPicker = ({ lat, lng, onChange, readOnly }) => {
     const lng = e.latLng.lng();
     setPosition({ lat, lng });
     try {
-      const res = await axios.get(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+      const res = await api.get(
+        `/location/reverse-geocode?lat=${lat}&lng=${lng}`,
       );
-      const address = res.data?.display_name || "";
+      const address = res.data?.data?.[0]?.formatted_address || "";
       onChange(lat, lng, address);
     } catch (err) {
       onChange(lat, lng);
@@ -65,24 +68,77 @@ const LocationPicker = ({ lat, lng, onChange, readOnly }) => {
 
     setIsSearching(true);
     try {
-      const response = await axios.get(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
+      const response = await api.get(
+        `/location/geocode?address=${encodeURIComponent(searchQuery)}`,
       );
-      if (response.data && response.data.length > 0) {
-        const { lat, lon, display_name } = response.data[0];
-        const newLat = parseFloat(lat);
-        const newLng = parseFloat(lon);
-        setPosition({ lat: newLat, lng: newLng });
-        if (mapRef.current) {
-          mapRef.current.panTo({ lat: newLat, lng: newLng });
-          mapRef.current.setZoom(14);
+      const results = response.data?.data || [];
+      if (results.length > 0) {
+        const { location, formatted_address } = results[0];
+        if (location && location.lat !== undefined && location.lng !== undefined) {
+          const newLat = parseFloat(location.lat);
+          const newLng = parseFloat(location.lng);
+          setPosition({ lat: newLat, lng: newLng });
+          if (mapRef.current) {
+            mapRef.current.panTo({ lat: newLat, lng: newLng });
+            mapRef.current.setZoom(14);
+          }
+          onChange(newLat, newLng, formatted_address);
         }
-        onChange(newLat, newLng, display_name);
       }
     } catch (error) {
       console.error("Search failed:", error);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await api.get(`/location/autocomplete?input=${encodeURIComponent(searchQuery)}`);
+        if (res.data && res.data.status === "ok") {
+          setSuggestions(res.data.data || []);
+        }
+      } catch (err) {
+        console.error("Autocomplete error:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 5000); // 5 seconds debounce
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [searchQuery]);
+
+  const handleSelectSuggestion = async (suggestion) => {
+    if (!suggestion || !suggestion.place_id) return;
+    try {
+      const res = await api.get(`/location/details?placeId=${suggestion.place_id}`);
+      if (res.data && res.data.status === "ok" && res.data.data) {
+        const details = res.data.data;
+        const newLat = details.geometry?.location?.lat;
+        const newLng = details.geometry?.location?.lng;
+        const formatted_address = details.formatted_address || suggestion.description;
+        if (newLat !== undefined && newLng !== undefined) {
+          setPosition({ lat: Number(newLat), lng: Number(newLng) });
+          setSearchQuery(formatted_address);
+          setSuggestions([]);
+          setIsFocused(false);
+          if (mapRef.current) {
+            mapRef.current.panTo({ lat: Number(newLat), lng: Number(newLng) });
+            mapRef.current.setZoom(15);
+          }
+          onChange(Number(newLat), Number(newLng), formatted_address);
+        }
+      }
+    } catch (err) {
+      console.error("Place details error:", err);
     }
   };
 
@@ -97,31 +153,74 @@ const LocationPicker = ({ lat, lng, onChange, readOnly }) => {
   return (
     <div className="flex flex-col gap-2">
       {!readOnly && (
-        <div className="relative">
+        <div className="relative z-50">
           <input
             type="text"
-          placeholder={t.searchLocationPlaceholder || "Search location..."}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              e.stopPropagation();
-              handleSearch(e);
-            }
-          }}
-          className="w-full bg-[#fcfaf7] border border-[#e8ddd0] rounded-lg pl-8 pr-20 py-1.5 text-[10px] text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-medium"
-        />
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#9a8a7a]" />
-        <button
-          type="button"
-          onClick={handleSearch}
-          disabled={isSearching}
-          className="absolute right-1 top-1/2 -translate-y-1/2 bg-[#8B6914] text-white text-[9px] font-bold px-3 py-1 rounded-md hover:bg-[#6a5010] transition-all disabled:opacity-50"
-        >
-          {isSearching ? "..." : t.findBtn || "Find"}
-        </button>
-      </div>
+            placeholder={t.searchLocationPlaceholder || "Search location..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSearch(e);
+              }
+            }}
+            className="w-full bg-[#fcfaf7] border border-[#e8ddd0] rounded-lg pl-8 pr-20 py-1.5 text-[10px] text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-medium"
+          />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#9a8a7a]" />
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={isSearching}
+            className="absolute right-1 top-1/2 -translate-y-1/2 bg-[#8B6914] text-white text-[9px] font-bold px-3 py-1 rounded-md hover:bg-[#6a5010] transition-all disabled:opacity-50"
+          >
+            {isSearching ? "..." : t.findBtn || "Find"}
+          </button>
+
+          {/* Dropdown Suggestions */}
+          {isFocused && searchQuery.trim().length >= 2 && (
+            <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-lg border border-[#e8ddd0] shadow-xl overflow-hidden z-50 max-h-52 overflow-y-auto">
+              {isSearching && suggestions.length === 0 ? (
+                <div className="p-2.5 flex items-center justify-center gap-1.5 text-[10px] text-[#9a8a7a]">
+                  <Loader2 className="w-3 h-3 animate-spin text-[#8B6914]" />
+                  Searching OpenStreetMap...
+                </div>
+              ) : suggestions.length === 0 ? (
+                <div className="p-2.5 text-center text-[10px] text-[#9a8a7a]">
+                  No locations found
+                </div>
+              ) : (
+                suggestions.map((suggestion) => (
+                  <div
+                    key={suggestion.place_id}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelectSuggestion(suggestion);
+                    }}
+                    className="p-2 hover:bg-[#fcfaf7] cursor-pointer border-b border-[#e8ddd0] last:border-b-0 flex items-center gap-2 transition-all"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[#f5f0e8] flex items-center justify-center text-[#8B6914] shrink-0 border border-[#e8ddd0]">
+                      <MapPin className="w-3 h-3" />
+                    </div>
+                    <div className="min-w-0 text-left flex-1">
+                      <p className="text-[10px] font-bold text-[#3a2a1a] truncate">
+                        {suggestion.structured_formatting?.main_text || suggestion.description}
+                      </p>
+                      {suggestion.structured_formatting?.secondary_text && (
+                        <p className="text-[9px] text-[#9a8a7a] truncate">
+                          {suggestion.structured_formatting.secondary_text}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="h-48 w-full rounded-xl overflow-hidden border border-[#e8ddd0] shadow-sm relative z-0">

@@ -1,11 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import {
   GoogleMap,
   MarkerF,
   useJsApiLoader,
   InfoWindowF,
   MarkerClusterer,
-  Autocomplete,
 } from "@react-google-maps/api";
 import api from "../utils/api";
 import { useLang } from "../context/LanguageContext";
@@ -96,9 +101,15 @@ const LiveMapPage = () => {
   const [mapType, setMapType] = useState("roadmap");
   const mapRef = useRef(null);
 
-  // Search state
-  const [autocomplete, setAutocomplete] = useState(null);
+  // Location search state (Backend Nominatim Free)
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [isLocationSearchFocused, setIsLocationSearchFocused] = useState(false);
+  const [searchingLocation, setSearchingLocation] = useState(false);
+  const locationSearchTimeoutRef = useRef(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
+
+  // User search state
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [isUserSearchFocused, setIsUserSearchFocused] = useState(false);
 
@@ -107,7 +118,8 @@ const LiveMapPage = () => {
     const query = userSearchQuery.toLowerCase().trim();
     return users
       .filter((u) => {
-        const fullName = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
+        const fullName =
+          `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
         const email = (u.email || "").toLowerCase();
         return fullName.includes(query) || email.includes(query);
       })
@@ -180,71 +192,119 @@ const LiveMapPage = () => {
     });
   }, [users, isLoaded]);
 
-  const onLoadAutocomplete = (autoC) => {
-    setAutocomplete(autoC);
-  };
+  // Debounced backend location search (OpenStreetMap Nominatim via Backend)
+  useEffect(() => {
+    if (!locationQuery || locationQuery.trim().length < 2) {
+      setLocationSuggestions([]);
+      return;
+    }
 
-  const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      
-      // Handle cases where the user types text without selecting a valid option from the dropdown menu
-      if (!place.geometry || !place.geometry.location) {
-        console.warn("No valid location selected from dropdown.");
-        setSelectedLocation(null);
-        return;
+    if (locationSearchTimeoutRef.current) {
+      clearTimeout(locationSearchTimeoutRef.current);
+    }
+
+    locationSearchTimeoutRef.current = setTimeout(async () => {
+      setSearchingLocation(true);
+      try {
+        const res = await api.get(
+          `/location/autocomplete?input=${encodeURIComponent(locationQuery)}`,
+        );
+        if (res.data && res.data.status === "ok") {
+          setLocationSuggestions(res.data.data || []);
+        }
+      } catch (err) {
+        console.error(
+          "Failed to fetch location suggestions from backend:",
+          err,
+        );
+      } finally {
+        setSearchingLocation(false);
       }
+    }, 2); // 2 ms debounce
 
-      // Extract and handle the selected place's details
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-      
-      const locationData = {
-        formattedAddress: place.formatted_address,
-        lat: lat,
-        lng: lng,
-        placeId: place.place_id
-      };
+    return () => {
+      if (locationSearchTimeoutRef.current)
+        clearTimeout(locationSearchTimeoutRef.current);
+    };
+  }, [locationQuery]);
 
-      // Store the selected location data in the component's state
-      setSelectedLocation(locationData);
-      
-      if (mapRef.current) {
-        mapRef.current.panTo({ lat, lng });
-        mapRef.current.setZoom(14); // Zoom in closer to the searched place
+  const handleSelectLocation = async (suggestion) => {
+    if (!suggestion || !suggestion.place_id) return;
+    try {
+      const res = await api.get(
+        `/location/details?placeId=${suggestion.place_id}`,
+      );
+      if (res.data && res.data.status === "ok" && res.data.data) {
+        const details = res.data.data;
+        const lat = details.geometry?.location?.lat;
+        const lng = details.geometry?.location?.lng;
+
+        if (lat !== undefined && lng !== undefined) {
+          setSelectedLocation({
+            formattedAddress:
+              details.formatted_address || suggestion.description,
+            lat: Number(lat),
+            lng: Number(lng),
+            placeId: details.place_id,
+          });
+
+          if (mapRef.current) {
+            mapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+            mapRef.current.setZoom(14);
+          }
+        }
       }
+    } catch (err) {
+      console.error("Failed to fetch location details from backend:", err);
+    } finally {
+      setLocationQuery(suggestion.description || "");
+      setIsLocationSearchFocused(false);
     }
   };
 
-  const onMapClick = (e) => {
+  const onMapClick = async (e) => {
     setSelectedUser(null);
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
-    
-    if (window.google && window.google.maps && window.google.maps.Geocoder) {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status === "OK" && results[0]) {
-          const formattedAddress = results[0].formatted_address;
-          setSelectedLocation({
-            formattedAddress,
-            lat,
-            lng,
-            placeId: results[0].place_id
-          });
-          const input = document.getElementById('live-map-search-input');
-          if (input) input.value = formattedAddress;
-        } else {
-          setSelectedLocation({
-            formattedAddress: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-            lat,
-            lng,
-            placeId: null
-          });
-          const input = document.getElementById('live-map-search-input');
-          if (input) input.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-        }
+
+    try {
+      const res = await api.get(
+        `/location/reverse-geocode?lat=${lat}&lng=${lng}`,
+      );
+      if (
+        res.data &&
+        res.data.status === "ok" &&
+        res.data.data &&
+        res.data.data.length > 0
+      ) {
+        const formattedAddress = res.data.data[0].formatted_address;
+        setSelectedLocation({
+          formattedAddress,
+          lat,
+          lng,
+          placeId: res.data.data[0].place_id || null,
+        });
+        setLocationQuery(formattedAddress);
+      } else {
+        const fallbackText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        setSelectedLocation({
+          formattedAddress: fallbackText,
+          lat,
+          lng,
+          placeId: null,
+        });
+        setLocationQuery(fallbackText);
+      }
+    } catch (err) {
+      console.error("Failed reverse geocoding from backend:", err);
+      const fallbackText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      setSelectedLocation({
+        formattedAddress: fallbackText,
+        lat,
+        lng,
+        placeId: null,
       });
+      setLocationQuery(fallbackText);
     }
   };
 
@@ -262,43 +322,43 @@ const LiveMapPage = () => {
   // Ensure dropdown matches input width perfectly via ResizeObserver
   useEffect(() => {
     if (!isLoaded) return;
-    
+
     const updatePacWidth = () => {
-      const input = document.getElementById('live-map-search-input');
-      const pacs = document.querySelectorAll('.pac-container');
+      const input = document.getElementById("live-map-search-input");
+      const pacs = document.querySelectorAll(".pac-container");
       if (pacs.length > 0 && input) {
         const width = input.offsetWidth;
-        pacs.forEach(pac => {
-          pac.style.setProperty('min-width', `${width}px`, 'important');
-          pac.style.setProperty('width', `${width}px`, 'important');
+        pacs.forEach((pac) => {
+          pac.style.setProperty("min-width", `${width}px`, "important");
+          pac.style.setProperty("width", `${width}px`, "important");
         });
       }
     };
-    
+
     let observer;
-    
+
     const initWidthSync = () => {
-      const input = document.getElementById('live-map-search-input');
+      const input = document.getElementById("live-map-search-input");
       if (input) {
         observer = new ResizeObserver(updatePacWidth);
         observer.observe(input);
-        input.addEventListener('focus', updatePacWidth);
-        input.addEventListener('input', updatePacWidth);
-        window.addEventListener('resize', updatePacWidth);
+        input.addEventListener("focus", updatePacWidth);
+        input.addEventListener("input", updatePacWidth);
+        window.addEventListener("resize", updatePacWidth);
       } else {
         setTimeout(initWidthSync, 100);
       }
     };
-    
+
     initWidthSync();
 
     return () => {
       if (observer) observer.disconnect();
-      window.removeEventListener('resize', updatePacWidth);
-      const input = document.getElementById('live-map-search-input');
+      window.removeEventListener("resize", updatePacWidth);
+      const input = document.getElementById("live-map-search-input");
       if (input) {
-        input.removeEventListener('focus', updatePacWidth);
-        input.removeEventListener('input', updatePacWidth);
+        input.removeEventListener("focus", updatePacWidth);
+        input.removeEventListener("input", updatePacWidth);
       }
     };
   }, [isLoaded]);
@@ -313,91 +373,86 @@ const LiveMapPage = () => {
 
   return (
     <div className="p-4 flex flex-col gap-4 h-[calc(100vh-90px)]">
-      <style>{`
-        .pac-container {
-          border-radius: 0.75rem !important;
-          border: 1px solid #e8ddd0 !important;
-          box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
-          margin-top: 8px !important;
-          font-family: inherit !important;
-          box-sizing: border-box !important;
-          padding-bottom: 0 !important;
-        }
-
-        /* Hide Powered by Google logo */
-        .pac-container::after {
-          display: none !important;
-          content: none !important;
-        }
-        
-        .pac-item {
-          padding: 12px 16px !important;
-          cursor: pointer !important;
-          border-top: none !important;
-          border-bottom: 1px solid #e8ddd0 !important;
-          color: #9a8a7a !important;
-          font-size: 13px !important;
-          transition: all 0.2s ease !important;
-          display: flex !important;
-          align-items: center !important;
-        }
-
-        .pac-item:last-of-type {
-          border-bottom: none !important;
-        }
-        
-        .pac-item:hover, .pac-item-selected {
-          background-color: #fcfaf7 !important;
-        }
-        
-        .pac-item-query {
-          color: #3a2a1a !important;
-          font-size: 14px !important;
-          font-weight: 600 !important;
-          padding-right: 6px !important;
-        }
-        
-        .pac-icon {
-          display: none !important;
-        }
-        
-        .pac-item::before {
-          content: '';
-          display: inline-block;
-          width: 18px;
-          height: 18px;
-          min-width: 18px;
-          margin-right: 12px;
-          background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238B6914" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>');
-          background-repeat: no-repeat;
-          background-position: center;
-        }
-      `}</style>
       {/* Page Header */}
       <div className="flex items-center justify-between shrink-0 gap-4">
         <h1 className="text-xl font-bold text-[#3a2a1a] flex items-center gap-2 shrink-0">
           <Users className="w-6 h-6 text-[#8B6914]" />
           {t.liveMap || "Live Map"}
         </h1>
-        
+
         {/* Search Fields Container */}
         <div className="flex-1 flex items-center justify-end gap-3 max-w-3xl relative z-[200]">
-          {/* 1. Address / City Search */}
+          {/* 1. Address / City Search (Backend Nominatim Free) */}
           <div className="flex-1 relative">
-            {isLoaded && (
-              <div className="relative">
-                <Autocomplete
-                  onLoad={onLoadAutocomplete}
-                  onPlaceChanged={onPlaceChanged}
-                >
-                  <input
-                    id="live-map-search-input"
-                    type="text"
-                    placeholder={t.searchLocationPlaceholder || "Search for an address or city..."}
-                    className="w-full bg-white border border-[#e8ddd0] rounded-xl pl-10 pr-4 py-2 text-sm text-[#3a2a1a] outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all shadow-sm"
-                  />
-                </Autocomplete>
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a8a7a] pointer-events-none" />
+            <input
+              id="live-map-search-input"
+              type="text"
+              value={locationQuery}
+              onChange={(e) => setLocationQuery(e.target.value)}
+              onFocus={() => setIsLocationSearchFocused(true)}
+              onBlur={() =>
+                setTimeout(() => setIsLocationSearchFocused(false), 200)
+              }
+              placeholder={
+                t.searchLocationPlaceholder ||
+                "Search for an address or city..."
+              }
+              className="w-full bg-white border border-[#e8ddd0] rounded-xl pl-10 pr-8 py-2 text-sm text-[#3a2a1a] outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all shadow-sm"
+            />
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a8a7a] pointer-events-none" />
+            {locationQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationQuery("");
+                  setSelectedLocation(null);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9a8a7a] hover:text-[#3a2a1a] p-0.5 transition-colors"
+                title="Clear location search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Location Search Dropdown Results */}
+            {isLocationSearchFocused && locationQuery.trim().length >= 2 && (
+              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl border border-[#e8ddd0] shadow-xl overflow-hidden z-[250] max-h-80 overflow-y-auto">
+                {searchingLocation ? (
+                  <div className="p-4 flex items-center justify-center gap-2 text-sm text-[#9a8a7a]">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#8B6914]" />
+                    Searching OpenStreetMap...
+                  </div>
+                ) : locationSuggestions.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-[#9a8a7a]">
+                    No locations found for "{locationQuery}"
+                  </div>
+                ) : (
+                  locationSuggestions.map((suggestion) => (
+                    <div
+                      key={suggestion.place_id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectLocation(suggestion);
+                      }}
+                      className="p-3 hover:bg-[#fcfaf7] cursor-pointer border-b border-[#e8ddd0] last:border-b-0 flex items-center gap-3 transition-all"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#f5f0e8] flex items-center justify-center text-[#8B6914] shrink-0 border border-[#e8ddd0]">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 text-left">
+                        <p className="text-sm font-bold text-[#3a2a1a] truncate">
+                          {suggestion.structured_formatting?.main_text ||
+                            suggestion.description}
+                        </p>
+                        {suggestion.structured_formatting?.secondary_text && (
+                          <p className="text-xs text-[#9a8a7a] truncate">
+                            {suggestion.structured_formatting.secondary_text}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -409,8 +464,13 @@ const LiveMapPage = () => {
               value={userSearchQuery}
               onChange={(e) => setUserSearchQuery(e.target.value)}
               onFocus={() => setIsUserSearchFocused(true)}
-              onBlur={() => setTimeout(() => setIsUserSearchFocused(false), 200)}
-              placeholder={t.searchUserLocationPlaceholder || "Search user location (name, email)..."}
+              onBlur={() =>
+                setTimeout(() => setIsUserSearchFocused(false), 200)
+              }
+              placeholder={
+                t.searchUserLocationPlaceholder ||
+                "Search user location (name, email)..."
+              }
               className="w-full bg-white border border-[#e8ddd0] rounded-xl pl-10 pr-8 py-2 text-sm text-[#3a2a1a] outline-none focus:ring-2 focus:ring-[#8B6914]/20 focus:border-[#8B6914] transition-all shadow-sm"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a8a7a] pointer-events-none" />
@@ -461,13 +521,17 @@ const LiveMapPage = () => {
                           <p className="text-sm font-bold text-[#3a2a1a] truncate">
                             {user.firstName} {user.lastName}
                           </p>
-                          <p className="text-xs text-[#9a8a7a] truncate">{user.email}</p>
+                          <p className="text-xs text-[#9a8a7a] truncate">
+                            {user.email}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 ml-2">
                         <span
                           className="w-2 h-2 rounded-full shadow-sm"
-                          style={{ backgroundColor: getUserCategory(user).color }}
+                          style={{
+                            backgroundColor: getUserCategory(user).color,
+                          }}
                         ></span>
                         <span className="text-[10px] font-bold text-[#5a4a3a] uppercase">
                           {getUserCategory(user).label}

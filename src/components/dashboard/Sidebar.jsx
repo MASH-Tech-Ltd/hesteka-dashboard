@@ -25,6 +25,7 @@ import {
   ShieldAlert,
   LogOut,
   X,
+  Database,
 } from "lucide-react";
 
 const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
@@ -138,6 +139,12 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
           icon: MapPin,
           key: "collectionPoints",
           path: "/collection-points",
+          badge: null,
+        },
+        {
+          icon: Database,
+          key: "savedLocations",
+          path: "/saved-locations",
           badge: null,
         },
       ],
