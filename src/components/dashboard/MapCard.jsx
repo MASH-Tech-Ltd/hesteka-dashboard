@@ -1,3 +1,4 @@
+import api from "../../utils/api";
 import { useLang } from "../../context/LanguageContext";
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -11,7 +12,7 @@ const mapContainerStyle = {
   height: "100%",
 };
 
-const libraries = ['places'];
+const libraries = [];
 
 // Helper to generate a custom map pin with an image inside
 const generatePinIcon = (imgUrl) => {
@@ -90,6 +91,13 @@ export default function MapCard({ data, total }) {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
     libraries,
   });
+
+  // Track map loads for analytics
+  useEffect(() => {
+    if (isLoaded) {
+      api.post("/location/track", { type: "map_load", provider: "client", source: "admin_dashboard" }).catch(() => {});
+    }
+  }, [isLoaded]);
 
   // Filter out invalid coordinates (0,0)
   const validReports = (data || []).filter(

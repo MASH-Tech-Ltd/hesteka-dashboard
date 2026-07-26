@@ -18,7 +18,7 @@ import {
 } from "@react-google-maps/api";
 
 const mapContainerStyle = { width: "100%", height: "100%" };
-const libraries = ["places"];
+const libraries = [];
 
 const isMissionPassed = (mission) => {
   if (!mission) return false;

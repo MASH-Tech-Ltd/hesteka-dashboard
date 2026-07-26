@@ -9,7 +9,7 @@ const mapContainerStyle = {
   height: "100%",
 };
 
-const libraries = ['places'];
+const libraries = [];
 
 const LocationPicker = ({ lat, lng, onChange, readOnly }) => {
   const { t } = useLang();

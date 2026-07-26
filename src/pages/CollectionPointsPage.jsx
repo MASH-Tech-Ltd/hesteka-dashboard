@@ -17,7 +17,7 @@ import {
 } from "@react-google-maps/api";
 import { Store, ClipboardList, Plus, MapPin, X } from "lucide-react";
 const mapContainerStyle = { height: "100%", width: "100%" };
-const libraries = ['places'];
+const libraries = [];
 
 const CollectionPointsPage = React.memo(() => {
   const { t } = useLang();

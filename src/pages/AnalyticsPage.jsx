@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLang } from "../context/LanguageContext";
-import { BarChart3, Map, TrendingUp, TrendingDown, Clock, Activity } from "lucide-react";
+import { BarChart3, Globe, TrendingUp, TrendingDown, Clock, Activity, Search, MapPin } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from "../utils/api";
 
@@ -66,14 +66,21 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function AnalyticsPage() {
   const { t } = useLang();
   const [data, setData] = useState(null);
+  const [locationStats, setLocationStats] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await api.get("/admin/analytics");
+        const [res, statsRes] = await Promise.all([
+          api.get("/admin/analytics"),
+          api.get("/location/stats").catch(() => ({ data: { data: [] } }))
+        ]);
         if (res.data.status === "ok") {
           setData(res.data.data);
+        }
+        if (statsRes.data?.data) {
+          setLocationStats(statsRes.data.data);
         }
       } catch (err) {
         console.error("Failed to fetch analytics", err);
@@ -83,6 +90,32 @@ export default function AnalyticsPage() {
     };
     fetchAnalytics();
   }, []);
+
+  const apiCounts = useMemo(() => {
+    const counts = { map_load: 0, autocomplete: 0, details: 0, geocode: 0 };
+    if (Array.isArray(locationStats)) {
+      locationStats.forEach(stat => {
+        if (stat && stat.apiType && counts[stat.apiType] !== undefined) {
+          counts[stat.apiType] += (stat.count || 0);
+        }
+      });
+    }
+    return counts;
+  }, [locationStats]);
+
+  const sourceBreakdown = useMemo(() => {
+    const sources = { admin_dashboard: 0, partner_dashboard: 0, mobile_app: 0 };
+    if (Array.isArray(locationStats)) {
+      locationStats.forEach(stat => {
+        if (stat && stat.apiType === "map_load" && stat.source) {
+          if (sources[stat.source] !== undefined) {
+            sources[stat.source] += (stat.count || 0);
+          }
+        }
+      });
+    }
+    return sources;
+  }, [locationStats]);
 
   if (loading) {
     return (
@@ -105,6 +138,57 @@ export default function AnalyticsPage() {
 
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-6 bg-[#fcfaf7]/50 min-h-screen">
+      
+      {/* Location API Usage Bar */}
+      <div>
+        <h3 className="text-xs font-black text-[#3a2a1a] uppercase tracking-widest mb-4">Location API Usage (Free OSM & Map Loads)</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <AnalyticsCard 
+            label="Map Views"
+            value={apiCounts.map_load.toLocaleString()} 
+            color="bg-indigo-600" 
+            icon={Globe}
+          />
+          <AnalyticsCard 
+            label="Autocomplete (OSM)"
+            value={apiCounts.autocomplete.toLocaleString()} 
+            color="bg-teal-600" 
+            icon={Search}
+          />
+          <AnalyticsCard 
+            label="Place Details (OSM)"
+            value={apiCounts.details.toLocaleString()} 
+            color="bg-rose-600" 
+            icon={MapPin}
+          />
+          <AnalyticsCard 
+            label="Geocode (OSM)"
+            value={apiCounts.geocode.toLocaleString()} 
+            color="bg-cyan-600" 
+            icon={MapPin}
+          />
+        </div>
+        
+        {/* Device Map Load Breakdown */}
+        <div className="mt-4 flex flex-wrap gap-4 items-center">
+           <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-widest mr-2">Map Views By Device:</span>
+           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-[#e8ddd0] shadow-sm transition hover:-translate-y-0.5">
+             <span className="text-xs font-bold text-[#3a2a1a]">🖥️ Admin</span>
+             <div className="w-1 h-4 bg-indigo-200 rounded-full"></div>
+             <span className="text-sm font-black text-indigo-600">{sourceBreakdown.admin_dashboard.toLocaleString()}</span>
+           </div>
+           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-[#e8ddd0] shadow-sm transition hover:-translate-y-0.5">
+             <span className="text-xs font-bold text-[#3a2a1a]">🏢 Partner</span>
+             <div className="w-1 h-4 bg-teal-200 rounded-full"></div>
+             <span className="text-sm font-black text-teal-600">{sourceBreakdown.partner_dashboard.toLocaleString()}</span>
+           </div>
+           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-[#e8ddd0] shadow-sm transition hover:-translate-y-0.5">
+             <span className="text-xs font-bold text-[#3a2a1a]">📱 App</span>
+             <div className="w-1 h-4 bg-rose-200 rounded-full"></div>
+             <span className="text-sm font-black text-rose-600">{sourceBreakdown.mobile_app.toLocaleString()}</span>
+           </div>
+        </div>
+      </div>
 
       {/* Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -195,7 +279,7 @@ export default function AnalyticsPage() {
           <div className="flex items-center justify-between mb-8">
             <h3 className="font-bold text-[#3a2a1a] text-sm flex items-center gap-2">
               <div className="p-2 bg-[#8B6914]/10 rounded-lg">
-                <Map className="w-4 h-4 text-[#8B6914]" />
+                <Globe className="w-4 h-4 text-[#8B6914]" />
               </div>
               {t.activeZones}
             </h3>
@@ -212,7 +296,7 @@ export default function AnalyticsPage() {
             {zones.length === 0 && (
               <div className="py-20 flex flex-col items-center justify-center text-center">
                 <div className="w-16 h-16 bg-[#fcfaf7] rounded-full flex items-center justify-center mb-4">
-                  <Map className="w-8 h-8 text-[#e8ddd0]" />
+                  <Globe className="w-8 h-8 text-[#e8ddd0]" />
                 </div>
                 <p className="text-xs font-bold text-[#9a8a7a] uppercase tracking-widest">{t.noDataFound || "No regional data yet"}</p>
               </div>

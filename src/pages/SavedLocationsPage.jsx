@@ -28,7 +28,7 @@ const mapContainerStyle = {
   height: "100%",
 };
 
-const libraries = ["places"];
+const libraries = [];
 
 export default function SavedLocationsPage() {
   const { t } = useLang();

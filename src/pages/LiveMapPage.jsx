@@ -16,7 +16,7 @@ import api from "../utils/api";
 import { useLang } from "../context/LanguageContext";
 import { Loader2, Users, Search, MapPin, X } from "lucide-react";
 
-const libraries = ["places"];
+const libraries = [];
 const mapContainerStyle = {
   width: "100%",
   height: "100%",
@@ -147,6 +147,13 @@ const LiveMapPage = () => {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
     libraries,
   });
+
+  // Track map loads for analytics
+  useEffect(() => {
+    if (isLoaded) {
+      api.post("/location/track", { type: "map_load", provider: "client", source: "admin_dashboard" }).catch(() => {});
+    }
+  }, [isLoaded]);
 
   useEffect(() => {
     const fetchLocations = async () => {
