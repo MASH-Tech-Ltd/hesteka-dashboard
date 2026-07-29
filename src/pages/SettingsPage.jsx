@@ -12,7 +12,8 @@ export default function SettingsPage() {
     supportEmail: "",
     platformName: "",
     maintenanceMode: false,
-    alertRadius: 5
+    reportRadius: 50,
+    localMissionRadius: 50
   });
   const [supportLink, setSupportLink] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
@@ -103,7 +104,12 @@ export default function SettingsPage() {
     try {
       const res = await api.get("/settings");
       if (res.data.status === "ok") {
-        setSettings(res.data.data);
+        setSettings(prev => ({
+          ...prev,
+          ...res.data.data,
+          reportRadius: res.data.data.reportRadius ?? 50,
+          localMissionRadius: res.data.data.localMissionRadius ?? 50
+        }));
       }
     } catch (err) {
       console.error("Failed to fetch settings", err);
@@ -432,19 +438,36 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center justify-between">
                  <div>
-                    <p className="text-xs font-bold text-[#3a2a1a]">{t.alertRadius}</p>
+                    <p className="text-xs font-bold text-[#3a2a1a]">{t.reportRadius}</p>
                     <p className="text-[9px] text-[#9a8a7a]">{t.defaultGeo}</p>
                  </div>
                  <div className="flex items-center gap-2">
                     <input 
                       type="number" 
-                      value={settings.alertRadius} 
+                      value={settings.reportRadius} 
                       onChange={(e) => {
                         const newRadius = Number(e.target.value);
-                        setSettings({...settings, alertRadius: newRadius});
-                        api.patch("/settings", { alertRadius: newRadius });
+                        setSettings({...settings, reportRadius: newRadius});
                       }}
-                      className="w-12 bg-[#f5f0e8] border border-[#e8ddd0] rounded px-2 py-1 text-xs font-bold text-center outline-none" 
+                      className="w-20 bg-[#f5f0e8] border border-[#e8ddd0] rounded px-2 py-1 text-xs font-bold text-center outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                    />
+                    <span className="text-xs text-[#9a8a7a]">km</span>
+                 </div>
+              </div>
+              <div className="flex items-center justify-between">
+                 <div>
+                    <p className="text-xs font-bold text-[#3a2a1a]">{t.localMissionRadius}</p>
+                    <p className="text-[9px] text-[#9a8a7a]">{t.defaultGeo}</p>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <input 
+                      type="number" 
+                      value={settings.localMissionRadius} 
+                      onChange={(e) => {
+                        const newRadius = Number(e.target.value);
+                        setSettings({...settings, localMissionRadius: newRadius});
+                      }}
+                      className="w-20 bg-[#f5f0e8] border border-[#e8ddd0] rounded px-2 py-1 text-xs font-bold text-center outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                     />
                     <span className="text-xs text-[#9a8a7a]">km</span>
                  </div>
