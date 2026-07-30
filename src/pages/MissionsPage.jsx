@@ -866,6 +866,7 @@ export default function MissionsPage() {
                             disableDefaultUI: true,
                             zoomControl: true,
                             gestureHandling: "greedy",
+                            clickableIcons: false,
                           }}
                         >
                           <MarkerF

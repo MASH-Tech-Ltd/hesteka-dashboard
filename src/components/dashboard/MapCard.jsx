@@ -239,6 +239,7 @@ export default function MapCard({ data, total }) {
             },
             mapTypeControl: false,
             scrollwheel: true,
+            clickableIcons: false,
           }}
         >
           {validReports.map((p, idx) => {

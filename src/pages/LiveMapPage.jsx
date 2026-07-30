@@ -658,6 +658,7 @@ const LiveMapPage = () => {
                 zoomControl: true,
                 mapTypeControl: false,
                 streetViewControl: false,
+                clickableIcons: false,
               }}
             >
               <MarkerClusterer options={clusterOptions}>

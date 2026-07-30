@@ -950,7 +950,7 @@ export default function ReportsPage() {
                           lng: selectedReport.location.coordinates[0],
                         }}
                         zoom={14}
-                        options={{ disableDefaultUI: true, zoomControl: true }}
+                        options={{ disableDefaultUI: true, zoomControl: true, clickableIcons: false }}
                       >
                         <Marker
                           position={{

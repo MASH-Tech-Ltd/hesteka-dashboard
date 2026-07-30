@@ -237,6 +237,7 @@ const LocationPicker = ({ lat, lng, onChange, readOnly }) => {
             options={{
               disableDefaultUI: true,
               zoomControl: true,
+              clickableIcons: false,
             }}
           >
             {position && <MarkerF position={position} />}

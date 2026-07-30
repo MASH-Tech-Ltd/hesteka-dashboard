@@ -572,6 +572,7 @@ export default function SavedLocationsPage() {
                             options={{
                               disableDefaultUI: false,
                               zoomControl: true,
+                              clickableIcons: false,
                             }}
                           >
                             <MarkerF position={getCoordinates(selectedLocation.data)} />

@@ -350,7 +350,7 @@ const CollectionPointsPage = React.memo(() => {
               center={{ lat: 46.2276, lng: 2.2137 }}
               zoom={5}
               onLoad={onMapLoad}
-              options={{ disableDefaultUI: true, zoomControl: true }}
+              options={{ disableDefaultUI: true, zoomControl: true, clickableIcons: false }}
             >
               {allPoints
                 .filter(
