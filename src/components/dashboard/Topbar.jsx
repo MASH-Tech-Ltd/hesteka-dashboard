@@ -95,6 +95,7 @@ const Topbar = React.memo(({ onToggleSidebar }) => {
     "/security": { title: t.security || "Security & IPs", sub: t.securitySub || "Manage blocked IPs, users, and security logs" },
     "/posts": { title: t.posts || "Posts (Temporary)", sub: t.managePostsDesc || "Manage community posts (chat messages)." },
     "/live-map": { title: t.liveMap || "Live Map", sub: "Real-time user locations" },
+    "/saved-locations": { title: t.savedLocationsTitle || "Saved Locations", sub: t.savedLocationsDesc || "Manage cached database locations" },
   };
 
   const page = PAGE_TITLES[location.pathname] || { title: t.dashboard || "Dashboard", sub: "HESTEKA Admin" };

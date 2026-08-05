@@ -102,6 +102,7 @@ export default function UsersPage() {
     role: "all",
     status: "all",
     provider: "all",
+    fcm: "all",
     search: "",
     sortBy: "date",
     sort: "descending"
@@ -536,14 +537,21 @@ export default function UsersPage() {
                 { label: t.blocked || "Blocked", value: "blocked" },
                 { label: t.banned || "Banned", value: "banned" }
             ]},
-            ...(devMode ? [{
-                name: "provider", label: "Provider", options: [
-                    { label: "All", value: "all" },
+            ...(devMode ? [
+              {
+                name: "provider", label: "All providers", options: [
                     { label: "Local", value: "local" },
                     { label: "Google", value: "google" },
                     { label: "Apple", value: "apple" }
                 ]
-            }] : [])
+              },
+              {
+                name: "fcm", label: "All FCM statuses", options: [
+                    { label: "Has FCM", value: "yes" },
+                    { label: "No FCM", value: "no" }
+                ]
+              }
+            ] : [])
           ]}
           sortOptions={[
             { label: t.dateDesc || "Date (Newest)", value: "date:descending" },
