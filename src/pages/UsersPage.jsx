@@ -93,6 +93,7 @@ export default function UsersPage() {
   const [meta, setMeta] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [devMode, setDevMode] = useState(false);
   
   // Query State
   const [queryParams, setQueryParams] = useState({
@@ -100,6 +101,7 @@ export default function UsersPage() {
     limit: 10,
     role: "all",
     status: "all",
+    provider: "all",
     search: "",
     sortBy: "date",
     sort: "descending"
@@ -154,6 +156,18 @@ export default function UsersPage() {
       }
     };
     fetchLocations();
+
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get("/settings");
+        if (res.data.status === "ok") {
+          setDevMode(res.data.data.devMode || false);
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings", err);
+      }
+    };
+    fetchSettings();
   }, [fetchData]);
 
   const handleUpdateStatus = (userId, newStatus) => {
@@ -360,6 +374,23 @@ export default function UsersPage() {
         </span>
       ) 
     },
+    ...(devMode ? [{
+      header: "FCM",
+      accessor: "fcmTokens",
+      cell: (user) => (
+        <div className="flex flex-col gap-1 max-w-[150px]">
+          {user.fcmTokens && user.fcmTokens.length > 0 ? (
+            user.fcmTokens.map((token, i) => (
+              <span key={i} className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded truncate" title={token}>
+                {token}
+              </span>
+            ))
+          ) : (
+            <span className="text-[10px] text-[#9a8a7a]">None</span>
+          )}
+        </div>
+      )
+    }] : []),
     {
       header: t.actions,
       align: "right",
@@ -504,7 +535,15 @@ export default function UsersPage() {
                 { label: t.inactive || "Inactive", value: "inactive" },
                 { label: t.blocked || "Blocked", value: "blocked" },
                 { label: t.banned || "Banned", value: "banned" }
-            ]}
+            ]},
+            ...(devMode ? [{
+                name: "provider", label: "Provider", options: [
+                    { label: "All", value: "all" },
+                    { label: "Local", value: "local" },
+                    { label: "Google", value: "google" },
+                    { label: "Apple", value: "apple" }
+                ]
+            }] : [])
           ]}
           sortOptions={[
             { label: t.dateDesc || "Date (Newest)", value: "date:descending" },

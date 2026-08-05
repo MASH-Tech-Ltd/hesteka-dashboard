@@ -1,9 +1,75 @@
 import React, { useState, useEffect } from "react";
 import { useLang } from "../context/LanguageContext";
-import { Users, Smartphone, Lock, Save, Plus, Database, Clock, Download, FileArchive, HardDrive } from "lucide-react";
+import { Users, Smartphone, Lock, Save, Plus, Database, Clock, Download, FileArchive, HardDrive, AlertTriangle, X } from "lucide-react";
 import api from "../utils/api";
 import ProfileModal from "../components/dashboard/ProfileModal";
+import ConfirmModal from "../components/common/ConfirmModal";
 import { toast } from "react-toastify";
+
+const DevModeModal = ({ isOpen, onClose, onConfirm, loading }) => {
+  const [countdown, setCountdown] = useState(5);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCountdown(5);
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="p-5 border-b border-[#f0e8d8] flex justify-between items-center bg-[#fcfaf7]">
+          <h2 className="text-lg font-bold text-[#3a2a1a] flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-600" /> Developer Mode
+          </h2>
+          <button 
+            onClick={onClose}
+            className="text-[#9a8a7a] hover:text-[#3a2a1a] transition-colors p-1"
+            disabled={loading}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-6">
+          <p className="text-sm text-[#5a4a3a] mb-4">
+            This is only for developers. If you are not a developer, then don't change it.
+          </p>
+        </div>
+
+        <div className="p-4 bg-[#fcfaf7] border-t border-[#f0e8d8] flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 px-4 py-2 rounded-lg border border-[#e8ddd0] text-[#3a2a1a] text-sm font-bold hover:bg-white transition-all disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading || countdown > 0}
+            className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
+            {countdown > 0 ? `Wait ${countdown}s...` : "Proceed"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function SettingsPage() {
   const { t } = useLang();
@@ -12,6 +78,7 @@ export default function SettingsPage() {
     supportEmail: "",
     platformName: "",
     maintenanceMode: false,
+    devMode: false,
     reportRadius: 50,
     localMissionRadius: 50
   });
@@ -24,6 +91,7 @@ export default function SettingsPage() {
   const [backupFiles, setBackupFiles] = useState([]);
   const [downloadingFile, setDownloadingFile] = useState(null);
   const [activeBackupTab, setActiveBackupTab] = useState("files");
+  const [devModeConfirm, setDevModeConfirm] = useState({ isOpen: false });
 
   const fetchBackupLogs = async () => {
     try {
@@ -438,6 +506,20 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center justify-between">
                  <div>
+                    <p className="text-xs font-bold text-[#3a2a1a]">Dev Mode</p>
+                    <p className="text-[9px] text-[#9a8a7a]">Enables developer features and filters</p>
+                 </div>
+                 <div 
+                   onClick={() => {
+                     setDevModeConfirm({ isOpen: true });
+                   }}
+                   className={`w-10 h-5 rounded-full p-1 cursor-pointer transition-colors ${settings.devMode ? 'bg-blue-500' : 'bg-gray-200'}`}
+                 >
+                    <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.devMode ? 'translate-x-5' : ''}`} />
+                 </div>
+              </div>
+              <div className="flex items-center justify-between">
+                 <div>
                     <p className="text-xs font-bold text-[#3a2a1a]">{t.reportRadius}</p>
                     <p className="text-[9px] text-[#9a8a7a]">{t.defaultGeo}</p>
                  </div>
@@ -495,6 +577,17 @@ export default function SettingsPage() {
         onClose={() => setSelectedAdmin(null)}
         user={selectedAdmin}
         onUpdate={handleAdminUpdate}
+      />
+
+      <DevModeModal
+        isOpen={devModeConfirm.isOpen}
+        onClose={() => setDevModeConfirm({ isOpen: false })}
+        onConfirm={() => {
+          const newMode = !settings.devMode;
+          setSettings({...settings, devMode: newMode});
+          api.patch("/settings", { devMode: newMode });
+          setDevModeConfirm({ isOpen: false });
+        }}
       />
     </div>
   );
