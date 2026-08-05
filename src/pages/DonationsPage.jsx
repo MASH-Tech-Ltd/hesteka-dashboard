@@ -386,6 +386,7 @@ export default function DonationsPage() {
   const [donationToDelete, setDonationToDelete] = useState(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [statPeriod, setStatPeriod] = useState("all");
+  const [devMode, setDevMode] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -470,6 +471,17 @@ export default function DonationsPage() {
 
   useEffect(() => {
     fetchData();
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get("/settings");
+        if (res.data.status === "ok") {
+          setDevMode(res.data.data.devMode || false);
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings", err);
+      }
+    };
+    fetchSettings();
   }, [fetchData]);
 
   useEffect(() => {
@@ -563,12 +575,23 @@ export default function DonationsPage() {
               )}
             </>
           ) : (
-            <button
-              onClick={() => fetchSingleDonation(d._id, 'fiscal')}
-              className="md:w-28 bg-blue-50 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded border border-blue-100 hover:bg-blue-100 transition-colors text-center"
-            >
-              {t.fiscalReceipt}
-            </button>
+            <>
+              <button
+                onClick={() => fetchSingleDonation(d._id, 'fiscal')}
+                className="md:w-28 bg-blue-50 text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded border border-blue-100 hover:bg-blue-100 transition-colors text-center"
+              >
+                {t.fiscalReceipt}
+              </button>
+              {(devMode && (d.status?.toLowerCase() === 'cancelled' || d.payment?.status?.toLowerCase() === 'cancelled')) && (
+                <button
+                  onClick={() => handleDeleteDonation(d._id)}
+                  className="bg-red-50 text-red-600 hover:text-red-700 hover:bg-red-100 p-1.5 rounded transition-colors flex items-center justify-center border border-red-100"
+                  title={t.deleteBtn || "Delete"}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </>
           )}
         </div>
       )

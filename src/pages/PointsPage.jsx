@@ -866,8 +866,8 @@ export default function PointsPage() {
               label: t.allTypes || "All Types",
               value: historyParams.type || "all",
               options: [
-                { label: t.earn || "Earned", value: "EARN" },
-                { label: t.redeem || "Redeemed", value: "REDEEM" },
+                { label: t.earn || "Earned", value: "earn" },
+                { label: t.redeem || "Redeemed", value: "redeem" },
               ],
             },
             {
@@ -877,25 +877,25 @@ export default function PointsPage() {
               options: [
                 {
                   label: t.srcAdminCustom || "Admin Custom",
-                  value: "ADMIN_CUSTOM",
+                  value: "admin_custom",
                 },
                 {
                   label: t.srcOnlineDonation || "Online Donation",
-                  value: "ONLINE_DONATION",
+                  value: "online_donation",
                 },
                 {
                   label: t.srcPhysicalDonation || "Physical Donation",
-                  value: "PHYSICAL_DONATION",
+                  value: "physical_donation",
                 },
                 {
                   label: t.srcLocalMission || "Local Mission",
-                  value: "LOCAL_MISSION",
+                  value: "local_mission",
                 },
                 {
                   label: t.srcAnimalReport || "Animal Report",
-                  value: "ANIMAL_REPORT",
+                  value: "animal_report",
                 },
-                { label: t.srcRedeem || "Redeem", value: "REDEEM" },
+                { label: t.srcRedeem || "Redeem", value: "redeem" },
               ],
             },
           ]}
