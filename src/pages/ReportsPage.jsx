@@ -684,6 +684,23 @@ export default function ReportsPage() {
       ),
     },
     {
+      header: t.points || "POINTS",
+      align: "center",
+      cell: (r) => (
+        <div className="flex justify-center">
+          {r.isPointApproved ? (
+            <span className="text-[10px] font-bold px-2 py-1 rounded-full uppercase bg-green-100 text-green-600 border border-green-200">
+              {t.approved || "Approved"}
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold px-2 py-1 rounded-full uppercase bg-yellow-100 text-yellow-700 border border-yellow-200">
+              {t.pending || "Pending"}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
       header: t.actions,
       align: "right",
       cell: (r) => (
@@ -700,7 +717,7 @@ export default function ReportsPage() {
           >
             {t.editBtn || "Edit"}
           </button>
-          {r.status === "found" && !r.isPointApproved && (
+          {(!r.isPointApproved && !r.isDeleted) && (
             <button
               onClick={() => handleApprovePoints(r._id)}
               className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-green-200 transition-colors"
