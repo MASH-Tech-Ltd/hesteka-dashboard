@@ -705,6 +705,14 @@ export default function ReportsPage() {
       align: "right",
       cell: (r) => (
         <div className="flex gap-1 justify-end">
+          {(!r.isPointApproved && !r.isDeleted) && (
+            <button
+              onClick={() => handleApprovePoints(r._id)}
+              className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-green-200 transition-colors"
+            >
+              {t.validateBtn}
+            </button>
+          )}
           <button
             onClick={() => openReportDetails(r._id)}
             className="bg-blue-100 text-blue-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-blue-200 transition-colors"
@@ -717,14 +725,6 @@ export default function ReportsPage() {
           >
             {t.editBtn || "Edit"}
           </button>
-          {(!r.isPointApproved && !r.isDeleted) && (
-            <button
-              onClick={() => handleApprovePoints(r._id)}
-              className="bg-green-100 text-green-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-green-200 transition-colors"
-            >
-              {t.validateBtn}
-            </button>
-          )}
           <button
             onClick={() => {
               if (r.isDeleted) {
