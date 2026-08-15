@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
-const ConfirmModal = ({ isOpen, title, message, onConfirm, onClose, loading, hideFooter, confirmText, hideCancel }) => {
+const ConfirmModal = ({ isOpen, title, message, onConfirm, onClose, loading, hideFooter, confirmText, hideCancel, disabled }) => {
   if (!isOpen) return null;
 
   return (
@@ -37,7 +37,7 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onClose, loading, hid
             )}
             <button
               onClick={onConfirm}
-              disabled={loading}
+              disabled={loading || disabled}
               className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}

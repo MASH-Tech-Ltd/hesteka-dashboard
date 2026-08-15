@@ -9,7 +9,7 @@ import FilterBar from "../components/common/FilterBar";
 import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
-import { Star, Plus, Trash2, X, AlertTriangle } from "lucide-react";
+import { Star, Plus, Trash2, X, AlertTriangle, CheckCircle } from "lucide-react";
 
 const DeleteUserModal = ({ isOpen, user, onClose, onConfirm, loading }) => {
   const [countdown, setCountdown] = useState(5);
@@ -201,7 +201,7 @@ export default function UsersPage() {
       if (editingUser) {
         // Collect updated fields for the admin update API
         const formDataPayload = new FormData();
-        const editableFields = ["firstName", "lastName", "phone", "address", "postalCode", "city", "country", "company", "role", "status", "region", "department"];
+        const editableFields = ["firstName", "lastName", "phone", "address", "postalCode", "city", "country", "company", "role", "status", "region", "department", "isTrusted"];
         
         editableFields.forEach(field => {
           if (formData[field] !== undefined && formData[field] !== editingUser[field]) {
@@ -336,6 +336,21 @@ export default function UsersPage() {
       }
     },
     { header: t.email, accessor: "email" },
+    {
+      header: "Trusted",
+      align: "center",
+      cell: (user) => user.isTrusted ? (
+        <div className="flex justify-center">
+          <div className="w-5 h-5 rounded-full bg-[#c0392b] flex items-center justify-center shadow-sm">
+            <CheckCircle className="w-3.5 h-3.5 text-white" />
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-center">
+          <span className="text-gray-300">-</span>
+        </div>
+      )
+    },
     {
       header: t.status,
       cell: (user) => <StatusBadge status={user.status} />
@@ -479,6 +494,11 @@ export default function UsersPage() {
         { label: t.adminRole || "Admin", value: "admin" },
       ]
     },
+    ...(isEditing ? [{
+      name: "isTrusted",
+      label: "Trusted User (Special Badge)",
+      type: "checkbox"
+    }] : []),
     ...(isEditing ? [{
       name: "status",
       label: t.statusLabel || "Status",

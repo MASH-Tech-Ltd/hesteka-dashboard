@@ -190,36 +190,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <AnalyticsCard 
-          label={t.sessionsMonth} 
-          value={overview.sessionsMonth.value.toLocaleString()} 
-          trend={overview.sessionsMonth.trend} 
-          color="bg-green-600" 
-          icon={Activity}
-        />
-        <AnalyticsCard 
-          label={t.retention} 
-          value={`${overview.retention.value}%`} 
-          trend={overview.retention.trend} 
-          color="bg-blue-600" 
-          icon={TrendingUp}
-        />
-        <AnalyticsCard 
-          label={t.avgDuration} 
-          value={overview.avgDuration} 
-          color="bg-orange-600" 
-          icon={Clock}
-        />
-        <AnalyticsCard 
-          label={t.conversion} 
-          value={`${overview.conversion}%`} 
-          color="bg-purple-600" 
-          icon={BarChart3}
-        />
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Reports Chart Card */}
         <div className="lg:col-span-3 bg-white rounded-2xl border border-[#e8ddd0] p-6 shadow-sm flex flex-col">

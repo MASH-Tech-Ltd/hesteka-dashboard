@@ -12,6 +12,7 @@ import {
   Target,
   Package,
   Ruler,
+  UserPlus,
   Lightbulb,
   Settings,
   Save,
@@ -98,6 +99,7 @@ export default function PointsPage() {
     isPointsOnDonationsActive: true,
     isValidityDurationActive: true,
     isMonthlyCeilingActive: true,
+    pointsPerReferral: 100,
   });
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -380,6 +382,12 @@ export default function PointsPage() {
       icon: <Package className="w-5 h-5 text-[#8B6914]" />,
       label: t.donationDeposits || "DONATION DEPOSITS",
       points: config?.pointsPerDonation || 0,
+    },
+    {
+      key: "pointsPerReferral",
+      icon: <UserPlus className="w-5 h-5 text-[#8B6914]" />,
+      label: t.referralRegistrations || "REFERRAL REGISTRATIONS",
+      points: config?.pointsPerReferral || 0,
     },
   ];
 

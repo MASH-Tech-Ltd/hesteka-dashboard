@@ -26,6 +26,7 @@ const PhysicalItemsPage = lazy(() => import("./pages/PhysicalItemsPage"));
 const DonationsPage = lazy(() => import("./pages/DonationsPage"));
 const CrowdfundingPage = lazy(() => import("./pages/CrowdfundingPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const RetentionPage = lazy(() => import("./pages/RetentionPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ValidationDonationsPage = lazy(
@@ -38,6 +39,9 @@ const SupportMessagesPage = lazy(() => import("./pages/SupportMessagesPage"));
 const PostsPage = lazy(() => import("./pages/PostsPage"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
 const SavedLocationsPage = lazy(() => import("./pages/SavedLocationsPage"));
+const BadgesPage = lazy(() => import("./pages/BadgesPage"));
+const SponsorsPage = lazy(() => import("./pages/SponsorsPage"));
+const ArticlesPage = lazy(() => import("./pages/ArticlesPage"));
 
 // Helper: is admin logged in?
 const isAdmin = () => {
@@ -149,11 +153,15 @@ const App = () => {
               />
               <Route path="crowdfunding" element={<CrowdfundingPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="retention" element={<RetentionPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="faq" element={<FAQPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="security" element={<SecurityPage />} />
+              <Route path="badges" element={<BadgesPage />} />
               <Route path="posts" element={<PostsPage />} />
+              <Route path="sponsors" element={<SponsorsPage />} />
+              <Route path="articles" element={<ArticlesPage />} />
             </Route>
 
             {/* Catch-all */}

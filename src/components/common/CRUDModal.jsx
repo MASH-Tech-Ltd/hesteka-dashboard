@@ -571,11 +571,12 @@ const CRUDModal = ({
 
   // Determine Logo URL
   const logoLive =
-    previews["logo"] || previews["profileImage"] || previews["avatar"];
+    previews["logo"] || previews["profileImage"] || previews["avatar"] || previews["icon"];
   const logoStatic =
     initialData?.logo?.secure_url ||
     initialData?.profileImage?.secure_url ||
-    initialData?.avatar?.secure_url;
+    initialData?.avatar?.secure_url ||
+    initialData?.icon?.secure_url;
   let logoImageUrl = logoLive || logoStatic;
 
   // Determine Banner URL
@@ -597,10 +598,10 @@ const CRUDModal = ({
   // Generic fallback if we don't have explicit logo/banner fields but have file fields
   const fileFields = fields.filter((f) => f.type === "file");
   const logoField = fileFields.find((f) =>
-    ["logo", "profileImage", "avatar"].includes(f.name),
+    ["logo", "profileImage", "avatar", "icon"].includes(f.name),
   );
   const bannerField = fileFields.find(
-    (f) => !["logo", "profileImage", "avatar"].includes(f.name),
+    (f) => !["logo", "profileImage", "avatar", "icon"].includes(f.name),
   );
 
   if (!bannerImageUrl && fileFields.length > 0) {
@@ -864,18 +865,24 @@ const CRUDModal = ({
                       </div>
                     </div>
                   ) : field.type === "checkbox" ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <input
-                        type="checkbox"
-                        name={field.name}
-                        checked={!!formData[field.name]}
-                        onChange={handleChange}
-                        disabled={field.disabled || isViewOnly}
-                        className="w-4 h-4 text-[#8B6914] bg-[#fcfaf7] border-[#e8ddd0] rounded focus:ring-[#8B6914] focus:ring-2"
-                      />
-                      <span className="text-[10px] md:text-[11px] font-medium text-[#3a2a1a] cursor-pointer whitespace-nowrap" onClick={() => !field.disabled && !isViewOnly && handleChange({target: {name: field.name, type: "checkbox", checked: !formData[field.name]}})}>
-                        {field.checkboxLabel || field.label}
-                      </span>
+                    <div className="flex flex-col justify-end h-full pb-1 md:pb-2">
+                      <label className={`flex items-center gap-3 cursor-pointer w-fit ${field.disabled || isViewOnly ? "opacity-70 cursor-not-allowed" : ""}`}>
+                        <div className="relative inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            name={field.name}
+                            checked={!!formData[field.name]}
+                            onChange={handleChange}
+                            disabled={field.disabled || isViewOnly}
+                            className="sr-only"
+                          />
+                          <div className={`w-10 h-5 rounded-full transition-colors duration-300 ease-in-out ${!!formData[field.name] ? 'bg-[#8B6914]' : 'bg-[#e8ddd0] shadow-inner'}`}></div>
+                          <div className={`absolute left-0.5 top-0.5 bg-white rounded-full h-4 w-4 transition-transform duration-300 ease-in-out shadow ${!!formData[field.name] ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                        </div>
+                        <span className="text-xs font-bold text-[#3a2a1a] select-none">
+                          {field.checkboxLabel || field.label}
+                        </span>
+                      </label>
                     </div>
                   ) : field.allowIndefinite && formData[field.indefiniteKey || "isIndefiniteDate"] ? (
                     <input

@@ -96,6 +96,9 @@ const Topbar = React.memo(({ onToggleSidebar }) => {
     "/posts": { title: t.posts || "Posts (Temporary)", sub: t.managePostsDesc || "Manage community posts (chat messages)." },
     "/live-map": { title: t.liveMap || "Live Map", sub: "Real-time user locations" },
     "/saved-locations": { title: t.savedLocationsTitle || "Saved Locations", sub: t.savedLocationsDesc || "Manage cached database locations" },
+    "/badges": { title: t.badges || "Badges", sub: t.manageBadges || "Manage user badges and achievements" },
+    "/sponsors": { title: t.sponsors || "Sponsors & Ads", sub: t.manageSponsors || "Manage partner advertisements" },
+    "/retention": { title: t.retentionPageTitle || "Retention & Activity", sub: t.retentionPageSubtitle || "User retention and activity metrics" },
   };
 
   const page = PAGE_TITLES[location.pathname] || { title: t.dashboard || "Dashboard", sub: "HESTEKA Admin" };

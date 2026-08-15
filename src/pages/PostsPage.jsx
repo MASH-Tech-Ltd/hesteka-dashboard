@@ -20,6 +20,7 @@ import {
   FileText,
   CornerDownRight,
   Send,
+  ThumbsUp,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
@@ -293,6 +294,31 @@ export default function PostsPage() {
     }
   };
 
+  const handleLikePost = async (postId) => {
+    try {
+      const res = await api.post(`/community/chat/${postId}/toggle`);
+      if (res.data.status === "ok" || res.status === 200 || res.status === 201) {
+        const updatedData = res.data.data || {};
+        setPosts((prev) => 
+          prev.map((p) => {
+            if (p._id === postId) {
+              const newLiked = updatedData.liked !== undefined ? updatedData.liked : !p.liked;
+              return { 
+                ...p, 
+                likesCount: updatedData.likesCount !== undefined ? updatedData.likesCount : (p.likesCount || 0) + (newLiked ? 1 : -1),
+                liked: newLiked
+              };
+            }
+            return p;
+          })
+        );
+        toast.success("Post like updated");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to toggle like");
+    }
+  };
+
   const handleViewComments = async (post) => {
     setCommentsModal({ isOpen: true, post });
     setCommentsLoading(true);
@@ -540,6 +566,23 @@ export default function PostsPage() {
               r.replies?.length ||
               0}
           </span>
+        </button>
+      ),
+    },
+    {
+      header: t.likeBtn || "LIKE",
+      align: "center",
+      cell: (r) => (
+        <button
+          onClick={() => handleLikePost(r._id)}
+          className={`p-1.5 rounded-full hover:scale-110 transition-all shadow-sm ${
+            r.liked 
+              ? "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+              : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+          }`}
+          title={r.liked ? "Unlike Post" : "Like Post"}
+        >
+          <ThumbsUp className={`w-4 h-4 ${r.liked ? "fill-current" : ""}`} />
         </button>
       ),
     },

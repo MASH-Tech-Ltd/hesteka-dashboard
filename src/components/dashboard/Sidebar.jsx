@@ -18,6 +18,7 @@ import {
   Gift,
   Rocket,
   BarChart,
+  Activity,
   Bell,
   HelpCircle,
   MessageSquare,
@@ -26,6 +27,8 @@ import {
   LogOut,
   X,
   Database,
+  Medal,
+  Megaphone,
 } from "lucide-react";
 
 const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
@@ -134,6 +137,7 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
       label: t.community,
       items: [
         { icon: MessageSquare, key: "posts", path: "/posts", badge: null },
+        { icon: FileText, key: "articles", path: "/articles", badge: null },
         { icon: Map, key: "localMissions", path: "/missions", badge: null },
         {
           icon: MapPin,
@@ -147,6 +151,12 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
           path: "/saved-locations",
           badge: null,
         },
+        {
+          icon: Medal,
+          key: "badges",
+          path: "/badges",
+          badge: null,
+        },
       ],
     },
     {
@@ -156,6 +166,12 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
           icon: ShoppingBag,
           key: "shopifyProducts",
           path: "/shopify-products",
+          badge: null,
+        },
+        {
+          icon: Megaphone,
+          key: "sponsors",
+          path: "/sponsors",
           badge: null,
         },
         {
@@ -183,6 +199,7 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
       label: t.config,
       items: [
         { icon: BarChart, key: "analytics", path: "/analytics", badge: null },
+        { icon: Activity, key: "retentionPageTitle", path: "/retention", badge: null },
         {
           icon: Bell,
           key: "notifications",
@@ -271,7 +288,7 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
               }`}
             >
               <item.icon className="w-4 h-4 shrink-0" />
-              <span className="flex-1 text-left">{t[item.key]}</span>
+              <span className="flex-1 text-left">{t[item.key] || item.key.charAt(0).toUpperCase() + item.key.slice(1).replace(/([A-Z])/g, ' $1').trim()}</span>
               {item.badge && (
                 <span
                   className={`${item.badgeColor} text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full`}

@@ -4,6 +4,12 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 
+// Globally suppress all console outputs as requested
+console.log = () => {};
+console.warn = () => {};
+console.error = () => {};
+console.info = () => {};
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>

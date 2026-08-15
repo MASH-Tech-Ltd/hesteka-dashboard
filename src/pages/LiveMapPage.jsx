@@ -108,6 +108,7 @@ const LiveMapPage = () => {
   const [searchingLocation, setSearchingLocation] = useState(false);
   const locationSearchTimeoutRef = useRef(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [isDevMode, setIsDevMode] = useState(false);
 
   // User search state
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -156,12 +157,20 @@ const LiveMapPage = () => {
   }, [isLoaded]);
 
   useEffect(() => {
-    const fetchLocations = async () => {
+    const fetchLocationsAndSettings = async () => {
       try {
-        const res = await api.get("/user/get-all-locations");
-        if (res.data.status === "ok") {
+        const [usersRes, settingsRes] = await Promise.all([
+          api.get("/user/get-all-locations"),
+          api.get("/settings")
+        ]);
+
+        if (settingsRes.data?.status === "ok") {
+           setIsDevMode(settingsRes.data.data.devMode);
+        }
+
+        if (usersRes.data.status === "ok") {
           // Filter valid coordinates [lng, lat]
-          const validUsers = res.data.data.filter(
+          const validUsers = usersRes.data.data.filter(
             (u) =>
               u.location &&
               u.location.coordinates &&
@@ -170,13 +179,13 @@ const LiveMapPage = () => {
           setUsers(validUsers);
         }
       } catch (err) {
-        console.error("Failed to fetch user locations", err);
+        console.error("Failed to fetch map data", err);
         setError("Failed to load map data");
       } finally {
         setLoading(false);
       }
     };
-    fetchLocations();
+    fetchLocationsAndSettings();
   }, []);
 
   useEffect(() => {
@@ -388,8 +397,9 @@ const LiveMapPage = () => {
         </h1>
 
         {/* Search Fields Container */}
-        <div className="flex-1 flex items-center justify-end gap-3 max-w-3xl relative z-[200]">
-          {/* 1. Address / City Search (Backend Nominatim Free) */}
+        {isDevMode && (
+          <div className="flex-1 flex items-center justify-end gap-3 max-w-3xl relative z-[200]">
+            {/* 1. Address / City Search (Backend Nominatim Free) */}
           <div className="flex-1 relative">
             <input
               id="live-map-search-input"
@@ -551,6 +561,7 @@ const LiveMapPage = () => {
             )}
           </div>
         </div>
+        )}
 
         <div className="bg-white px-4 py-2 rounded-lg border border-[#e8ddd0] shadow-sm flex items-center gap-2 shrink-0">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>

@@ -63,6 +63,8 @@ export default function ReportsPage() {
     sort: "descending",
   });
 
+  const [deleteCountdown, setDeleteCountdown] = useState(0);
+
   const [newComment, setNewComment] = useState("");
   const [replyingTo, setReplyingTo] = useState(null);
   const [newReply, setNewReply] = useState("");
@@ -607,8 +609,7 @@ export default function ReportsPage() {
       ),
     },
     {
-      header: t.status,
-      cell: (r) => {
+      header: t.status,      cell: (r) => {
         const statusColors = {
           lost: "bg-orange-100 text-orange-600",
           found: "bg-blue-100 text-blue-600",
@@ -666,6 +667,23 @@ export default function ReportsPage() {
       ),
     },
     {
+      header: t.softDeleted || "SOFT DELETED",
+      align: "center",
+      cell: (r) => (
+        <div className="flex justify-center">
+          {r.isDeleted ? (
+            <span className="text-[10px] font-bold px-2 py-1 rounded-full uppercase bg-red-100 text-red-600 border border-red-200">
+              {t.yes || "Yes"}
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold px-2 py-1 rounded-full uppercase bg-green-100 text-green-600 border border-green-200">
+              {t.no || "No"}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
       header: t.actions,
       align: "right",
       cell: (r) => (
@@ -692,35 +710,69 @@ export default function ReportsPage() {
           )}
           <button
             onClick={() => {
-              setConfirmModal({
-                isOpen: true,
-                title: "Delete Report",
-                message:
-                  "Are you sure you want to delete this report? This action cannot be undone.",
-                onConfirm: async () => {
-                  setConfirmLoading(true);
-                  try {
-                    const res = await api.delete(
-                      `/reports/delete-report/${r._id}`,
-                    );
-                    if (res.data.status === "ok" || res.status === 200) {
-                      toast.success("Report deleted successfully");
-                      fetchData();
+              if (r.isDeleted) {
+                setDeleteCountdown(3);
+                setConfirmModal({
+                  isOpen: true,
+                  title: "Permanent Deletion Warning",
+                  message: "WARNING: This report is already soft-deleted. Deleting it now will permanently remove it from the server along with all associated images and comments. This action cannot be undone.",
+                  confirmText: "Delete in 3s",
+                  disabled: true,
+                  onConfirm: async () => {
+                    setConfirmLoading(true);
+                    try {
+                      const res = await api.delete(`/reports/delete-report/${r._id}`);
+                      if (res.data.status === "ok" || res.status === 200) {
+                        toast.success("Report permanently deleted");
+                        fetchData();
+                      }
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || "Failed to permanently delete report");
+                    } finally {
+                      setConfirmLoading(false);
+                      setConfirmModal((prev) => ({ ...prev, isOpen: false }));
                     }
-                  } catch (err) {
-                    toast.error(
-                      err.response?.data?.message || "Failed to delete report",
-                    );
-                  } finally {
-                    setConfirmLoading(false);
-                    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+                  },
+                });
+                let count = 3;
+                const interval = setInterval(() => {
+                  count--;
+                  if (count > 0) {
+                    setConfirmModal(prev => ({ ...prev, confirmText: `Delete in ${count}s` }));
+                  } else {
+                    clearInterval(interval);
+                    setConfirmModal(prev => ({ ...prev, confirmText: "Permanently Delete", disabled: false }));
                   }
-                },
-              });
+                }, 1000);
+              } else {
+                setConfirmModal({
+                  isOpen: true,
+                  title: "Soft Delete Report",
+                  message: "Are you sure you want to delete this report? It will be removed from the public view.",
+                  confirmText: "Confirm",
+                  disabled: false,
+                  onConfirm: async () => {
+                    setConfirmLoading(true);
+                    try {
+                      const res = await api.delete(`/reports/delete-report/${r._id}`);
+                      if (res.data.status === "ok" || res.status === 200) {
+                        toast.success("Report soft-deleted successfully");
+                        fetchData();
+                      }
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || "Failed to delete report");
+                    } finally {
+                      setConfirmLoading(false);
+                      setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+                    }
+                  },
+                });
+              }
             }}
-            className="bg-red-50 text-red-600 text-[10px] font-bold px-3 py-1 rounded hover:bg-red-100 transition-colors"
+            className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition-colors"
+            title="Delete"
           >
-            {t.deleteBtn}
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       ),
@@ -1006,7 +1058,6 @@ export default function ReportsPage() {
               </div>
 
               {/* Comments Section */}
-              {/* Comments Section */}
               <div className="flex flex-col gap-4 mt-2">
                 <h3 className="font-bold text-[#3a2a1a] border-b pb-2 flex items-center gap-2">
                   <MessageCircle className="w-4 h-4 text-[#8B6914]" /> {t.commentsLabel || "Comments"} ({selectedReport.comments?.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0) || 0})
@@ -1271,6 +1322,8 @@ export default function ReportsPage() {
         }
         onConfirm={confirmModal.onConfirm}
         loading={confirmLoading}
+        confirmText={confirmModal.confirmText}
+        disabled={confirmModal.disabled}
       />
     </div>
   );
