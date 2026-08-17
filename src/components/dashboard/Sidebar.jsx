@@ -29,6 +29,7 @@ import {
   Database,
   Medal,
   Megaphone,
+  Smartphone,
 } from "lucide-react";
 
 const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
@@ -217,6 +218,7 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
           badgeColor: "bg-red-600",
         },
         { icon: HelpCircle, key: "faq", path: "/faq", badge: null },
+        { icon: Smartphone, key: "appModals", path: "/app-modals", badge: null },
         { icon: ShieldAlert, key: "security", path: "/security", badge: null },
         { icon: Settings, key: "settings", path: "/settings", badge: null },
       ],

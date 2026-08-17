@@ -263,6 +263,8 @@ const CustomSelectField = ({
   t,
   required,
   loadOptions,
+  isMulti,
+  menuPlacement = "bottom",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -308,23 +310,54 @@ const CustomSelectField = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Reset search term when dropdown opens
   React.useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
     }
   }, [isOpen]);
 
-  const selectedOption = options.find((opt) => opt.value === value) || {
-    label: t.selectOption || "Select...",
-    value: "",
+  const handleOptionClick = (opt) => {
+    if (isMulti) {
+      const currentValues = Array.isArray(value) ? value : (value ? [value] : []);
+      const newValues = currentValues.includes(opt.value)
+        ? currentValues.filter((v) => v !== opt.value)
+        : [...currentValues, opt.value];
+      onChange({ target: { name, value: newValues, type: "select" } });
+    } else {
+      onChange({ target: { name, value: opt.value, type: "select" } });
+      setIsOpen(false);
+    }
   };
 
-  const filteredOptions = loadOptions 
-    ? options 
-    : options.filter(opt => 
+  const getDisplayLabel = () => {
+    if (isMulti) {
+      const currentValues = Array.isArray(value) ? value : (value ? [value] : []);
+      if (currentValues.length === 0) return t.selectOption || "Select...";
+      return options
+        .filter((o) => currentValues.includes(o.value))
+        .map((o) => o.label)
+        .join(", ") || `${currentValues.length} selected`;
+    }
+    const selectedOption = options.find((opt) => opt.value === value) || {
+      label: t.selectOption || "Select...",
+    };
+    return selectedOption.label;
+  };
+
+  const getDisplayLogo = () => {
+    if (isMulti) return null;
+    const selectedOption = options.find((opt) => opt.value === value);
+    return selectedOption?.logo || null;
+  };
+
+  const filteredOptions = loadOptions
+    ? options
+    : options.filter((opt) =>
         opt.label.toLowerCase().includes(searchTerm.toLowerCase())
       );
+
+  const displayLabel = getDisplayLabel();
+  const displayLogo = getDisplayLogo();
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
@@ -333,10 +366,10 @@ const CustomSelectField = ({
         className={`w-full bg-[#fcfaf7] border rounded-xl px-4 py-2 text-xs text-[#3a2a1a] transition-all font-bold flex justify-between items-center ${disabled ? "cursor-default opacity-80" : "cursor-pointer hover:border-[#8B6914] focus:border-[#8B6914]"} ${hasError ? "border-red-400 bg-red-50/30" : "border-[#e8ddd0]"}`}
       >
         <span className="truncate pr-4 flex items-center gap-2">
-          {selectedOption.logo && (
-            <img src={selectedOption.logo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
+          {displayLogo && (
+            <img src={displayLogo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
           )}
-          {selectedOption.label}
+          {displayLabel}
         </span>
         <svg
           className={`w-4 h-4 text-[#9a8a7a] transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -354,7 +387,7 @@ const CustomSelectField = ({
       </div>
 
       {isOpen && (
-        <div className="absolute top-[100%] left-0 w-full mt-1 bg-white border border-[#e8ddd0] rounded-xl shadow-xl z-[500] max-h-60 flex flex-col overflow-hidden">
+        <div className={`absolute ${menuPlacement === 'top' ? 'bottom-full mb-1 top-auto' : 'top-full mt-1 bottom-auto'} left-0 w-full bg-white border border-[#e8ddd0] rounded-xl shadow-xl z-[500] max-h-60 flex flex-col overflow-hidden`}>
           {(options.length > 5 || loadOptions) && (
             <div className="p-2 border-b border-[#e8ddd0] shrink-0 sticky top-0 bg-white z-10">
               <input
@@ -368,7 +401,7 @@ const CustomSelectField = ({
             </div>
           )}
           <div className="overflow-y-auto custom-scrollbar flex-1">
-            {!required && !searchTerm && !options.some(opt => opt.value === "") && (
+            {!required && !searchTerm && !options.some((opt) => opt.value === "") && !isMulti && (
               <div
                 onClick={() => {
                   onChange({ target: { name, value: "", type: "select" } });
@@ -385,23 +418,27 @@ const CustomSelectField = ({
               </div>
             ) : loadOptions && !searchTerm.trim() ? (
               <>
-                {filteredOptions.length > 0 && filteredOptions.map((opt, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      onChange({
-                        target: { name, value: opt.value, type: "select" },
-                      });
-                      setIsOpen(false);
-                    }}
-                    className={`px-4 py-2.5 text-xs cursor-pointer transition-colors flex items-center gap-2 ${value === opt.value ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
-                  >
-                    {opt.logo && (
-                      <img src={opt.logo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
-                    )}
-                    <span className="truncate">{opt.label}</span>
-                  </div>
-                ))}
+                {filteredOptions.length > 0 &&
+                  filteredOptions.map((opt, idx) => {
+                    const isSelected = isMulti
+                      ? (Array.isArray(value) ? value : []).includes(opt.value)
+                      : value === opt.value;
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => handleOptionClick(opt)}
+                        className={`px-4 py-2.5 text-xs cursor-pointer transition-colors flex items-center gap-2 ${isSelected ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
+                      >
+                        {isMulti && (
+                          <input type="checkbox" checked={isSelected} readOnly className="mr-2" />
+                        )}
+                        {opt.logo && (
+                          <img src={opt.logo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
+                        )}
+                        <span className="truncate">{opt.label}</span>
+                      </div>
+                    );
+                  })}
                 <div className="px-4 py-3 text-xs text-[#9a8a7a] text-center italic border-t border-[#e8ddd0]/50">
                   {t.typeToSearch || "Type to search..."}
                 </div>
@@ -411,23 +448,26 @@ const CustomSelectField = ({
                 {t.noDataFound || "No options found"}
               </div>
             ) : (
-              filteredOptions.map((opt, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => {
-                    onChange({
-                      target: { name, value: opt.value, type: "select" },
-                    });
-                    setIsOpen(false);
-                  }}
-                  className={`px-4 py-2.5 text-xs cursor-pointer transition-colors flex items-center gap-2 ${value === opt.value ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
-                >
-                  {opt.logo && (
-                    <img src={opt.logo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
-                  )}
-                  <span className="truncate">{opt.label}</span>
-                </div>
-              ))
+              filteredOptions.map((opt, idx) => {
+                const isSelected = isMulti
+                  ? (Array.isArray(value) ? value : []).includes(opt.value)
+                  : value === opt.value;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleOptionClick(opt)}
+                    className={`px-4 py-2.5 text-xs cursor-pointer transition-colors flex items-center gap-2 ${isSelected ? "bg-[#f5f0e8] text-[#8B6914] font-bold" : "text-[#3a2a1a] hover:bg-[#fcfaf7]"}`}
+                  >
+                    {isMulti && (
+                      <input type="checkbox" checked={isSelected} readOnly className="mr-2" />
+                    )}
+                    {opt.logo && (
+                      <img src={opt.logo} alt="" className="w-5 h-5 rounded-full object-cover shrink-0 border border-[#e8ddd0]" />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -808,7 +848,7 @@ const CRUDModal = ({
                   {field.type === "select" ? (
                     <CustomSelectField
                       name={field.name}
-                      value={formData[field.name] || ""}
+                      value={formData[field.name] || (field.isMulti ? [] : "")}
                       onChange={handleChange}
                       options={field.options}
                       disabled={field.disabled || isViewOnly}
@@ -816,6 +856,8 @@ const CRUDModal = ({
                       t={t}
                       required={field.required}
                       loadOptions={field.loadOptions}
+                      isMulti={field.isMulti}
+                      menuPlacement={field.menuPlacement}
                     />
                   ) : field.type === "textarea" ? (
                     <textarea

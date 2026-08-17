@@ -555,7 +555,7 @@ export default function SettingsPage() {
                  </div>
               </div>
               
-              <div className="border-t border-[#e8ddd0] pt-4 flex flex-col gap-2">
+               <div className="border-t border-[#e8ddd0] pt-4 flex flex-col gap-2">
                   <div>
                     <p className="text-xs font-bold text-[#3a2a1a]">Database Synchronization</p>
                     <p className="text-[9px] text-[#9a8a7a]">Synchronizes local database records to the backup MongoDB cluster.</p>

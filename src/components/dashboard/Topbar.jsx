@@ -88,6 +88,7 @@ const Topbar = React.memo(({ onToggleSidebar }) => {
     "/crowdfunding": { title: `${t.crowdfunding} (${t.futureLaunch})`, sub: s ? `${(s.crowdfunding?.totalCollected || 0).toLocaleString()}€ ${t.collected}` : t.crowdSub },
     "/analytics": { title: t.analytics, sub: t.analyticsSub },
     "/notifications": { title: t.notifications, sub: s ? `${(s.notifications?.total || 0).toLocaleString()} ${t.sentCount}` : t.notifsSub },
+    "/app-modals": { title: "App Modals", sub: "Manage dynamic modals for the mobile app" },
     "/settings": { title: t.settings, sub: t.settingsSub },
     "/contacts": { title: t.contacts, sub: contactsStats ? `${(contactsStats.all || 0).toLocaleString()} ${t.contacts?.toLowerCase()} · ${(contactsStats.active || 0).toLocaleString()} ${t.active?.toLowerCase()}` : "Manage contacts" },
     "/shopify-products": { title: t.shopifyProducts, sub: "Manage Shopify products" },

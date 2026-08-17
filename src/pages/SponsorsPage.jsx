@@ -5,22 +5,32 @@ import CRUDModal from "../components/common/CRUDModal";
 import DataTable from "../components/common/DataTable";
 import FilterBar from "../components/common/FilterBar";
 import StatusBadge from "../components/common/StatusBadge";
+import Pagination from "../components/common/Pagination";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
 import { Target, Plus } from "lucide-react";
 
-const DEFAULT_SPONSOR = { isActive: true, type: "banner" };
+const DEFAULT_SPONSOR = { status: "active", type: "banner", targetAllUsers: true, regions: [], departments: [] };
 
 export default function SponsorsPage() {
   const { t } = useLang();
   const [sponsors, setSponsors] = useState([]);
+  const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  
+  const [queryParams, setQueryParams] = useState({
+    page: 1,
+    limit: 10,
+    search: "",
+    status: "all",
+    sortBy: "date",
+    sort: "descending"
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSponsor, setEditingSponsor] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [partners, setPartners] = useState([]);
+  const [locations, setLocations] = useState({ regions: [], departments: [] });
 
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -32,16 +42,18 @@ export default function SponsorsPage() {
   const fetchSponsors = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get("/sponsors");
+      const queryString = new URLSearchParams(queryParams).toString();
+      const res = await api.get(`/sponsors?${queryString}`);
       if (res.data.status === "ok" || res.data.success) {
         setSponsors(res.data.data || []);
+        setMeta(res.data.meta);
       }
     } catch (err) {
       toast.error("Failed to fetch sponsors");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [queryParams]);
 
   const fetchPartners = useCallback(async () => {
     try {
@@ -57,6 +69,18 @@ export default function SponsorsPage() {
   useEffect(() => {
     fetchSponsors();
     fetchPartners();
+
+    const fetchLocations = async () => {
+      try {
+        const res = await api.get("/contacts/locations");
+        if (res.data.status === "ok" || res.data.success) {
+          setLocations(res.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch locations", err);
+      }
+    };
+    fetchLocations();
   }, [fetchSponsors, fetchPartners]);
 
   const handleCreateOrUpdate = async (formData) => {
@@ -114,11 +138,7 @@ export default function SponsorsPage() {
     });
   };
 
-  const filteredSponsors = sponsors.filter((s) => {
-    const matchesSearch = (s.title || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? s.isActive : !s.isActive);
-    return matchesSearch && matchesStatus;
-  });
+
 
   const columns = [
     {
@@ -148,6 +168,14 @@ export default function SponsorsPage() {
     },
     { header: t.titleLabel || "Title", accessor: "title" },
     {
+      header: t.target || "Target",
+      cell: (row) => (
+        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
+          {row.targetAllUsers ? (t.allUsers || "All") : (t.regional || "Regional")}
+        </span>
+      )
+    },
+    {
       header: t.campaignDates || "Campaign Dates",
       cell: (row) =>
         `${new Date(row.startDate).toLocaleDateString()} - ${new Date(
@@ -166,10 +194,7 @@ export default function SponsorsPage() {
     {
       header: t.statusLabel || "Status",
       cell: (row) => (
-        <StatusBadge
-          status={row.isActive ? "active" : "inactive"}
-          text={row.isActive ? t.active || "Active" : t.inactive || "Inactive"}
-        />
+        <StatusBadge status={row.status || "active"} />
       ),
     },
     {
@@ -247,7 +272,37 @@ export default function SponsorsPage() {
     },
     { name: "startDate", label: t.startDate || "Start Date", type: "date", required: true },
     { name: "endDate", label: t.endDate || "End Date", type: "date", required: true },
-    { name: "isActive", label: t.isActive || "Is Active", type: "checkbox" },
+    {
+      name: "status",
+      label: t.statusLabel || "Status",
+      type: "select",
+      required: true,
+      menuPlacement: "top",
+      options: [
+        { value: "active", label: t.active || "Active" },
+        { value: "inactive", label: t.inactive || "Inactive" },
+        { value: "expired", label: t.expired || "Expired" },
+      ],
+    },
+    { name: "targetAllUsers", label: t.targetAllUsers || "Target All Users", type: "checkbox", fullWidth: true },
+    {
+      name: "regions",
+      label: t.regionsLabel || "Regions",
+      type: "select",
+      isMulti: true,
+      menuPlacement: "top",
+      options: locations.regions.map((r) => ({ value: r, label: r })),
+      dependsOn: { field: "targetAllUsers", value: false },
+    },
+    {
+      name: "departments",
+      label: t.departmentLabel || "Departments",
+      type: "select",
+      isMulti: true,
+      menuPlacement: "top",
+      options: locations.departments.map((d) => ({ value: d, label: d })),
+      dependsOn: { field: "targetAllUsers", value: false },
+    },
     { name: "image", label: t.sponsorImage || "Sponsor Image", type: "file", accept: "image/*" },
   ];
 
@@ -256,16 +311,24 @@ export default function SponsorsPage() {
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden flex flex-col shadow-sm">
         
         <FilterBar 
-          onSearch={setSearchTerm}
-          onFilterChange={(name, val) => {
-            if (name === "status") setStatusFilter(val);
-          }}
+          onSearch={(val) => setQueryParams(p => p.search === val ? p : { ...p, search: val, page: 1 })}
+          onFilterChange={(name, val) => setQueryParams(p => p[name] === val ? p : { ...p, [name]: val, page: 1 })}
+          onSortChange={(sortBy, sort) => setQueryParams(p => p.sortBy === sortBy && p.sort === sort ? p : { ...p, sortBy, sort, page: 1 })}
           related={true}
           filters={[
             { name: "status", label: t.allStatuses || "All statuses", options: [
                 { label: t.active || "Active", value: "active" },
-                { label: t.inactive || "Inactive", value: "inactive" }
+                { label: t.inactive || "Inactive", value: "inactive" },
+                { label: t.expired || "Expired", value: "expired" }
             ]}
+          ]}
+          sortOptions={[
+            { label: t.dateDesc || "Date (Newest)", value: "date:descending" },
+            { label: t.dateAsc || "Date (Oldest)", value: "date:ascending" },
+            { label: t.titleAsc || "Title (A-Z)", value: "title:ascending" },
+            { label: t.titleDesc || "Title (Z-A)", value: "title:descending" },
+            { label: t.impressionsDesc || "Impressions (High-Low)", value: "impressions:descending" },
+            { label: t.clicksDesc || "Clicks (High-Low)", value: "clicks:descending" }
           ]}
           actionButton={
             <div className="flex gap-2">
@@ -284,7 +347,7 @@ export default function SponsorsPage() {
 
         <DataTable
           columns={columns}
-          data={filteredSponsors}
+          data={sponsors}
           loading={loading}
           onEdit={(row) => {
             setEditingSponsor({
@@ -297,6 +360,12 @@ export default function SponsorsPage() {
           }}
           onDelete={(row) => handleDelete(row._id)}
         />
+        <div className="bg-[#fcfaf7]">
+          <Pagination 
+            meta={meta}
+            onPageChange={(page) => setQueryParams(p => ({ ...p, page }))}
+          />
+        </div>
       </div>
 
       <CRUDModal
