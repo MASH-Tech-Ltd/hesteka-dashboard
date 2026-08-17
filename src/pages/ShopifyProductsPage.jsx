@@ -4,7 +4,20 @@ import api from "../utils/api";
 import FilterBar from "../components/common/FilterBar";
 import Pagination from "../components/common/Pagination";
 import { toast } from "react-toastify";
-import { ShoppingBag, RefreshCw, Search, Users, Settings, Key, Copy, AlertTriangle, Play, CheckCircle, XCircle } from "lucide-react";
+import {
+  ShoppingBag,
+  RefreshCw,
+  Search,
+  Users,
+  Settings,
+  Key,
+  Copy,
+  AlertTriangle,
+  Play,
+  CheckCircle,
+  XCircle,
+  BookOpen,
+} from "lucide-react";
 import DataTable from "../components/common/DataTable";
 
 const ProductSkeleton = () => (
@@ -69,11 +82,18 @@ const ShopifyProductCard = ({ product, t }) => {
         <p className="text-[12px] font-black text-[#8B6914]">{price} €</p>
 
         <div className="flex flex-col gap-0.5 mt-1">
-          <p className="text-[9px] text-[#9a8a7a]"><span className="font-semibold">Vendor:</span> {product.vendor}</p>
-          <p className="text-[9px] text-[#9a8a7a]"><span className="font-semibold">Variants:</span> {product.variants?.length || 0}</p>
+          <p className="text-[9px] text-[#9a8a7a]">
+            <span className="font-semibold">Vendor:</span> {product.vendor}
+          </p>
+          <p className="text-[9px] text-[#9a8a7a]">
+            <span className="font-semibold">Variants:</span>{" "}
+            {product.variants?.length || 0}
+          </p>
           <p className="text-[9px] text-[#9a8a7a] flex items-center gap-1">
-            <span className="font-semibold">Status:</span> 
-            <span className={`px-1.5 py-0.5 rounded-full text-[8px] uppercase ${product.status === 'active' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'}`}>
+            <span className="font-semibold">Status:</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[8px] uppercase ${product.status === "active" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"}`}
+            >
               {product.status}
             </span>
           </p>
@@ -110,17 +130,23 @@ export default function ShopifyProductsPage() {
   const [viewMode, setViewMode] = useState("products");
   const [customers, setCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
-  const [pageInfoCustomers, setPageInfoCustomers] = useState({ next: null, prev: null });
-  const [currentPageInfoCustomers, setCurrentPageInfoCustomers] = useState(null);
+  const [pageInfoCustomers, setPageInfoCustomers] = useState({
+    next: null,
+    prev: null,
+  });
+  const [currentPageInfoCustomers, setCurrentPageInfoCustomers] =
+    useState(null);
 
+  const [devMode, setDevMode] = useState(false);
   const [apiKey, setApiKey] = useState(null);
   const [loadingApiKey, setLoadingApiKey] = useState(false);
+  const [allowedDomain, setAllowedDomain] = useState("");
+  const [savingDomain, setSavingDomain] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [testKey, setTestKey] = useState("");
   const [customTestUrl, setCustomTestUrl] = useState("");
   const [testingKey, setTestingKey] = useState(false);
   const [testResult, setTestResult] = useState(null);
-
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -171,6 +197,27 @@ export default function ShopifyProductsPage() {
     fetchCollections();
   }, [fetchCollections]);
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get("/settings");
+        if (res.data.status === "ok" || res.data.success) {
+          setDevMode(res.data.data.devMode || false);
+          setAllowedDomain(res.data.data.shopifyAllowedDomain || "");
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  useEffect(() => {
+    if (!devMode && viewMode === "customers") {
+      setViewMode("products");
+    }
+  }, [devMode, viewMode]);
+
   const fetchCustomers = useCallback(async () => {
     setLoadingCustomers(true);
     try {
@@ -185,11 +232,15 @@ export default function ShopifyProductsPage() {
       );
       if (res.data.status === "ok") {
         setCustomers(res.data.data.customers || []);
-        setPageInfoCustomers(res.data.data.pageInfo || { next: null, prev: null });
+        setPageInfoCustomers(
+          res.data.data.pageInfo || { next: null, prev: null },
+        );
       }
     } catch (err) {
       console.error("Failed to fetch Shopify customers", err);
-      toast.error("Failed to load customers from Shopify (Check App Permissions)");
+      toast.error(
+        "Failed to load customers from Shopify (Check App Permissions)",
+      );
     } finally {
       setLoadingCustomers(false);
     }
@@ -237,6 +288,22 @@ export default function ShopifyProductsPage() {
     }
   };
 
+  const handleSaveDomain = async () => {
+    setSavingDomain(true);
+    try {
+      const res = await api.patch("/settings", {
+        shopifyAllowedDomain: allowedDomain,
+      });
+      if (res.data.status === "ok" || res.data.success) {
+        toast.success("Allowed domain saved successfully");
+      }
+    } catch (err) {
+      toast.error("Failed to save allowed domain");
+    } finally {
+      setSavingDomain(false);
+    }
+  };
+
   const copyToClipboard = () => {
     if (apiKey) {
       navigator.clipboard.writeText(apiKey);
@@ -252,7 +319,7 @@ export default function ShopifyProductsPage() {
     setTestingKey(true);
     setTestResult(null);
     try {
-      const defaultUrl = `${import.meta.env.VITE_API_BASE_URL.replace('/v1', '')}/intigration/shopify/users`;
+      const defaultUrl = `${import.meta.env.VITE_API_BASE_URL.replace("/v1", "")}/intigration/shopify/users`;
       const urlToTest = customTestUrl || defaultUrl;
       const res = await api.get(urlToTest, {
         headers: {
@@ -260,21 +327,29 @@ export default function ShopifyProductsPage() {
         },
       });
       if (res.data.status === "ok" || res.data.success) {
-        setTestResult({ success: true, message: "API Key is valid! Connection successful.", data: res.data });
+        setTestResult({
+          success: true,
+          message: "API Key is valid! Connection successful.",
+          data: res.data,
+        });
       } else {
-        setTestResult({ success: true, message: "Request completed but success flag was false", data: res.data });
+        setTestResult({
+          success: true,
+          message: "Request completed but success flag was false",
+          data: res.data,
+        });
       }
     } catch (err) {
-      setTestResult({ 
-        success: false, 
-        message: err.response?.data?.message || "Invalid API Key or connection failed",
-        data: err.response?.data || err.message
+      setTestResult({
+        success: false,
+        message:
+          err.response?.data?.message || "Invalid API Key or connection failed",
+        data: err.response?.data || err.message,
       });
     } finally {
       setTestingKey(false);
     }
   };
-
 
   const handleFilterChange = (name, val) => {
     if (name === "collectionId") {
@@ -290,23 +365,31 @@ export default function ShopifyProductsPage() {
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
       <div className="flex gap-2">
-        <button 
-          onClick={() => setViewMode("products")} 
+        <button
+          onClick={() => setViewMode("products")}
           className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${viewMode === "products" ? "bg-[#8B6914] text-white shadow-md" : "bg-white text-[#9a8a7a] border border-[#e8ddd0] hover:bg-[#fcfaf7]"}`}
         >
-          <span className="flex items-center gap-2"><ShoppingBag className="w-4 h-4" /> Products</span>
+          <span className="flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4" /> Products
+          </span>
         </button>
-        <button 
-          onClick={() => setViewMode("customers")} 
-          className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${viewMode === "customers" ? "bg-[#8B6914] text-white shadow-md" : "bg-white text-[#9a8a7a] border border-[#e8ddd0] hover:bg-[#fcfaf7]"}`}
-        >
-          <span className="flex items-center gap-2"><Users className="w-4 h-4" /> Customers</span>
-        </button>
-        <button 
-          onClick={() => setViewMode("settings")} 
+        {devMode && (
+          <button
+            onClick={() => setViewMode("customers")}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${viewMode === "customers" ? "bg-[#8B6914] text-white shadow-md" : "bg-white text-[#9a8a7a] border border-[#e8ddd0] hover:bg-[#fcfaf7]"}`}
+          >
+            <span className="flex items-center gap-2">
+              <Users className="w-4 h-4" /> Customers
+            </span>
+          </button>
+        )}
+        <button
+          onClick={() => setViewMode("settings")}
           className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors ${viewMode === "settings" ? "bg-[#8B6914] text-white shadow-md" : "bg-white text-[#9a8a7a] border border-[#e8ddd0] hover:bg-[#fcfaf7]"}`}
         >
-          <span className="flex items-center gap-2"><Settings className="w-4 h-4" /> Settings</span>
+          <span className="flex items-center gap-2">
+            <Settings className="w-4 h-4" /> Settings
+          </span>
         </button>
       </div>
 
@@ -354,7 +437,11 @@ export default function ShopifyProductsPage() {
                     .map((_, i) => <ProductSkeleton key={i} />)
                 ) : filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
-                    <ShopifyProductCard key={product.id} product={product} t={t} />
+                    <ShopifyProductCard
+                      key={product.id}
+                      product={product}
+                      t={t}
+                    />
                   ))
                 ) : (
                   <div className="col-span-full py-20 text-center flex flex-col items-center gap-3">
@@ -400,7 +487,9 @@ export default function ShopifyProductsPage() {
           ) : viewMode === "customers" ? (
             <>
               <div className="flex justify-between items-center px-2">
-                <h2 className="text-lg font-bold text-[#3a2a1a]">Shopify Customers</h2>
+                <h2 className="text-lg font-bold text-[#3a2a1a]">
+                  Shopify Customers
+                </h2>
                 <button
                   onClick={() => {
                     setCurrentPageInfoCustomers(null);
@@ -409,25 +498,46 @@ export default function ShopifyProductsPage() {
                   disabled={loadingCustomers}
                   className="bg-[#8B6914] text-white text-[11px] font-bold px-4 py-2 rounded-xl hover:bg-[#6a5010] transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingCustomers ? "animate-spin" : ""}`} /> Sync Customers
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${loadingCustomers ? "animate-spin" : ""}`}
+                  />{" "}
+                  Sync Customers
                 </button>
               </div>
-              <DataTable 
+              <DataTable
                 columns={[
-                  { header: "Name", cell: (row) => `${row.first_name || ""} ${row.last_name || ""}` },
+                  {
+                    header: "Name",
+                    cell: (row) =>
+                      `${row.first_name || ""} ${row.last_name || ""}`,
+                  },
                   { header: "Email", accessor: "email" },
-                  { header: "State", cell: (row) => (
-                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${row.state === 'enabled' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{row.state || "N/A"}</span>
-                  )},
+                  {
+                    header: "State",
+                    cell: (row) => (
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-bold uppercase ${row.state === "enabled" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}
+                      >
+                        {row.state || "N/A"}
+                      </span>
+                    ),
+                  },
                   { header: "Orders", accessor: "orders_count" },
-                  { header: "Total Spent", cell: (row) => <span className="font-bold text-[#8B6914]">{row.total_spent || "0"} {row.currency || ""}</span> }
+                  {
+                    header: "Total Spent",
+                    cell: (row) => (
+                      <span className="font-bold text-[#8B6914]">
+                        {row.total_spent || "0"} {row.currency || ""}
+                      </span>
+                    ),
+                  },
                 ]}
                 data={customers}
                 loading={loadingCustomers}
                 onEdit={null}
                 onDelete={null}
               />
-              
+
               {/* Pagination for Customers */}
               <div className="flex items-center justify-between bg-[#fcfaf7] px-4 py-3 rounded-xl border border-[#e8ddd0]">
                 <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
@@ -442,14 +552,18 @@ export default function ShopifyProductsPage() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setCurrentPageInfoCustomers(pageInfoCustomers.prev)}
+                      onClick={() =>
+                        setCurrentPageInfoCustomers(pageInfoCustomers.prev)
+                      }
                       disabled={!pageInfoCustomers.prev || loadingCustomers}
                       className="relative inline-flex items-center px-4 py-2 border border-[#e8ddd0] text-xs font-bold rounded-xl text-[#3a2a1a] bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
                     >
                       {t.previous}
                     </button>
                     <button
-                      onClick={() => setCurrentPageInfoCustomers(pageInfoCustomers.next)}
+                      onClick={() =>
+                        setCurrentPageInfoCustomers(pageInfoCustomers.next)
+                      }
                       disabled={!pageInfoCustomers.next || loadingCustomers}
                       className="relative inline-flex items-center px-4 py-2 border border-[#e8ddd0] text-xs font-bold rounded-xl text-[#3a2a1a] bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
                     >
@@ -462,118 +576,247 @@ export default function ShopifyProductsPage() {
           ) : (
             <div className="p-4 flex flex-col gap-4">
               <h2 className="text-lg font-bold text-[#3a2a1a] flex items-center gap-2">
-                <Settings className="w-5 h-5 text-[#8B6914]" /> Integration Settings
+                <Settings className="w-5 h-5 text-[#8B6914]" /> Integration
+                Settings
               </h2>
               <div className="flex flex-col xl:flex-row gap-6 items-start w-full">
                 <div className="bg-[#fcfaf7] border border-[#e8ddd0] p-6 rounded-xl flex flex-col gap-4 w-full xl:w-1/2">
                   <div>
-                    <h3 className="text-sm font-bold text-[#3a2a1a] mb-1">Shopify API Key</h3>
-                  <p className="text-xs text-[#9a8a7a] mb-4">
-                    This key is used to securely authenticate requests from Shopify to your server.
-                    For example, configuring a webhook or fetching user emails via 
-                    <code className="mx-1 bg-white px-1.5 py-0.5 rounded border border-[#e8ddd0]">/api/intigration/shopify/users</code>.
-                  </p>
-                  
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="relative flex-1">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Key className="h-4 w-4 text-gray-400" />
+                    <h3 className="text-sm font-bold text-[#3a2a1a] mb-1">
+                      Shopify API Key
+                    </h3>
+                    <p className="text-xs text-[#9a8a7a] mb-4">
+                      This key is used to securely authenticate requests from
+                      Shopify to your server. For example, configuring a webhook
+                      or fetching user emails via
+                      <code className="mx-1 bg-white px-1.5 py-0.5 rounded border border-[#e8ddd0]">
+                        /api/intigration/shopify/users
+                      </code>
+                      .
+                    </p>
+
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="relative flex-1">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Key className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                          type="text"
+                          readOnly
+                          value={apiKey || "No key generated yet"}
+                          className="block w-full pl-10 pr-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700"
+                        />
                       </div>
+                      {apiKey && (
+                        <button
+                          onClick={copyToClipboard}
+                          className="px-3 py-2 bg-white border border-[#e8ddd0] rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm text-[#3a2a1a] font-medium transition-colors"
+                        >
+                          <Copy className="w-4 h-4" /> Copy
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#e8ddd0]">
+                    <h3 className="text-sm font-bold text-[#3a2a1a] mb-1 mt-2">
+                      Allowed Origin (Domain Validation)
+                    </h3>
+                    <p className="text-xs text-[#9a8a7a] mb-3">
+                      Restrict API access to a specific domain (e.g.,{" "}
+                      <code className="bg-white px-1 border border-[#e8ddd0] rounded">
+                        https://mystore.myshopify.com
+                      </code>
+                      ). Leave empty to allow any domain that has the valid API
+                      key.
+                    </p>
+                    <div className="flex items-center gap-3">
                       <input
                         type="text"
-                        readOnly
-                        value={apiKey || "No key generated yet"}
-                        className="block w-full pl-10 pr-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700"
+                        placeholder="e.g. https://your-store.myshopify.com"
+                        value={allowedDomain}
+                        onChange={(e) => setAllowedDomain(e.target.value)}
+                        className="block w-full px-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700 placeholder-gray-300"
                       />
-                    </div>
-                    {apiKey && (
                       <button
-                        onClick={copyToClipboard}
-                        className="px-3 py-2 bg-white border border-[#e8ddd0] rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm text-[#3a2a1a] font-medium transition-colors"
+                        onClick={handleSaveDomain}
+                        disabled={savingDomain}
+                        className="px-4 py-2 bg-[#8B6914] text-white rounded-lg text-sm font-bold hover:bg-[#6a5010] transition-colors disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
                       >
-                        <Copy className="w-4 h-4" /> Copy
+                        {savingDomain ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : null}
+                        Save
                       </button>
-                    )}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-[#e8ddd0] flex items-center justify-between">
+                    <p className="text-xs text-red-500 font-medium max-w-sm">
+                      Warning: Generating a new key will instantly invalidate
+                      the old one. Make sure to update your Shopify App
+                      settings.
+                    </p>
+                    <button
+                      onClick={() => setShowConfirmModal(true)}
+                      disabled={loadingApiKey}
+                      className="px-4 py-2 bg-[#3a2a1a] text-white rounded-lg text-sm font-bold hover:bg-[#2a1a0a] transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {loadingApiKey ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      Generate New Key
+                    </button>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#e8ddd0] flex items-center justify-between">
-                  <p className="text-xs text-red-500 font-medium max-w-sm">
-                    Warning: Generating a new key will instantly invalidate the old one. Make sure to update your Shopify App settings.
-                  </p>
-                  <button
-                    onClick={() => setShowConfirmModal(true)}
-                    disabled={loadingApiKey}
-                    className="px-4 py-2 bg-[#3a2a1a] text-white rounded-lg text-sm font-bold hover:bg-[#2a1a0a] transition-colors disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {loadingApiKey ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                    Generate New Key
-                  </button>
-                </div>
-              </div>
+                {/* Test API Key Box - Only visible in Development Mode */}
+                {devMode && (
+                  <div className="bg-[#fcfaf7] border border-[#e8ddd0] p-6 rounded-xl flex flex-col gap-4 w-full xl:w-1/2">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#3a2a1a] mb-1">
+                        Test API Connection
+                      </h3>
+                      <p className="text-xs text-[#9a8a7a] mb-4">
+                        Enter an API key to test the connection to your server's
+                        Shopify integration endpoints.
+                      </p>
 
-              {/* Test API Key Box */}
-              <div className="bg-[#fcfaf7] border border-[#e8ddd0] p-6 rounded-xl flex flex-col gap-4 w-full xl:w-1/2">
-                <div>
-                  <h3 className="text-sm font-bold text-[#3a2a1a] mb-1">Test API Connection</h3>
-                  <p className="text-xs text-[#9a8a7a] mb-4">
-                    Enter an API key to test the connection to your server's Shopify integration endpoints.
-                  </p>
-                  
-                  <div className="flex flex-col gap-3 mt-2">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Key className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Paste API Key here..."
-                        value={testKey}
-                        onChange={(e) => setTestKey(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700"
-                      />
-                    </div>
-                    <div className="relative mt-1">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-400 text-xs font-bold font-mono">URL</span>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder={`${import.meta.env.VITE_API_BASE_URL.replace('/v1', '')}/intigration/shopify/users`}
-                        value={customTestUrl}
-                        onChange={(e) => setCustomTestUrl(e.target.value)}
-                        className="block w-full pl-12 pr-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700 placeholder-gray-300"
-                      />
-                    </div>
-                    
-                    <button
-                      onClick={handleTestKey}
-                      disabled={testingKey || !testKey}
-                      className="px-4 py-2 mt-1 bg-white border border-[#e8ddd0] text-[#3a2a1a] rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {testingKey ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                      Test Connection
-                    </button>
-
-                    {testResult && (
-                      <div className="flex flex-col gap-2 mt-2">
-                        <div className={`p-3 rounded-lg text-sm flex items-start gap-2 ${testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                          {testResult.success ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <XCircle className="w-4 h-4 mt-0.5 shrink-0" />}
-                          <p>{testResult.message}</p>
+                      <div className="flex flex-col gap-3 mt-2">
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Key className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Paste API Key here..."
+                            value={testKey}
+                            onChange={(e) => setTestKey(e.target.value)}
+                            className="block w-full pl-10 pr-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700"
+                          />
                         </div>
-                        {testResult.data && (
-                          <div className="bg-gray-900 rounded-lg p-3 overflow-x-auto border border-gray-700">
-                            <pre className="text-xs text-gray-300 font-mono m-0">
-                              {JSON.stringify(testResult.data, null, 2)}
-                            </pre>
+                        <div className="relative mt-1">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-400 text-xs font-bold font-mono">
+                              URL
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder={`${import.meta.env.VITE_API_BASE_URL.replace("/v1", "")}/intigration/shopify/users`}
+                            value={customTestUrl}
+                            onChange={(e) => setCustomTestUrl(e.target.value)}
+                            className="block w-full pl-12 pr-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700 placeholder-gray-300"
+                          />
+                        </div>
+
+                        <button
+                          onClick={handleTestKey}
+                          disabled={testingKey || !testKey}
+                          className="px-4 py-2 mt-1 bg-white border border-[#e8ddd0] text-[#3a2a1a] rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {testingKey ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Play className="w-4 h-4" />
+                          )}
+                          Test Connection
+                        </button>
+
+                        {testResult && (
+                          <div className="flex flex-col gap-2 mt-2">
+                            <div
+                              className={`p-3 rounded-lg text-sm flex items-start gap-2 ${testResult.success ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}
+                            >
+                              {testResult.success ? (
+                                <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                              ) : (
+                                <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                              )}
+                              <p>{testResult.message}</p>
+                            </div>
+                            {testResult.data && (
+                              <div className="bg-gray-900 rounded-lg p-3 overflow-x-auto border border-gray-700">
+                                <pre className="text-xs text-gray-300 font-mono m-0">
+                                  {JSON.stringify(testResult.data, null, 2)}
+                                </pre>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Setup Documentation */}
+                <div className="bg-[#fcfaf7] border border-[#e8ddd0] p-6 rounded-xl flex flex-col gap-4 w-full">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#3a2a1a] mb-2 flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-[#8B6914]" /> Setup
+                      Guide: Newsletter & User Sync Integration
+                    </h3>
+                    <div className="text-xs text-[#5a4a3a] space-y-3 leading-relaxed">
+                      <p>
+                        This API key allows external services (like your Shopify
+                        store or its newsletter apps) to securely fetch user
+                        emails from your Hesteka server. This is commonly used
+                        to sync your app's users into your Shopify newsletter
+                        lists.
+                      </p>
+
+                      <h4 className="font-bold text-[#3a2a1a] mt-4 mb-1">
+                        How to fetch users for Newsletters:
+                      </h4>
+                      <p>
+                        To automatically sync or retrieve your server's users
+                        into Shopify (e.g., using a third-party app like
+                        Klaviyo, Make, Zapier, or a custom Shopify App),
+                        configure your external app to make a{" "}
+                        <strong className="text-[#3a2a1a]">GET</strong> request
+                        to:
+                      </p>
+                      <div className="bg-white px-3 py-2 rounded border border-[#e8ddd0] inline-block font-mono text-[#8B6914] text-[11px]">
+                        
+                        https://share.hesteka.com/api/v1/intigration/shopify/users
+                      </div>
+                      <div className="mt-2 p-3 bg-gray-50 border border-[#e8ddd0] rounded-lg">
+                        <p className="text-[#3a2a1a] font-bold mb-1 text-[11px]">Pagination Support:</p>
+                        <p className="text-[#5a4a3a]">
+                          You can append <code className="bg-white border border-[#e8ddd0] px-1 rounded text-[#8B6914]">?page=1&limit=100</code> to the URL to paginate through large user lists. 
+                          The response will include the user data alongside a <code>meta</code> object containing <code>total</code>, <code>page</code>, <code>limit</code>, and <code>totalPages</code>.
+                        </p>
+                      </div>
+
+                      <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                        <p className="text-orange-800 font-bold mb-2 flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4" /> Authentication
+                          Requirement
+                        </p>
+                        <p className="text-orange-700 mb-3">
+                          Your endpoint is fully protected. Any request made by
+                          your Shopify app or integration service{" "}
+                          <strong>must</strong> include the API key in the
+                          headers. Otherwise, the request will be rejected.
+                        </p>
+                        <div className="bg-white border border-orange-200 p-3 rounded-lg overflow-x-auto shadow-sm">
+                          <p className="text-orange-800 font-bold mb-1 text-[10px] uppercase tracking-wider">
+                            Required HTTP Header:
+                          </p>
+                          <pre className="text-gray-800 font-mono text-[11px] m-0">
+                            <span className="font-bold text-gray-500">
+                              x-api-key:
+                            </span>{" "}
+                            {apiKey || "YOUR_GENERATED_API_KEY"}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
             </div>
           )}
         </div>
@@ -585,9 +828,13 @@ export default function ShopifyProductsPage() {
               <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-center text-[#3a2a1a] mb-2">Are you absolutely sure?</h3>
+              <h3 className="text-lg font-bold text-center text-[#3a2a1a] mb-2">
+                Are you absolutely sure?
+              </h3>
               <p className="text-sm text-center text-[#9a8a7a]">
-                Generating a new API key will instantly invalidate your old key. Any external apps or webhooks relying on the old key will stop working immediately.
+                Generating a new API key will instantly invalidate your old key.
+                Any external apps or webhooks relying on the old key will stop
+                working immediately.
               </p>
             </div>
             <div className="p-4 bg-[#fcfaf7] border-t border-[#e8ddd0] flex gap-3 justify-end">
@@ -603,7 +850,9 @@ export default function ShopifyProductsPage() {
                 disabled={loadingApiKey}
                 className="px-4 py-2 text-sm font-bold rounded-xl text-white bg-red-600 hover:bg-red-700 transition-colors flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {loadingApiKey ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
+                {loadingApiKey ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : null}
                 {loadingApiKey ? "Generating..." : "Yes, Generate Key"}
               </button>
             </div>

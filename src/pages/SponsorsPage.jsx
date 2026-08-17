@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useLang } from "../context/LanguageContext";
 import api from "../utils/api";
+import StatCard from "../components/dashboard/StatCard";
 import CRUDModal from "../components/common/CRUDModal";
 import DataTable from "../components/common/DataTable";
 import FilterBar from "../components/common/FilterBar";
@@ -16,7 +17,9 @@ export default function SponsorsPage() {
   const { t } = useLang();
   const [sponsors, setSponsors] = useState([]);
   const [meta, setMeta] = useState(null);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   
   const [queryParams, setQueryParams] = useState({
     page: 1,
@@ -38,6 +41,20 @@ export default function SponsorsPage() {
     message: "",
     onConfirm: null,
   });
+
+  const fetchStats = useCallback(async (showLoading = true) => {
+    if (showLoading) setStatsLoading(true);
+    try {
+      const res = await api.get("/sponsors/stats");
+      if (res.data.status === "ok" || res.data.success) {
+        setStats(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch sponsor stats", err);
+    } finally {
+      if (showLoading) setStatsLoading(false);
+    }
+  }, []);
 
   const fetchSponsors = useCallback(async () => {
     setLoading(true);
@@ -68,6 +85,10 @@ export default function SponsorsPage() {
 
   useEffect(() => {
     fetchSponsors();
+  }, [fetchSponsors]);
+
+  useEffect(() => {
+    fetchStats();
     fetchPartners();
 
     const fetchLocations = async () => {
@@ -81,7 +102,7 @@ export default function SponsorsPage() {
       }
     };
     fetchLocations();
-  }, [fetchSponsors, fetchPartners]);
+  }, [fetchStats, fetchPartners]);
 
   const handleCreateOrUpdate = async (formData) => {
     setModalLoading(true);
@@ -111,6 +132,7 @@ export default function SponsorsPage() {
       } else {
          setSponsors(prev => [updatedSponsor, ...prev]);
       }
+      fetchStats(false);
     } catch (err) {
       if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
         err.response.data.data.forEach((e) => {
@@ -134,6 +156,7 @@ export default function SponsorsPage() {
           await api.delete(`/sponsors/${id}`);
           toast.success(t.sponsorDeletedSuccess || "Sponsor deleted successfully");
           fetchSponsors();
+          fetchStats(false);
         } catch (err) {
           toast.error(t.failedDeleteSponsor || "Failed to delete sponsor");
         } finally {
@@ -313,6 +336,14 @@ export default function SponsorsPage() {
 
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <StatCard loading={statsLoading} label={t.totalAds || "TOTAL ADS"} value={{ text: (stats?.total || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-purple-500" sub={`${stats?.trends?.total >= 0 ? "+" : ""}${stats?.trends?.total || 0}% vs last month`} subType={stats?.trends?.total >= 0 ? "up" : "down"} />
+        <StatCard loading={statsLoading} label={t.activeAds || "ACTIVE ADS"} value={{ text: (stats?.active || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-green-500" sub={`${stats?.trends?.active >= 0 ? "+" : ""}${stats?.trends?.active || 0}% vs last month`} subType={stats?.trends?.active >= 0 ? "up" : "down"} />
+        <StatCard loading={statsLoading} label={t.expiredAds || "EXPIRED ADS"} value={{ text: (stats?.expired || 0).toLocaleString(), color: "text-red-600" }} color="bg-red-500" sub={`${stats?.trends?.expired >= 0 ? "+" : ""}${stats?.trends?.expired || 0}% vs last month`} subType={stats?.trends?.expired >= 0 ? "up" : "down"} />
+        <StatCard loading={statsLoading} label={t.totalImpressions || "IMPRESSIONS"} value={{ text: (stats?.totalImpressions || 0).toLocaleString(), color: "text-blue-600" }} color="bg-blue-500" sub={`${stats?.trends?.impressions >= 0 ? "+" : ""}${stats?.trends?.impressions || 0}% vs last month`} subType={stats?.trends?.impressions >= 0 ? "up" : "down"} />
+        <StatCard loading={statsLoading} label={t.avgCtr || "AVG CTR"} value={{ text: `${stats?.avgCtr || 0}%`, color: "text-orange-600" }} color="bg-orange-500" sub={`${stats?.trends?.avgCtr >= 0 ? "+" : ""}${stats?.trends?.avgCtr || 0}% vs last month`} subType={stats?.trends?.avgCtr >= 0 ? "up" : "down"} />
+      </div>
+
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden flex flex-col shadow-sm">
         
         <FilterBar 

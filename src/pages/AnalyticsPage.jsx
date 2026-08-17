@@ -119,9 +119,64 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="h-[80vh] flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-[#8B6914]/20 border-t-[#8B6914] rounded-full animate-spin"></div>
-        <p className="text-[#9a8a7a] font-bold animate-pulse uppercase tracking-widest text-xs">{t.loadingLabel || "Loading performance data..."}</p>
+      <div className="px-4 md:px-6 py-4 flex flex-col gap-6 bg-[#fcfaf7]/50 min-h-screen animate-pulse">
+        {/* Skeleton for Location API Usage Bar */}
+        <div>
+          <div className="h-4 bg-[#e8ddd0] rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-5 border border-[#e8ddd0] h-32 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col gap-2">
+                    <div className="h-3 bg-[#f5f0e8] rounded w-16"></div>
+                    <div className="h-8 bg-[#f5f0e8] rounded w-24"></div>
+                  </div>
+                  <div className="w-10 h-10 bg-[#f5f0e8] rounded-xl"></div>
+                </div>
+                <div className="h-3 bg-[#f5f0e8] rounded w-32 mt-4"></div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-4 items-center">
+            <div className="h-3 bg-[#e8ddd0] rounded w-32 mr-2"></div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white px-4 py-2 rounded-full border border-[#e8ddd0] h-8 w-32"></div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* Skeleton for Reports Chart */}
+          <div className="lg:col-span-3 bg-white rounded-2xl border border-[#e8ddd0] p-6 shadow-sm flex flex-col">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-[#f5f0e8] rounded-lg"></div>
+                <div className="h-4 bg-[#f5f0e8] rounded w-32"></div>
+              </div>
+              <div className="h-3 bg-[#f5f0e8] rounded w-24"></div>
+            </div>
+            <div className="h-[300px] w-full bg-[#fcfaf7] rounded-xl border border-[#f5f0e8]"></div>
+          </div>
+
+          {/* Skeleton for Zones Card */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-[#e8ddd0] p-6 shadow-sm flex flex-col">
+            <div className="flex items-center gap-2 mb-8">
+              <div className="w-8 h-8 bg-[#f5f0e8] rounded-lg"></div>
+              <div className="h-4 bg-[#f5f0e8] rounded w-32"></div>
+            </div>
+            <div className="flex flex-col gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <div className="flex justify-between">
+                    <div className="h-3 bg-[#f5f0e8] rounded w-24"></div>
+                    <div className="h-3 bg-[#f5f0e8] rounded w-8"></div>
+                  </div>
+                  <div className="w-full h-2 bg-[#fcfaf7] rounded-full"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
