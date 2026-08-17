@@ -32,6 +32,26 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+const RetentionCardSkeleton = () => (
+  <div className="bg-white rounded-2xl p-5 border border-[#e8ddd0] flex justify-between items-start animate-pulse h-[94px]">
+    <div className="flex flex-col gap-2 w-1/2">
+      <div className="w-20 h-3 bg-gray-200 rounded"></div>
+      <div className="w-24 h-8 bg-gray-100 rounded"></div>
+    </div>
+    <div className="w-9 h-9 bg-gray-200 rounded-xl"></div>
+  </div>
+);
+
+const ChartSkeleton = () => (
+  <div className="bg-white rounded-2xl border border-[#e8ddd0] p-4 md:p-6 shadow-sm mt-4 animate-pulse h-[400px]">
+    <div className="flex items-center gap-2 mb-6">
+      <div className="w-9 h-9 bg-gray-200 rounded-lg"></div>
+      <div className="w-48 h-4 bg-gray-200 rounded"></div>
+    </div>
+    <div className="w-full h-[300px] bg-gray-50 rounded-xl"></div>
+  </div>
+);
+
 export default function RetentionPage() {
   const { t } = useLang();
   const [data, setData] = useState(null);
@@ -55,11 +75,11 @@ export default function RetentionPage() {
 
   if (loading) {
     return (
-      <div className="h-[80vh] flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-[#8B6914]/20 border-t-[#8B6914] rounded-full animate-spin"></div>
-        <p className="text-[#9a8a7a] font-bold animate-pulse uppercase tracking-widest text-xs">
-          {t.loadingLabel || "Loading..."}
-        </p>
+      <div className="px-4 md:px-6 py-4 flex flex-col gap-6 bg-[#fcfaf7]/50 min-h-screen">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => <RetentionCardSkeleton key={i} />)}
+        </div>
+        <ChartSkeleton />
       </div>
     );
   }

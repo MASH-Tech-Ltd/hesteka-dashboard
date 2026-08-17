@@ -196,9 +196,17 @@ const CollectionPointsPage = React.memo(() => {
         toast.success(
           `Collection point ${isUpdate ? "updated" : "created"} successfully`,
         );
+        
+        const updatedPoint = res.data.data || res.data;
+        if (isUpdate) {
+          setPoints(prev => prev.map(p => (p._id === updatedPoint._id ? updatedPoint : p)));
+          setAllPoints(prev => prev.map(p => (p._id === updatedPoint._id ? updatedPoint : p)));
+        } else {
+          setPoints(prev => [updatedPoint, ...prev]);
+          setAllPoints(prev => [updatedPoint, ...prev]);
+        }
+        
         invalidateCache("/partner-ads/get-all-partner-ads");
-        fetchData();
-        fetchAllForMap();
         setIsModalOpen(false);
       }
     } catch (err) {
@@ -220,9 +228,9 @@ const CollectionPointsPage = React.memo(() => {
         try {
           await api.delete(`/partner-ads/delete-partner-ad/${id}`);
           toast.success("Collection point deleted successfully");
-          invalidateCache("/partner-ads/get-all-partner-ads");
           fetchData();
           fetchAllForMap();
+          invalidateCache("/partner-ads/get-all-partner-ads");
         } catch (err) {
           toast.error(err.response?.data?.message || "Delete failed.");
         } finally {

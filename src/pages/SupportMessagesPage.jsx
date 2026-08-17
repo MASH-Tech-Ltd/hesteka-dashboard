@@ -64,10 +64,11 @@ export default function SupportMessagesPage() {
     if (!replyMessage.trim()) return;
     setIsReplying(true);
     try {
-      await api.post(`/support-messages/${currentMessage._id}/reply`, { replyMessage });
+      const res = await api.post(`/support-messages/${currentMessage._id}/reply`, { replyMessage });
       toast.success(t.replySent || "Reply sent successfully");
       setIsModalOpen(false);
-      fetchMessages();
+      const updatedMessage = res.data?.data || { ...currentMessage, status: 'closed', adminReply: replyMessage };
+      setMessages(prev => prev.map(m => m._id === currentMessage._id ? updatedMessage : m));
       window.dispatchEvent(new Event("refetch-stats"));
     } catch (err) {
       console.error("Failed to send reply", err);
@@ -83,8 +84,8 @@ export default function SupportMessagesPage() {
     try {
       await api.delete(`/support-messages/${messageToDelete._id}`);
       toast.success(t.messageDeleted || "Message deleted successfully");
-      setMessageToDelete(null);
       fetchMessages();
+      setMessageToDelete(null);
       window.dispatchEvent(new Event("refetch-stats"));
     } catch (err) {
       console.error("Failed to delete message", err);

@@ -182,7 +182,7 @@ export default function UsersPage() {
           const res = await api.patch(`/user/update-status/${userId}`, { status: newStatus });
           if (res.data.status === "ok") {
             toast.success(`${t.statusLabel || "Status"} ${newStatus} ${t.updating || "updated"}`);
-            fetchData();
+            setUsers(prev => prev.map(u => u._id === userId ? { ...u, status: newStatus } : u));
           }
         } catch (err) {
           toast.error(err.response?.data?.message || "Failed to update status");
@@ -217,15 +217,17 @@ export default function UsersPage() {
         // Check if formDataPayload has any keys
         const hasData = Array.from(formDataPayload.keys()).length > 0;
 
+        let updatedUser = editingUser;
         if (hasData) {
-          await api.patch(`/user/update-user-admin/${editingUser._id}`, formDataPayload, {
+          const res = await api.patch(`/user/update-user-admin/${editingUser._id}`, formDataPayload, {
             headers: { 'Content-Type': 'multipart/form-data' }
           });
+          updatedUser = res.data?.data || res.data;
         }
         setIsModalOpen(false);
         setEditingUser(null);
         toast.success("User updated successfully");
-        fetchData();
+        setUsers(prev => prev.map(u => u._id === updatedUser._id ? updatedUser : u));
       } else {
         const payloadData = { ...formData };
         
@@ -251,7 +253,8 @@ export default function UsersPage() {
           if (res.data?.status === "ok" || res.status === 201) {
             setIsModalOpen(false);
             toast.success("Partner created successfully");
-            fetchData();
+            const newUser = res.data?.data || res.data;
+            setUsers(prev => [newUser, ...prev]);
           }
         } else {
           const endpoint = "/auth/register-user";
@@ -270,7 +273,8 @@ export default function UsersPage() {
           if (res.data?.status === "ok" || res.status === 201) {
             setIsModalOpen(false);
             toast.success("User created successfully");
-            fetchData();
+            const newUser = res.data?.data || res.data;
+            setUsers(prev => [newUser, ...prev]);
           }
         }
       }
@@ -305,8 +309,8 @@ export default function UsersPage() {
       const res = await api.delete(`/user/delete-user/${deleteUserModal.user._id}`);
       if (res.data.status === "ok" || res.status === 200) {
         toast.success("User permanently deleted and related records cleared.");
-        setDeleteUserModal({ isOpen: false, user: null });
         fetchData();
+        setDeleteUserModal({ isOpen: false, user: null });
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to delete user");

@@ -315,7 +315,12 @@ export default function NotificationsPage() {
       });
       if (res.data.status === "ok") {
         setAlertMessage("");
-        setViewMode("all"); // Refresh to show the new alert in history
+        const newNotif = res.data.data || res.data;
+        if (viewMode === "all") {
+            setHistory(prev => [newNotif, ...prev]);
+        } else {
+            setViewMode("all");
+        }
       }
     } catch (err) {
       console.error("Failed to send alert", err);
@@ -359,11 +364,14 @@ export default function NotificationsPage() {
         setTargetedMessage("");
         setSelectedTargetUser(null);
         setUserSearchQuery("");
-        setViewMode("all");
-        if (targetedPage === 1) {
-          fetchTargetedNotifications(1);
+        
+        const newNotif = res.data.data || res.data;
+        setTargetedHistory(prev => [newNotif, ...prev]);
+        
+        if (viewMode === "all") {
+            setHistory(prev => [newNotif, ...prev]);
         } else {
-          setTargetedPage(1);
+            setViewMode("all");
         }
       }
     } catch (err) {

@@ -193,14 +193,9 @@ export default function PartnersPage() {
           const res = await api.patch(`/user/approve-partner/${id}`);
           if (res.data.status === "ok") {
             toast.success("Partner approved successfully");
-            setQueryParams((prev) => ({
-              ...prev,
-              status: "active",
-              search: "",
-              page: 1,
-            }));
-            fetchPendingPartners();
-            fetchStats();
+            const approvedPartner = pendingPartners.find(p => p._id === id) || { _id: id };
+            setPendingPartners(prev => prev.filter(p => p._id !== id));
+            setActivePartners(prev => [approvedPartner, ...prev]);
           }
         } catch (err) {
           toast.error(
@@ -227,8 +222,7 @@ export default function PartnersPage() {
           const res = await api.patch(`/user/reject-partner/${id}`);
           if (res.data.status === "ok") {
             toast.success("Partner rejected successfully");
-            fetchPendingPartners();
-            fetchStats();
+            setPendingPartners(prev => prev.filter(p => p._id !== id));
           }
         } catch (err) {
           toast.error(
@@ -327,9 +321,12 @@ export default function PartnersPage() {
         setIsAddModalOpen(false);
         setAddFieldErrors([]);
         toast.success("Partner created successfully");
-        fetchActivePartners();
-        fetchPendingPartners();
-        fetchStats();
+        const newPartner = res.data?.data || res.data;
+        if (newPartner.status === 'pending') {
+           setPendingPartners(prev => [newPartner, ...prev]);
+        } else {
+           setActivePartners(prev => [newPartner, ...prev]);
+        }
       }
     } catch (err) {
       const serverErrors = err.response?.data?.data;
@@ -363,9 +360,9 @@ export default function PartnersPage() {
         setIsEditModalOpen(false);
         setEditFieldErrors([]);
         toast.success("Partner updated successfully");
-        fetchActivePartners();
-        fetchPendingPartners();
-        fetchStats();
+        const updatedPartner = res.data?.data || res.data;
+        setActivePartners(prev => prev.map(p => p._id === updatedPartner._id ? updatedPartner : p));
+        setPendingPartners(prev => prev.map(p => p._id === updatedPartner._id ? updatedPartner : p));
       }
     } catch (err) {
       const serverErrors = err.response?.data?.data;

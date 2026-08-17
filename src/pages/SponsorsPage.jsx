@@ -97,7 +97,7 @@ export default function SponsorsPage() {
         }
       });
 
-      await api[method](url, data, {
+      const res = await api[method](url, data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -105,7 +105,12 @@ export default function SponsorsPage() {
         isUpdate ? t.sponsorUpdatedSuccess || "Sponsor updated successfully" : t.sponsorCreatedSuccess || "Sponsor created successfully"
       );
       setIsModalOpen(false);
-      fetchSponsors();
+      const updatedSponsor = res.data?.data || res.data;
+      if (isUpdate) {
+         setSponsors(prev => prev.map(s => s._id === updatedSponsor._id ? updatedSponsor : s));
+      } else {
+         setSponsors(prev => [updatedSponsor, ...prev]);
+      }
     } catch (err) {
       if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
         err.response.data.data.forEach((e) => {

@@ -284,8 +284,8 @@ export default function PostsPage() {
       const res = await api.delete(`/community/chat/admin/${confirmModal.id}`);
       if (res.data.status === "ok" || res.status === 200) {
         toast.success("Post deleted successfully");
-        setConfirmModal({ isOpen: false, id: null });
         fetchPosts();
+        setConfirmModal({ isOpen: false, id: null });
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to delete post");
@@ -361,8 +361,14 @@ export default function PostsPage() {
       if (res.data.status === "ok" || res.status === 200) {
         toast.success(t.commentDeletedSuccess || "Comment deleted successfully");
         setDeleteCommentModal({ isOpen: false, id: null });
+        setPosts(prev => prev.map(p => {
+          if (p._id === commentsModal.post._id) {
+             const newCount = Math.max(0, (p.replyCount || p.repliesCount || p.commentsCount || 0) - 1);
+             return { ...p, replyCount: newCount };
+          }
+          return p;
+        }));
         handleViewComments(commentsModal.post);
-        fetchPosts();
       }
     } catch (err) {
       console.error("Failed to delete comment:", err);
@@ -384,8 +390,14 @@ export default function PostsPage() {
         toast.success(t.commentAddedSuccess || "Comment added successfully");
         setNewCommentText("");
         setReplyingTo(null);
+        setPosts(prev => prev.map(p => {
+          if (p._id === commentsModal.post._id) {
+             const newCount = (p.replyCount || p.repliesCount || p.commentsCount || 0) + 1;
+             return { ...p, replyCount: newCount };
+          }
+          return p;
+        }));
         handleViewComments(commentsModal.post);
-        fetchPosts(); // To update the comment count on the post
       }
     } catch (err) {
       console.error("Failed to add comment:", err);

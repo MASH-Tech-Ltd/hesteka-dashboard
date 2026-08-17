@@ -60,7 +60,7 @@ export default function ArticleModal({ isOpen, onClose, initialData, onSubmit, l
   const handleAddBlock = () => {
     setContentBlocks([
       ...contentBlocks,
-      { type: "paragraph", title: "", content: "" },
+      { type: "paragraph", title: "", content: "", sourceUrl: "" },
     ]);
   };
 
@@ -300,6 +300,18 @@ export default function ArticleModal({ isOpen, onClose, initialData, onSubmit, l
                             value={block.title || ""}
                             onChange={(e) => handleBlockChange(index, "title", e.target.value)}
                             placeholder={block.type === "numbered_point" ? "e.g., 1 Moisturize it constantly" : "Optional title..."}
+                            className="w-full border border-[#e8ddd0] rounded px-2 py-1 text-sm focus:outline-none focus:border-[#8B6914]"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="flex-1">
+                          <label className="text-[10px] font-bold text-gray-500 uppercase">Website / Source Link (Optional)</label>
+                          <input
+                            type="url"
+                            value={block.sourceUrl || ""}
+                            onChange={(e) => handleBlockChange(index, "sourceUrl", e.target.value)}
+                            placeholder="https://example.com/read-more"
                             className="w-full border border-[#e8ddd0] rounded px-2 py-1 text-sm focus:outline-none focus:border-[#8B6914]"
                           />
                         </div>

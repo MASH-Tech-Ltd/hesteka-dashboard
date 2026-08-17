@@ -84,7 +84,14 @@ export default function BadgesPage() {
             ? t.badgeUpdated || "Badge updated successfully"
             : t.badgeCreated || "Badge created successfully",
         );
-        fetchBadges();
+        
+        const updatedBadge = response.data.data || response.data;
+        if (isUpdate) {
+          setBadges(prev => prev.map(b => (b._id === updatedBadge._id ? updatedBadge : b)));
+        } else {
+          setBadges(prev => [updatedBadge, ...prev]);
+        }
+        
         handleCloseModal();
       }
     } catch (error) {

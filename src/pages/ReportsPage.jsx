@@ -148,7 +148,7 @@ export default function ReportsPage() {
           );
           if (res.data.status === "ok") {
             toast.success(t.pointsApprovedSuccess || "Points approuvés avec succès");
-            fetchData();
+            setReports(prev => prev.map(r => r._id === reportId ? { ...r, isPointApproved: true } : r));
           }
         } catch (err) {
           toast.error(
@@ -167,6 +167,7 @@ export default function ReportsPage() {
       const res = await api.get(`/reports/get-single-report/${reportId}`);
       if (res.data.status === "ok") {
         setSelectedReport(res.data.data);
+        setReports(prev => prev.map(r => r._id === reportId ? res.data.data : r));
         setIsModalOpen(true);
       }
     } catch (err) {
@@ -376,7 +377,8 @@ export default function ReportsPage() {
         );
         if (res.data.status === "ok" || res.status === 200) {
           toast.success("Report updated successfully");
-          fetchData();
+          const updatedReport = res.data?.data || res.data;
+          setReports(prev => prev.map(r => r._id === updatedReport._id ? updatedReport : r));
           setIsAddModalOpen(false);
         }
       } else {
@@ -385,14 +387,8 @@ export default function ReportsPage() {
         });
         if (res.data.status === "ok" || res.status === 201) {
           toast.success("Report created successfully");
-          setQueryParams((prev) => ({
-            ...prev,
-            page: 1,
-            search: "",
-            status: "all",
-            species: "all",
-          }));
-          fetchData();
+          const newReport = res.data?.data || res.data;
+          setReports(prev => [newReport, ...prev]);
           setIsAddModalOpen(false);
         }
       }

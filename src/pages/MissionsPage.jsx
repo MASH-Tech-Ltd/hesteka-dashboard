@@ -278,7 +278,11 @@ export default function MissionsPage() {
             p._id === participationId ? { ...p, status: "completed" } : p,
           ),
         }));
-        fetchData();
+        setMissions(prevMissions => prevMissions.map(m => 
+          m.title === participantsModal.missionTitle 
+            ? { ...m, pendingRequestsCount: Math.max(0, (m.pendingRequestsCount || 1) - 1) } 
+            : m
+        ));
       }
     } catch (err) {
       toast.error(
@@ -300,7 +304,11 @@ export default function MissionsPage() {
             p._id === participationId ? { ...p, status: "rejected" } : p,
           ),
         }));
-        fetchData();
+        setMissions(prevMissions => prevMissions.map(m => 
+          m.title === participantsModal.missionTitle 
+            ? { ...m, pendingRequestsCount: Math.max(0, (m.pendingRequestsCount || 1) - 1) } 
+            : m
+        ));
       }
     } catch (err) {
       toast.error(
@@ -347,8 +355,9 @@ export default function MissionsPage() {
         );
       }
 
+      let res;
       if (editingMission) {
-        await api.patch(
+        res = await api.patch(
           `/local-missions/update-local-mission/${editingMission._id}`,
           data,
           {
@@ -356,7 +365,7 @@ export default function MissionsPage() {
           },
         );
       } else {
-        await api.post("/local-missions/create-local-mission", data, {
+        res = await api.post("/local-missions/create-local-mission", data, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       }
@@ -366,7 +375,13 @@ export default function MissionsPage() {
           ? "Mission updated successfully"
           : "Mission created successfully",
       );
-      fetchData();
+      
+      const updatedMission = res.data?.data || res.data;
+      if (editingMission) {
+        setMissions(prev => prev.map(m => m._id === updatedMission._id ? updatedMission : m));
+      } else {
+        setMissions(prev => [updatedMission, ...prev]);
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Operation failed.");
     } finally {

@@ -3,6 +3,8 @@ import { useLang } from "../context/LanguageContext";
 import api from "../utils/api";
 import ArticleModal from "../components/articles/ArticleModal";
 import DataTable from "../components/common/DataTable";
+import FilterBar from "../components/common/FilterBar";
+import Pagination from "../components/common/Pagination";
 import StatusBadge from "../components/common/StatusBadge";
 import { toast } from "react-toastify";
 import ConfirmModal from "../components/common/ConfirmModal";
@@ -16,6 +18,16 @@ export default function ArticlesPage() {
   const [editingArticle, setEditingArticle] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  const [meta, setMeta] = useState(null);
+  const [queryParams, setQueryParams] = useState({
+    page: 1,
+    limit: 10,
+    search: "",
+    status: "all",
+    sortBy: "date",
+    sort: "descending"
+  });
+
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     title: "",
@@ -26,9 +38,11 @@ export default function ArticlesPage() {
   const fetchArticles = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get("/articles");
+      const queryString = new URLSearchParams(queryParams).toString();
+      const res = await api.get(`/articles?${queryString}`);
       if (res.data.status === "ok" || res.data.success) {
         setArticles(res.data.data || []);
+        setMeta(res.data.meta);
       }
     } catch (err) {
       console.error("Failed to fetch articles", err);
@@ -36,7 +50,7 @@ export default function ArticlesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [queryParams]);
 
   useEffect(() => {
     fetchArticles();
@@ -56,15 +70,22 @@ export default function ArticlesPage() {
         }
       });
 
-      await api[method](url, data, {
+      const res = await api[method](url, data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
+      const updatedArticle = res.data.data;
+
+      if (isUpdate) {
+        setArticles((prev) => prev.map((a) => (a._id === updatedArticle._id ? updatedArticle : a)));
+      } else {
+        setArticles((prev) => [updatedArticle, ...prev]);
+      }
 
       toast.success(
         isUpdate ? t.articleUpdatedSuccess || "Article updated successfully" : t.articleCreatedSuccess || "Article created successfully"
       );
       setIsModalOpen(false);
-      fetchArticles();
     } catch (err) {
       console.error(err);
       if (err.response?.data?.data && Array.isArray(err.response.data.data)) {
@@ -155,32 +176,37 @@ export default function ArticlesPage() {
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-4">
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden flex flex-col shadow-sm">
-        <div className="p-4 border-b border-[#e8ddd0] bg-white flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#8B6914]/10 flex items-center justify-center text-[#8B6914]">
-              <FileText size={20} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-[#3a2a1a]">{t.articles || "Articles & News"}</h1>
-              <p className="text-xs font-bold text-[#8B6914] tracking-widest uppercase">
-                {t.manageArticles || "Manage News & Advice content"}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
+
+
+        <FilterBar 
+          onSearch={(val) => setQueryParams(p => p.search === val ? p : { ...p, search: val, page: 1 })}
+          onFilterChange={(name, val) => setQueryParams(p => p[name] === val ? p : { ...p, [name]: val, page: 1 })}
+          onSortChange={(sortBy, sort) => setQueryParams(p => p.sortBy === sortBy && p.sort === sort ? p : { ...p, sortBy, sort, page: 1 })}
+          related={true}
+          filters={[
+            { name: "status", label: t.allStatuses || "All statuses", options: [
+                { label: t.active || "Active", value: "active" },
+                { label: t.inactive || "Inactive", value: "inactive" }
+            ]}
+          ]}
+          sortOptions={[
+            { label: t.dateDesc || "Date (Newest)", value: "date:descending" },
+            { label: t.dateAsc || "Date (Oldest)", value: "date:ascending" },
+            { label: t.titleAsc || "Title (A-Z)", value: "title:ascending" },
+            { label: t.titleDesc || "Title (Z-A)", value: "title:descending" }
+          ]}
+          actionButton={
             <button
               onClick={() => {
                 setEditingArticle(null);
                 setIsModalOpen(true);
               }}
-              className="bg-[#2A3B31] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#1f2c25] transition-colors shadow-sm text-sm font-bold uppercase tracking-wide"
+              className="bg-[#8B6914] text-white text-[11px] font-bold px-4 py-2 rounded-xl hover:bg-[#6a5010] transition-colors flex items-center gap-2"
             >
-              <Plus size={16} />
-              {t.createArticle || "Add Article"}
+              <Plus className="w-4 h-4" /> {t.createArticle || "Add Article"}
             </button>
-          </div>
-        </div>
+          }
+        />
 
         <DataTable
           columns={columns}
@@ -192,6 +218,13 @@ export default function ArticlesPage() {
           }}
           onDelete={(row) => handleDelete(row._id)}
         />
+        
+        <div className="bg-[#fcfaf7]">
+          <Pagination 
+            meta={meta}
+            onPageChange={(page) => setQueryParams(p => ({ ...p, page }))}
+          />
+        </div>
       </div>
 
       <ArticleModal

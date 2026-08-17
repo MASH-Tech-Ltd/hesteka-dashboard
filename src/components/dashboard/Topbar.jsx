@@ -78,6 +78,7 @@ const Topbar = React.memo(({ onToggleSidebar }) => {
     "/dashboard": { title: t.overview, sub: s ? `${(s.users?.total || 0).toLocaleString()} ${t.users?.toLowerCase()} · ${(s.reports?.total || 0).toLocaleString()} ${t.reports?.toLowerCase()}` : t.dashboardSub },
     "/reports": { title: t.reports, sub: s ? `${(s.reports?.total || 0).toLocaleString()} ${t.totalCount} · ${(s.reports?.breakdown?.lost || 0).toLocaleString()} ${t.lost?.toLowerCase() || "lost"}` : t.reportsSub },
     "/users": { title: t.users, sub: s ? `${(s.users?.total || 0).toLocaleString()} ${t.registeredCount} · ${(s.users?.active || 0).toLocaleString()} ${t.active?.toLowerCase()}` : t.usersSub },
+    "/articles": { title: t.articles || "Articles & News", sub: t.manageArticles || "Manage News & Advice content" },
     "/partners": { title: t.partners, sub: s ? `${(s.partners?.total || 0).toLocaleString()} ${t.totalCount} · ${(s.partners?.pending || 0).toLocaleString()} ${t.pendingCountLabel}` : t.partnersSub },
     "/missions": { title: t.localMissions, sub: s ? `${(s.missions?.total || 0).toLocaleString()} ${t.missions?.toLowerCase()} · ${(s.missions?.inProgress || 0).toLocaleString()} ${t.inProgressCount}` : t.missionsSub },
     "/collection-points": { title: t.collectionPoints, sub: collectionPointsTotal !== null ? `${collectionPointsTotal.toLocaleString()} ${t.collectionPointsCount}` : t.collPointsSub },

@@ -175,15 +175,21 @@ export default function FAQPage() {
         data.append("image", imageFile);
       }
 
+      let res;
       if (currentFaq) {
-        await api.patch(`/faq/${currentFaq._id}`, data, { headers: { "Content-Type": "multipart/form-data" } });
+        res = await api.patch(`/faq/${currentFaq._id}`, data, { headers: { "Content-Type": "multipart/form-data" } });
         toast.success("FAQ updated successfully");
       } else {
-        await api.post("/faq", data, { headers: { "Content-Type": "multipart/form-data" } });
+        res = await api.post("/faq", data, { headers: { "Content-Type": "multipart/form-data" } });
         toast.success("New FAQ added successfully");
       }
       setIsModalOpen(false);
-      fetchFaqs();
+      const updatedFaq = res.data?.data || res.data;
+      if (currentFaq) {
+        setFaqs(prev => prev.map(f => f._id === updatedFaq._id ? updatedFaq : f));
+      } else {
+        setFaqs(prev => [updatedFaq, ...prev]);
+      }
     } catch (err) {
       console.error("Failed to save FAQ", err);
       toast.error("Failed to save FAQ");
@@ -196,8 +202,8 @@ export default function FAQPage() {
     try {
       await api.delete(`/faq/${faqToDelete._id}`);
       toast.success("FAQ deleted successfully");
-      setFaqToDelete(null);
       fetchFaqs();
+      setFaqToDelete(null);
     } catch (err) {
       console.error("Failed to delete FAQ", err);
       toast.error("Failed to delete FAQ");

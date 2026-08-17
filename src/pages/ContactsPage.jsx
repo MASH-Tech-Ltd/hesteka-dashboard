@@ -161,7 +161,8 @@ export default function ContactsPage() {
         if (res.data.status === "ok" || res.status === 200) {
           toast.success("Contact updated successfully");
           setIsModalOpen(false);
-          fetchData();
+          const updatedContact = res.data.data || res.data.contact || res.data;
+          setContacts((prev) => prev.map((c) => (c._id === updatedContact._id ? updatedContact : c)));
         }
       } else {
         const res = await api.post("/contacts/create-contact", data, {
@@ -170,7 +171,8 @@ export default function ContactsPage() {
         if (res.data.status === "ok" || res.status === 201) {
           toast.success("Contact created successfully");
           setIsModalOpen(false);
-          fetchData();
+          const newContact = res.data.data || res.data.contact || res.data;
+          setContacts((prev) => [newContact, ...prev]);
         }
       }
     } catch (err) {

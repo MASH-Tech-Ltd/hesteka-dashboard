@@ -43,7 +43,7 @@ export default function ArticlePreviewModal({ isOpen, onClose, formData, content
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 overflow-y-auto bg-[#f9f6e8] -mt-10 rounded-t-3xl px-5 py-6 custom-scrollbar relative z-10">
+        <div className="flex-1 overflow-y-auto bg-[#f9f6e8] -mt-10 rounded-t-3xl px-5 py-6 no-scrollbar relative z-10">
           
           {/* Author */}
           <div className="flex items-center gap-3 mb-5">
@@ -79,6 +79,18 @@ export default function ArticlePreviewModal({ isOpen, onClose, formData, content
                     <p className="text-[#84361c] text-sm leading-relaxed whitespace-pre-wrap">
                       {block.content}
                     </p>
+                    {block.sourceUrl && (
+                      <div className="mt-4">
+                        <a 
+                          href={block.sourceUrl} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="w-full block text-center py-2.5 rounded-xl bg-[#af492c] text-white font-bold text-xs hover:bg-[#9a3a1f] transition-colors shadow-sm"
+                        >
+                          Read from online
+                        </a>
+                      </div>
+                    )}
                   </div>
                 );
               }
@@ -94,6 +106,18 @@ export default function ArticlePreviewModal({ isOpen, onClose, formData, content
                       <p className="text-[#84361c] text-xs leading-relaxed whitespace-pre-wrap">
                         {block.content}
                       </p>
+                      {block.sourceUrl && (
+                        <div className="mt-3">
+                          <a 
+                            href={block.sourceUrl} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="w-full block text-center py-2 rounded-lg bg-[#af492c] text-white font-bold text-xs hover:bg-[#9a3a1f] transition-colors shadow-sm"
+                          >
+                            Read from online
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -106,6 +130,18 @@ export default function ArticlePreviewModal({ isOpen, onClose, formData, content
                     <p className="text-sm leading-relaxed whitespace-pre-wrap text-white/90">
                       {block.content}
                     </p>
+                    {block.sourceUrl && (
+                      <div className="mt-4">
+                        <a 
+                          href={block.sourceUrl} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="w-full block text-center py-2.5 rounded-xl bg-white text-[#af492c] font-bold text-xs hover:bg-gray-100 transition-colors shadow-sm"
+                        >
+                          Read from online
+                        </a>
+                      </div>
+                    )}
                   </div>
                 );
               }
@@ -113,7 +149,6 @@ export default function ArticlePreviewModal({ isOpen, onClose, formData, content
               return null;
             })}
           </div>
-
           <div className="h-10"></div>
         </div>
 
