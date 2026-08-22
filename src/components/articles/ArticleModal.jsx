@@ -2,43 +2,62 @@ import React, { useState, useEffect } from "react";
 import { X, Plus, Trash2, ArrowUp, ArrowDown, Pencil, Smartphone } from "lucide-react";
 import ArticlePreviewModal from "./ArticlePreviewModal";
 import { useLang } from "../../context/LanguageContext";
+import api from "../../utils/api";
 
 export default function ArticleModal({ isOpen, onClose, initialData, onSubmit, loading }) {
   const { t } = useLang();
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     title: "",
-    mainCategory: "Advice",
+    mainCategory: "",
     tag: "",
     author: "Team Hesteka",
     readTime: 2,
     isFeatured: false,
+    externalLink: "",
     isActive: true,
   });
   const [contentBlocks, setContentBlocks] = useState([]);
   const [imageFile, setImageFile] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
+  // Fetch categories dynamically from backend
+  useEffect(() => {
+    api.get("/articles/get-article-category")
+      .then((res) => {
+        if (res.data?.data?.length > 0) {
+          setCategories(res.data.data);
+        }
+      })
+      .catch(() => {
+        // fallback to defaults if API fails
+        setCategories([{ _id: null, name: "Advice" }, { _id: null, name: "News" }, { _id: null, name: "Health" }]);
+      });
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setFormData({
           title: initialData.title || "",
-          mainCategory: initialData.mainCategory || "Advice",
+          mainCategory: initialData.mainCategory || "",
           tag: initialData.tag || "",
           author: initialData.author || "Team Hesteka",
           readTime: initialData.readTime || 2,
           isFeatured: initialData.isFeatured || false,
+          externalLink: initialData.externalLink || "",
           isActive: initialData.isActive ?? true,
         });
         setContentBlocks(initialData.contentBlocks || []);
       } else {
         setFormData({
           title: "",
-          mainCategory: "Advice",
+          mainCategory: "",
           tag: "",
           author: "Team Hesteka",
           readTime: 2,
           isFeatured: false,
+          externalLink: "",
           isActive: true,
         });
         setContentBlocks([]);
@@ -168,9 +187,12 @@ export default function ArticleModal({ isOpen, onClose, initialData, onSubmit, l
                   onChange={handleInputChange}
                   className="w-full border border-[#e8ddd0] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#8B6914]"
                 >
-                  <option value="Advice">Advice</option>
-                  <option value="News">News</option>
-                  <option value="Health">Health</option>
+                  <option value="" disabled>Select a category...</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id || cat.name} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -224,6 +246,18 @@ export default function ArticleModal({ isOpen, onClose, initialData, onSubmit, l
                 {initialData?.image && !imageFile && (
                   <p className="text-xs text-gray-500 mt-1">Current image uploaded.</p>
                 )}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-[#8B6914] uppercase tracking-widest">{t.externalLink || "External Link"} (Optional)</label>
+                <input
+                  type="url"
+                  name="externalLink"
+                  value={formData.externalLink}
+                  onChange={handleInputChange}
+                  placeholder="https://..."
+                  className="w-full border border-[#e8ddd0] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#8B6914]"
+                />
               </div>
             </div>
 
@@ -317,13 +351,13 @@ export default function ArticleModal({ isOpen, onClose, initialData, onSubmit, l
                         </div>
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-gray-500 uppercase">Content *</label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase">{t.contentLabel || "Content"} *</label>
                         <textarea
                           required
                           value={block.content}
                           onChange={(e) => handleBlockChange(index, "content", e.target.value)}
                           rows={3}
-                          placeholder="Enter paragraph text..."
+                          placeholder={t.enterParagraphText || "Enter text..."}
                           className="w-full border border-[#e8ddd0] rounded px-2 py-1 text-sm focus:outline-none focus:border-[#8B6914]"
                         />
                       </div>
@@ -332,7 +366,7 @@ export default function ArticleModal({ isOpen, onClose, initialData, onSubmit, l
                 ))}
                 {contentBlocks.length === 0 && (
                   <div className="text-center py-6 text-gray-400 text-sm border-2 border-dashed border-[#e8ddd0] rounded-lg">
-                    No content blocks added yet. Click "Add Block" to start building your article.
+                    {t.noContentBlocks || "No content blocks added yet. Click 'Add Block' to start building your article."}
                   </div>
                 )}
               </div>
@@ -373,6 +407,7 @@ export default function ArticleModal({ isOpen, onClose, initialData, onSubmit, l
         contentBlocks={contentBlocks} 
         imageFile={imageFile} 
         initialImage={initialData?.image} 
+        articleId={initialData?._id}
       />
     </div>
   );

@@ -96,7 +96,7 @@ export default function SavedLocationsPage() {
         }
       } catch (err) {
         console.error("Failed to fetch saved locations:", err);
-        toast.error("Failed to load saved locations from database");
+        toast.error(t.failedLoadLocations || "Failed to load saved locations from database");
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -120,18 +120,18 @@ export default function SavedLocationsPage() {
   const handleDeleteSingle = (item) => {
     setConfirmModal({
       isOpen: true,
-      title: "Delete Saved Location",
-      message: `Are you sure you want to remove cache key "${item.key}"? Subsequent requests for this location will re-fetch from OpenStreetMap.`,
+      title: t.deleteSavedLocation || "Delete Saved Location",
+      message: `${t.confirmRemoveCacheKey || "Are you sure you want to remove cache key"} "${item.key}"? ${t.subsequentRequests || "Subsequent requests for this location will re-fetch from OpenStreetMap."}`,
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
           await api.delete(`/location/saved/${item._id}`);
-          toast.success("Saved location removed from cache");
+          toast.success(t.savedLocationRemoved || "Saved location removed from cache");
           setConfirmModal((prev) => ({ ...prev, isOpen: false }));
           fetchLocations();
         } catch (err) {
           console.error("Delete failed:", err);
-          toast.error("Failed to delete saved location");
+          toast.error(t.failedDeleteLocation || "Failed to delete saved location");
         } finally {
           setConfirmLoading(false);
         }
@@ -142,18 +142,18 @@ export default function SavedLocationsPage() {
   const handleClearAll = () => {
     setConfirmModal({
       isOpen: true,
-      title: "Clear All Location Cache",
-      message: "WARNING: Are you sure you want to clear ALL saved location data from the MongoDB database? All autocomplete, place details, and geocoding cache will be erased.",
+      title: t.clearAllLocationCache || "Clear All Location Cache",
+      message: t.warningClearAll || "WARNING: Are you sure you want to clear ALL saved location data from the MongoDB database? All autocomplete, place details, and geocoding cache will be erased.",
       onConfirm: async () => {
         setConfirmLoading(true);
         try {
           await api.delete(`/location/saved`);
-          toast.success("All saved location cache cleared successfully");
+          toast.success(t.allCacheCleared || "All saved location cache cleared successfully");
           setConfirmModal((prev) => ({ ...prev, isOpen: false }));
           fetchLocations();
         } catch (err) {
           console.error("Clear all failed:", err);
-          toast.error("Failed to clear location cache");
+          toast.error(t.failedClearCache || "Failed to clear location cache");
         } finally {
           setConfirmLoading(false);
         }
@@ -163,15 +163,15 @@ export default function SavedLocationsPage() {
 
   const getTypeInfo = (key) => {
     if (key?.startsWith("pd:")) {
-      return { label: "Place Details", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: MapPin };
+      return { label: t.placeDetails || "Place Details", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: MapPin };
     }
     if (key?.startsWith("ac:") || key?.startsWith("auto_")) {
-      return { label: "Autocomplete", color: "bg-blue-500/10 text-blue-600 border-blue-500/20", icon: Search };
+      return { label: t.autocomplete || "Autocomplete", color: "bg-blue-500/10 text-blue-600 border-blue-500/20", icon: Search };
     }
     if (key?.startsWith("gc:") || key?.startsWith("rev_")) {
-      return { label: "Geocode", color: "bg-purple-500/10 text-purple-600 border-purple-500/20", icon: Globe };
+      return { label: t.geocodeReverse || "Geocode", color: "bg-purple-500/10 text-purple-600 border-purple-500/20", icon: Globe };
     }
-    return { label: "General Cache", color: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: Database };
+    return { label: t.generalCache || "General Cache", color: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: Database };
   };
 
   const getCoordinates = (data) => {
@@ -193,7 +193,7 @@ export default function SavedLocationsPage() {
 
   const getDisplayName = (item) => {
     const data = item?.data;
-    if (!data) return item?.key || "Unknown Item";
+    if (!data) return item?.key || t.unknownItem || "Unknown Item";
     if (data.name && data.formatted_address) {
       return `${data.name} (${data.formatted_address})`;
     }
@@ -201,14 +201,14 @@ export default function SavedLocationsPage() {
     if (data.description) return data.description;
     if (data.name) return data.name;
     if (Array.isArray(data)) {
-      return `Array of ${data.length} predictions/results`;
+      return `${t.arrayOf || "Array of"} ${data.length} ${t.predictionsResults || "predictions/results"}`;
     }
     return item?.key;
   };
 
   const columns = [
     {
-      header: "CACHE KEY & TYPE",
+      header: t.cacheKeyType || "CACHE KEY & TYPE",
       cell: (item) => {
         const typeInfo = getTypeInfo(item.key);
         const Icon = typeInfo.icon;
@@ -230,7 +230,7 @@ export default function SavedLocationsPage() {
       },
     },
     {
-      header: "LOCATION SUMMARY",
+      header: t.locationSummary || "LOCATION SUMMARY",
       cell: (item) => {
         const name = getDisplayName(item);
         const coords = getCoordinates(item.data);
@@ -250,7 +250,7 @@ export default function SavedLocationsPage() {
       },
     },
     {
-      header: "CACHED ON",
+      header: t.cachedOn || "CACHED ON",
       cell: (item) => (
         <div className="flex flex-col">
           <span className="text-xs font-medium text-[#3a2a1a]">
@@ -263,7 +263,7 @@ export default function SavedLocationsPage() {
       ),
     },
     {
-      header: "EXPIRES (TTL)",
+      header: t.expiresTtl || "EXPIRES (TTL)",
       cell: (item) => {
         const expiresAt = new Date(item.expiresAt);
         const isExpired = expiresAt < new Date();
@@ -278,7 +278,7 @@ export default function SavedLocationsPage() {
       },
     },
     {
-      header: "ACTIONS",
+      header: t.actionsLabel || "ACTIONS",
       cell: (item) => (
         <div className="flex items-center gap-2">
           <button
@@ -288,14 +288,14 @@ export default function SavedLocationsPage() {
               setIsDetailModalOpen(true);
             }}
             className="p-1.5 bg-[#f5f0e8] text-[#8B6914] hover:bg-[#8B6914] hover:text-white rounded-lg transition-all"
-            title="View Details & Map"
+            title={t.viewDetailsMap || "View Details & Map"}
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => handleDeleteSingle(item)}
             className="p-1.5 bg-red-500/10 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all"
-            title="Remove from Cache"
+            title={t.removeFromCache || "Remove from Cache"}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -349,33 +349,33 @@ export default function SavedLocationsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           loading={loading}
-          label="Total Saved Items"
+          label={t.totalSavedItems || "Total Saved Items"}
           value={{ text: (stats?.all || 0).toLocaleString(), color: "text-[#3a2a1a]" }}
-          sub="All cached database entries"
+          sub={t.allCachedEntries || "All cached database entries"}
           subType="neutral"
           color="bg-amber-600"
         />
         <StatCard
           loading={loading}
-          label="Place Details Cached"
+          label={t.placeDetailsCached || "Place Details Cached"}
           value={{ text: (stats?.details || 0).toLocaleString(), color: "text-[#3a2a1a]" }}
-          sub="Full location coordinates & address"
+          sub={t.fullLocationCoords || "Full location coordinates & address"}
           subType="neutral"
           color="bg-emerald-600"
         />
         <StatCard
           loading={loading}
-          label="Autocomplete Queries"
+          label={t.autocompleteQueries || "Autocomplete Queries"}
           value={{ text: (stats?.autocomplete || 0).toLocaleString(), color: "text-[#3a2a1a]" }}
-          sub="Debounced search prediction lists"
+          sub={t.debouncedSearch || "Debounced search prediction lists"}
           subType="neutral"
           color="bg-blue-600"
         />
         <StatCard
           loading={loading}
-          label="Geocode / Reverse"
+          label={t.geocodeReverse || "Geocode / Reverse"}
           value={{ text: (stats?.geocode || 0).toLocaleString(), color: "text-[#3a2a1a]" }}
-          sub="Lat/Lng and forward geocoding"
+          sub={t.latLngForward || "Lat/Lng and forward geocoding"}
           subType="neutral"
           color="bg-purple-600"
         />
@@ -389,7 +389,7 @@ export default function SavedLocationsPage() {
               type="text"
               value={queryParams.search}
               onChange={handleSearchChange}
-              placeholder="Search by cache key, name, or address..."
+              placeholder={t.searchCachePlaceholder || "Search by cache key, name, or address..."}
               className="w-full bg-[#fcfaf7] border border-[#e8ddd0] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#3a2a1a] outline-none focus:border-[#8B6914] transition-all font-medium shadow-inner"
             />
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a8a7a]" />
@@ -405,10 +405,10 @@ export default function SavedLocationsPage() {
 
           <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
             {[
-              { id: "all", label: "All Types", icon: Layers },
-              { id: "details", label: "Place Details", icon: MapPin },
-              { id: "autocomplete", label: "Autocomplete", icon: Search },
-              { id: "geocode", label: "Geocoding", icon: Globe },
+              { id: "all", label: t.allTypes || "All Types", icon: Layers },
+              { id: "details", label: t.placeDetails || "Place Details", icon: MapPin },
+              { id: "autocomplete", label: t.autocomplete || "Autocomplete", icon: Search },
+              { id: "geocode", label: t.geocoding || "Geocoding", icon: Globe },
             ].map((tab) => {
               const TabIcon = tab.icon;
               const isActive = queryParams.type === tab.id;
@@ -435,7 +435,7 @@ export default function SavedLocationsPage() {
           columns={columns}
           data={locations}
           loading={loading}
-          emptyMessage="No saved locations found in the MongoDB cache matching your criteria."
+          emptyMessage={t.noSavedLocationsFound || "No saved locations found in the MongoDB cache matching your criteria."}
         />
 
         {/* Pagination */}
@@ -488,7 +488,7 @@ export default function SavedLocationsPage() {
                 }`}
               >
                 <MapPin className="w-3.5 h-3.5" />
-                <span>Visual Overview & Map</span>
+                <span>{t.visualOverviewMap || "Visual Overview & Map"}</span>
               </button>
               <button
                 onClick={() => setActiveTab("json")}
@@ -499,7 +499,7 @@ export default function SavedLocationsPage() {
                 }`}
               >
                 <Code className="w-3.5 h-3.5" />
-                <span>Raw Cached JSON Data</span>
+                <span>{t.rawJsonData || "Raw JSON Data"}</span>
               </button>
             </div>
 

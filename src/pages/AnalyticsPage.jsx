@@ -4,7 +4,7 @@ import { BarChart3, Globe, TrendingUp, TrendingDown, Clock, Activity, Search, Ma
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from "../utils/api";
 
-const AnalyticsCard = React.memo(({ label, value, trend, color, icon: Icon }) => (
+const AnalyticsCard = React.memo(({ label, value, trend, color, icon: Icon, t }) => (
   <div className="bg-white rounded-2xl p-5 border border-[#e8ddd0] flex flex-col justify-between relative overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
     <div className={`absolute left-0 top-0 w-1.5 h-full ${color}`}></div>
     <div className="flex justify-between items-start">
@@ -22,14 +22,14 @@ const AnalyticsCard = React.memo(({ label, value, trend, color, icon: Icon }) =>
           <div className={`p-0.5 rounded-full ${trend >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
             {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
           </div>
-          <span>{Math.abs(trend)}% {trend >= 0 ? 'increase' : 'decrease'}</span>
+          <span>{Math.abs(trend)}% {trend >= 0 ? (t.increase || 'increase') : (t.decrease || 'decrease')}</span>
         </div>
       ) : (
         <div className="text-[11px] font-bold text-[#9a8a7a] flex items-center gap-1.5">
           <div className="p-0.5 rounded-full bg-gray-100">
             <Activity className="w-3 h-3" />
           </div>
-          <span>Stable performance</span>
+          <span>{t.stablePerformance || "Stable performance"}</span>
         </div>
       )}
     </div>
@@ -51,12 +51,12 @@ const ZoneRow = React.memo(({ label, percentage, color }) => (
   </div>
 ));
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label, t }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-[#3a2a1a] text-white p-3 rounded-xl border border-white/20 shadow-2xl backdrop-blur-md">
         <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-sm font-black">{payload[0].value} Reports</p>
+        <p className="text-sm font-black">{payload[0].value} {t.reportsWord || "Reports"}</p>
       </div>
     );
   }
@@ -196,49 +196,53 @@ export default function AnalyticsPage() {
       
       {/* Location API Usage Bar */}
       <div>
-        <h3 className="text-xs font-black text-[#3a2a1a] uppercase tracking-widest mb-4">Location API Usage (Free OSM & Map Loads)</h3>
+        <h3 className="text-xs font-black text-[#3a2a1a] uppercase tracking-widest mb-4">{t.locationApiUsage || "Location API Usage (Free OSM & Map Loads)"}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <AnalyticsCard 
-            label="Map Views"
+            label={t.mapViews || "Map Views"}
             value={apiCounts.map_load.toLocaleString()} 
             color="bg-indigo-600" 
             icon={Globe}
+            t={t}
           />
           <AnalyticsCard 
-            label="Autocomplete (OSM)"
+            label={t.autocompleteOsm || "Autocomplete (OSM)"}
             value={apiCounts.autocomplete.toLocaleString()} 
             color="bg-teal-600" 
             icon={Search}
+            t={t}
           />
           <AnalyticsCard 
-            label="Place Details (OSM)"
+            label={t.placeDetailsOsm || "Place Details (OSM)"}
             value={apiCounts.details.toLocaleString()} 
             color="bg-rose-600" 
             icon={MapPin}
+            t={t}
           />
           <AnalyticsCard 
-            label="Geocode (OSM)"
+            label={t.geocodeOsm || "Geocode (OSM)"}
             value={apiCounts.geocode.toLocaleString()} 
             color="bg-cyan-600" 
             icon={MapPin}
+            t={t}
           />
         </div>
         
         {/* Device Map Load Breakdown */}
         <div className="mt-4 flex flex-wrap gap-4 items-center">
-           <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-widest mr-2">Map Views By Device:</span>
+           <span className="text-[10px] font-bold text-[#9a8a7a] uppercase tracking-widest mr-2">{t.mapViewsByDevice || "Map Views By Device:"}</span>
            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-[#e8ddd0] shadow-sm transition hover:-translate-y-0.5">
-             <span className="text-xs font-bold text-[#3a2a1a]">🖥️ Admin</span>
+             <span className="text-xs font-bold text-[#3a2a1a]">🖥️ {t.adminDevice || "Admin"}</span>
              <div className="w-1 h-4 bg-indigo-200 rounded-full"></div>
              <span className="text-sm font-black text-indigo-600">{sourceBreakdown.admin_dashboard.toLocaleString()}</span>
            </div>
            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-[#e8ddd0] shadow-sm transition hover:-translate-y-0.5">
-             <span className="text-xs font-bold text-[#3a2a1a]">🏢 Partner</span>
+             <span className="text-xs font-bold text-[#3a2a1a]">🏢 {t.partnerDevice || "Partner"}</span>
              <div className="w-1 h-4 bg-teal-200 rounded-full"></div>
              <span className="text-sm font-black text-teal-600">{sourceBreakdown.partner_dashboard.toLocaleString()}</span>
            </div>
            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-[#e8ddd0] shadow-sm transition hover:-translate-y-0.5">
-             <span className="text-xs font-bold text-[#3a2a1a]">📱 App</span>
+             <span className="text-xs font-bold text-[#3a2a1a]">📱 {t.appDevice || "App"}</span>
              <div className="w-1 h-4 bg-rose-200 rounded-full"></div>
              <span className="text-sm font-black text-rose-600">{sourceBreakdown.mobile_app.toLocaleString()}</span>
            </div>
@@ -257,7 +261,7 @@ export default function AnalyticsPage() {
             </h3>
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#9a8a7a]">
-                <div className="w-2 h-2 rounded-full bg-[#8B6914]"></div> Active Reports
+                <div className="w-2 h-2 rounded-full bg-[#8B6914]"></div> {t.activeReportsLabel || "Active Reports"}
               </span>
             </div>
           </div>
@@ -284,7 +288,7 @@ export default function AnalyticsPage() {
                   tickLine={false} 
                   tick={{ fill: '#9a8a7a', fontSize: 10, fontWeight: 'bold' }}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip t={t} />} />
                 <Area 
                   type="monotone" 
                   dataKey="reports" 
@@ -330,7 +334,7 @@ export default function AnalyticsPage() {
           
           <div className="mt-auto pt-6 border-t border-[#f0f0f0]">
              <p className="text-[10px] text-[#9a8a7a] font-medium leading-relaxed italic">
-               * Data updated in real-time based on geolocated animal reports submitted by the community.
+               {t.analyticsFootnote || "* Data updated in real-time based on geolocated animal reports submitted by the community."}
              </p>
           </div>
         </div>
