@@ -797,8 +797,7 @@ const CRUDModal = ({
             {fields.map((field) => {
               if (
                 field.name === "latitude" ||
-                field.name === "longitude" ||
-                field.type === "file"
+                field.name === "longitude"
               )
                 return null;
 

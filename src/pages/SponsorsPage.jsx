@@ -194,6 +194,19 @@ export default function SponsorsPage() {
         );
       },
     },
+    {
+      header: t.sponsorImage || "Image",
+      cell: (row) => {
+        const imageUrl = row.sponsorImage?.secure_url;
+        return imageUrl ? (
+          <img src={imageUrl} alt={row.title} className="w-16 h-10 rounded border border-[#e8ddd0] object-cover bg-[#fcfaf7]" />
+        ) : (
+          <div className="w-16 h-10 rounded border border-[#e8ddd0] bg-[#f5f0e8] flex items-center justify-center text-[10px] text-[#9a8a7a] font-bold">
+            NO IMG
+          </div>
+        );
+      },
+    },
     { header: t.titleLabel || "Title", accessor: "title" },
     {
       header: t.target || "Target",
@@ -331,7 +344,7 @@ export default function SponsorsPage() {
       options: locations.departments.map((d) => ({ value: d, label: d })),
       dependsOn: { field: "targetAllUsers", value: false },
     },
-    { name: "image", label: t.sponsorImage || "Sponsor Image", type: "file", accept: "image/*" },
+    { name: "sponsorImage", label: t.sponsorImage || "Sponsor Image", type: "file", accept: "image/*" },
   ];
 
   return (
