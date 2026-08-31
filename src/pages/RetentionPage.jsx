@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLang } from "../context/LanguageContext";
-import { Download, Trash2, Activity, Clock, LogIn, LineChart } from "lucide-react";
+import { Download, Trash2, Activity, Clock, LogIn, LineChart, Smartphone } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from "../utils/api";
 
@@ -56,11 +56,28 @@ export default function RetentionPage() {
   const { t } = useLang();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [timeframe, setTimeframe] = useState("monthly");
+  const [devMode, setDevMode] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get("/settings");
+        if (res.data.status === "ok") {
+          setDevMode(res.data.data.devMode || false);
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const fetchRetention = async () => {
+      setLoading(true);
       try {
-        const res = await api.get("/app-analytics/admin/retention");
+        const res = await api.get(`/app-analytics/admin/retention?timeframe=${timeframe}`);
         if (res.data.status === "ok") {
           setData(res.data.data);
         }
@@ -71,12 +88,12 @@ export default function RetentionPage() {
       }
     };
     fetchRetention();
-  }, []);
+  }, [timeframe]);
 
   if (loading) {
     return (
       <div className="px-4 md:px-6 py-4 flex flex-col gap-6 bg-[#fcfaf7]/50 min-h-screen">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4, 5, 6].map(i => <RetentionCardSkeleton key={i} />)}
         </div>
         <ChartSkeleton />
@@ -89,7 +106,7 @@ export default function RetentionPage() {
   return (
     <div className="px-4 md:px-6 py-4 flex flex-col gap-6 bg-[#fcfaf7]/50 min-h-screen">
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <RetentionCard 
           label={t.downloadsLabel || "Downloads"} 
           value={data?.downloads?.toLocaleString() || 0} 
@@ -126,16 +143,34 @@ export default function RetentionPage() {
           color="bg-pink-600" 
           icon={LogIn}
         />
+        <RetentionCard 
+          label={t.uniqueDevices || "Unique Devices"} 
+          value={data?.uniqueDevices?.toLocaleString() || 0} 
+          color="bg-teal-600" 
+          icon={Smartphone}
+        />
       </div>
 
       <div className="bg-white rounded-2xl border border-[#e8ddd0] p-4 md:p-6 shadow-sm mt-4">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="p-2 rounded-lg bg-[#8B6914]/10 text-[#8B6914]">
-            <LineChart size={20} />
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-[#8B6914]/10 text-[#8B6914]">
+              <LineChart size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-[#3a2a1a] uppercase tracking-widest">{t.installUninstallTrend || "Installs & Uninstalls Trend"}</h3>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-black text-[#3a2a1a] uppercase tracking-widest">{t.installUninstallTrend || "Installs & Uninstalls Trend"}</h3>
-          </div>
+          <select 
+            value={timeframe} 
+            onChange={(e) => setTimeframe(e.target.value)}
+            className="bg-[#fcfaf7] border-2 border-[#e8ddd0] text-[#3a2a1a] text-xs font-black uppercase tracking-widest rounded-xl px-4 py-2.5 outline-none focus:border-[#8B6914] transition-all cursor-pointer shadow-sm hover:bg-white hover:shadow"
+          >
+            <option value="weekly">{t.weekly || "Weekly"}</option>
+            <option value="monthly">{t.monthly || "Monthly"}</option>
+            <option value="yearly">{t.yearly || "Yearly"}</option>
+            <option value="lifetime">{t.lifetime || "Lifetime"}</option>
+          </select>
         </div>
 
         <div className="h-[300px] w-full">
@@ -185,6 +220,42 @@ export default function RetentionPage() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {devMode && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+          <div className="bg-white rounded-2xl border border-[#e8ddd0] p-4 md:p-6 shadow-sm">
+            <h3 className="text-sm font-black text-[#3a2a1a] uppercase tracking-widest mb-4">OS Breakdown (Installs)</h3>
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-center bg-[#fcfaf7] p-3 rounded-xl border border-[#e8ddd0]"><span className="text-sm font-bold text-[#5a4a3a]">Android</span><span className="text-sm font-black text-[#3a2a1a]">{data?.osBreakdown?.android || 0}</span></div>
+              <div className="flex justify-between items-center bg-[#fcfaf7] p-3 rounded-xl border border-[#e8ddd0]"><span className="text-sm font-bold text-[#5a4a3a]">iOS</span><span className="text-sm font-black text-[#3a2a1a]">{data?.osBreakdown?.ios || 0}</span></div>
+              <div className="flex justify-between items-center bg-[#fcfaf7] p-3 rounded-xl border border-[#e8ddd0]"><span className="text-sm font-bold text-[#5a4a3a]">Web</span><span className="text-sm font-black text-[#3a2a1a]">{data?.osBreakdown?.web || 0}</span></div>
+              <div className="flex justify-between items-center bg-[#fcfaf7] p-3 rounded-xl border border-[#e8ddd0]"><span className="text-sm font-bold text-[#5a4a3a]">Unknown</span><span className="text-sm font-black text-[#3a2a1a]">{data?.osBreakdown?.unknown || 0}</span></div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-[#e8ddd0] p-4 md:p-6 shadow-sm">
+            <h3 className="text-sm font-black text-[#3a2a1a] uppercase tracking-widest mb-4">Metadata & Device Logs</h3>
+            <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              {data?.metadataSamples && data.metadataSamples.length > 0 ? (
+                data.metadataSamples.map((sample, idx) => (
+                  <div key={idx} className="bg-[#fcfaf7] p-3 rounded-xl border border-[#e8ddd0]">
+                    <div className="flex justify-between mb-2 pb-2 border-b border-[#e8ddd0]/50">
+                      <span className="text-[10px] font-bold text-[#8B6914] uppercase">{sample.eventType} • {sample.os}</span>
+                      <span className="text-[10px] font-bold text-[#9a8a7a]">{new Date(sample.createdAt).toLocaleString()}</span>
+                    </div>
+                    <pre className="text-[9px] text-[#5a4a3a] overflow-x-auto whitespace-pre-wrap font-mono bg-white p-2 rounded border border-[#e8ddd0]">
+                      {JSON.stringify(sample.metadata, null, 2)}
+                    </pre>
+                  </div>
+                ))
+              ) : (
+                <div className="bg-[#fcfaf7] p-4 rounded-xl border border-[#e8ddd0] text-center">
+                  <p className="text-sm font-bold text-[#9a8a7a]">No metadata events found.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

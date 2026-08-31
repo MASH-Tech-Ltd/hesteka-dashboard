@@ -315,7 +315,7 @@ export default function SettingsPage() {
               {activeBackupTab === "files" ? (
                 <>
                   <p className="text-[10px] text-[#9a8a7a] leading-normal -mt-1">
-                     Compressed JSON backup archives (.json.gz) stored on the server disk. Click download to save locally.
+                     Compressed JSON backup archives (.gz) stored on the server disk. Click download to save locally.
                   </p>
                   <div className="max-h-[350px] overflow-y-auto flex flex-col gap-2.5 pr-1">
                     {backupFiles.length === 0 ? (
