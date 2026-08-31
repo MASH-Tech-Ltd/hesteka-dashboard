@@ -103,6 +103,7 @@ export default function UsersPage() {
     status: "all",
     provider: "all",
     fcm: "all",
+    locationStatus: "all",
     search: "",
     sortBy: "date",
     sort: "descending"
@@ -394,7 +395,18 @@ export default function UsersPage() {
         </span>
       ) 
     },
-    ...(devMode ? [{
+    ...(devMode ? [
+      {
+        header: "REGION",
+        accessor: "region",
+        cell: (user) => <span className="text-[10px] uppercase font-bold text-[#5a4a3a]">{user.region || "N/A"}</span>
+      },
+      {
+        header: "DEPARTMENT",
+        accessor: "department",
+        cell: (user) => <span className="text-[10px] uppercase font-bold text-[#5a4a3a]">{user.department || "N/A"}</span>
+      },
+      {
       header: "FCM",
       accessor: "fcmTokens",
       cell: (user) => (
@@ -543,6 +555,15 @@ export default function UsersPage() {
         <StatCard loading={loading} label={t.pendingPartners || "PENDING PARTNERS"} value={{ text: (stats?.pendingPartners || 0).toLocaleString(), color: "text-orange-600" }} color="bg-orange-500" />
       </div>
 
+      {devMode && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mt-3">
+          <StatCard loading={loading} label="REGION & DEPARTMENT SET" value={{ text: (stats?.devStats?.bothSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-teal-500" />
+          <StatCard loading={loading} label="ONLY REGION SET" value={{ text: (stats?.devStats?.onlyRegionSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-cyan-500" />
+          <StatCard loading={loading} label="ONLY DEPARTMENT SET" value={{ text: (stats?.devStats?.onlyDepartmentSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-indigo-500" />
+          <StatCard loading={loading} label="NONE SET" value={{ text: (stats?.devStats?.noneSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-gray-500" />
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-[#e8ddd0] overflow-hidden flex flex-col shadow-sm">
         <FilterBar 
           onSearch={(val) => setQueryParams(p => p.search === val ? p : { ...p, search: val, page: 1 })}
@@ -562,6 +583,14 @@ export default function UsersPage() {
                 { label: t.banned || "Banned", value: "banned" }
             ]},
             ...(devMode ? [
+              {
+                name: "locationStatus", label: "Location Setup", options: [
+                    { label: "Both Set", value: "both" },
+                    { label: "Only Region", value: "regionOnly" },
+                    { label: "Only Department", value: "departmentOnly" },
+                    { label: "None Set", value: "none" }
+                ]
+              },
               {
                 name: "provider", label: "All providers", options: [
                     { label: "Local", value: "local" },

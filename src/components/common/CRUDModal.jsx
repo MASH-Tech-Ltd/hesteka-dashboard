@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { GoogleMap, MarkerF, useJsApiLoader } from "@react-google-maps/api";
 import api from "../../utils/api";
 import { useLang } from "../../context/LanguageContext";
-import { Search, X, Image as ImageIcon, Pencil, MapPin, Loader2 } from "lucide-react";
+import { Search, X, Image as ImageIcon, Pencil, MapPin, Loader2, Eye } from "lucide-react";
 
 const mapContainerStyle = {
   width: "100%",
@@ -491,6 +491,7 @@ const CRUDModal = ({
   const [formData, setFormData] = useState({});
   const [previews, setPreviews] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+  const [fullScreenImage, setFullScreenImage] = useState(null);
 
   // Sync external field errors (from server) into local state
   useEffect(() => {
@@ -733,11 +734,20 @@ const CRUDModal = ({
                 <div className="relative z-20 shrink-0">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-4 border-white bg-white shadow-sm overflow-hidden relative">
                     {logoImageUrl ? (
-                      <img
-                        src={logoImageUrl}
-                        alt="Logo"
-                        className="w-full h-full object-contain"
-                      />
+                      <div className="relative group/preview w-full h-full">
+                        <img
+                          src={logoImageUrl}
+                          alt="Logo"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFullScreenImage(logoImageUrl)}
+                          className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity"
+                        >
+                          <Eye className="w-6 h-6 text-white" />
+                        </button>
+                      </div>
                     ) : (
                       <div className="w-full h-full bg-[#fcfaf7] flex items-center justify-center text-2xl font-black text-[#8B6914]">
                         {entityName?.charAt(0)?.toUpperCase() || "?"}
@@ -1009,6 +1019,26 @@ const CRUDModal = ({
           </div>
         </form>
       </div>
+
+      {/* Fullscreen Image Preview */}
+      {fullScreenImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setFullScreenImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+            onClick={() => setFullScreenImage(null)}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img 
+            src={fullScreenImage} 
+            alt="Fullscreen preview" 
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" 
+          />
+        </div>
+      )}
     </div>
   );
 };
