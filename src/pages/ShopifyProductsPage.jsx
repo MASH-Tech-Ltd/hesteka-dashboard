@@ -141,6 +141,7 @@ export default function ShopifyProductsPage() {
   const [apiKey, setApiKey] = useState(null);
   const [loadingApiKey, setLoadingApiKey] = useState(false);
   const [allowedDomain, setAllowedDomain] = useState("");
+  const [domainMode, setDomainMode] = useState("all");
   const [savingDomain, setSavingDomain] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [testKey, setTestKey] = useState("");
@@ -204,6 +205,7 @@ export default function ShopifyProductsPage() {
         if (res.data.status === "ok" || res.data.success) {
           setDevMode(res.data.data.devMode || false);
           setAllowedDomain(res.data.data.shopifyAllowedDomain || "");
+          setDomainMode(res.data.data.shopifyAllowedDomain ? "specific" : "all");
         }
       } catch (err) {
         console.error("Failed to fetch settings", err);
@@ -292,7 +294,7 @@ export default function ShopifyProductsPage() {
     setSavingDomain(true);
     try {
       const res = await api.patch("/settings", {
-        shopifyAllowedDomain: allowedDomain,
+        shopifyAllowedDomain: domainMode === "all" ? "" : allowedDomain,
       });
       if (res.data.status === "ok" || res.data.success) {
         toast.success("Allowed domain saved successfully");
@@ -619,35 +621,62 @@ export default function ShopifyProductsPage() {
                   </div>
 
                   <div className="pt-2 border-t border-[#e8ddd0]">
-                    <h3 className="text-sm font-bold text-[#3a2a1a] mb-1 mt-2">
-                      Allowed Origin (Domain Validation)
+                    <h3 className="text-sm font-bold text-[#3a2a1a] mb-1 mt-2 flex items-center justify-between">
+                      CORS & Domain Restrictions
                     </h3>
                     <p className="text-xs text-[#9a8a7a] mb-3">
-                      Restrict API access to a specific domain (e.g.,{" "}
+                      Bypass CORS by allowing all domains (a valid API Key is still required), or restrict API access to a specific domain (e.g.,{" "}
                       <code className="bg-white px-1 border border-[#e8ddd0] rounded">
                         https://mystore.myshopify.com
                       </code>
-                      ). Leave empty to allow any domain that has the valid API
-                      key.
+                      ).
                     </p>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="text"
-                        placeholder="e.g. https://your-store.myshopify.com"
-                        value={allowedDomain}
-                        onChange={(e) => setAllowedDomain(e.target.value)}
-                        className="block w-full px-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700 placeholder-gray-300"
-                      />
-                      <button
-                        onClick={handleSaveDomain}
-                        disabled={savingDomain}
-                        className="px-4 py-2 bg-[#8B6914] text-white rounded-lg text-sm font-bold hover:bg-[#6a5010] transition-colors disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
-                      >
-                        {savingDomain ? (
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : null}
-                        Save
-                      </button>
+
+                    <div className="flex flex-col gap-4 mt-2">
+                      <div className="flex items-center gap-3">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer" 
+                            checked={domainMode === "all"}
+                            onChange={(e) => setDomainMode(e.target.checked ? "all" : "specific")}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#8B6914]"></div>
+                          <span className="ml-3 text-sm font-bold text-[#3a2a1a]">Bypass CORS (Allow All Domains)</span>
+                        </label>
+                      </div>
+
+                      {domainMode === "all" && (
+                        <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-xs shadow-sm">
+                          <AlertTriangle className="w-4 h-4 shrink-0 text-yellow-600 mt-0.5" />
+                          <p>
+                            <strong>Warning:</strong> Bypassing CORS is recommended for the <strong>development phase only</strong>. In live mode, you must disable this and add a specific allowed domain to keep your API secure.
+                          </p>
+                        </div>
+                      )}
+
+                      {domainMode === "specific" && (
+                        <input
+                          type="text"
+                          placeholder="e.g. https://your-store.myshopify.com"
+                          value={allowedDomain}
+                          onChange={(e) => setAllowedDomain(e.target.value)}
+                          className="block w-full px-3 py-2 border border-[#e8ddd0] rounded-lg bg-white text-sm focus:outline-none focus:ring-1 focus:ring-[#8B6914] text-gray-700 placeholder-gray-300"
+                        />
+                      )}
+                      
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleSaveDomain}
+                          disabled={savingDomain || (domainMode === "specific" && !allowedDomain)}
+                          className="px-4 py-2 bg-[#8B6914] text-white rounded-lg text-sm font-bold hover:bg-[#6a5010] transition-colors disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
+                        >
+                          {savingDomain ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : null}
+                          Save CORS Settings
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -780,7 +809,7 @@ export default function ShopifyProductsPage() {
                       </p>
                       <div className="bg-white px-3 py-2 rounded border border-[#e8ddd0] inline-block font-mono text-[#8B6914] text-[11px]">
                         
-                        https://share.hesteka.com/api/v1/intigration/shopify/users
+                        https://share.hesteka.com/api/intigration/shopify/users
                       </div>
                       <div className="mt-2 p-3 bg-gray-50 border border-[#e8ddd0] rounded-lg">
                         <p className="text-[#3a2a1a] font-bold mb-1 text-[11px]">Pagination Support:</p>
