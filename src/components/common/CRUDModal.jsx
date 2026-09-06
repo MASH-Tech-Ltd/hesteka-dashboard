@@ -915,6 +915,34 @@ const CRUDModal = ({
                         </div>
                       </div>
                     </div>
+                  ) : field.type === "badge-checkbox" ? (
+                    <div className="flex flex-col justify-end h-full pb-1 md:pb-2">
+                      <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border w-fit select-none transition-all ${!!formData[field.name] ? (field.activeColor || 'bg-blue-50 border-blue-200') : 'bg-gray-50 border-gray-200'} ${field.disabled || isViewOnly ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:shadow-sm active:scale-95'}`}>
+                        <input
+                          type="checkbox"
+                          name={field.name}
+                          checked={!!formData[field.name]}
+                          onChange={handleChange}
+                          disabled={field.disabled || isViewOnly}
+                          className="sr-only"
+                        />
+                        {!!formData[field.name] ? (
+                          <>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shadow-sm text-white ${field.iconBgColor || 'bg-blue-500'}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase tracking-wider pt-0.5 ${field.activeTextColor || 'text-blue-700'}`}>{field.activeLabel || "Active"}</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center shadow-sm text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </div>
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider pt-0.5">{field.inactiveLabel || "Inactive"}</span>
+                          </>
+                        )}
+                      </label>
+                    </div>
                   ) : field.type === "checkbox" ? (
                     <div className="flex flex-col justify-end h-full pb-1 md:pb-2">
                       <label className={`flex items-center gap-3 cursor-pointer w-fit ${field.disabled || isViewOnly ? "opacity-70 cursor-not-allowed" : ""}`}>

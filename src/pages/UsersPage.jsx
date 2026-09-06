@@ -104,6 +104,8 @@ export default function UsersPage() {
     provider: "all",
     fcm: "all",
     locationStatus: "all",
+    isTrusted: "all",
+    isVerified: "all",
     search: "",
     sortBy: "date",
     sort: "descending"
@@ -341,21 +343,38 @@ export default function UsersPage() {
       }
     },
     { header: t.email, accessor: "email" },
-    {
-      header: "Trusted",
-      align: "center",
-      cell: (user) => user.isTrusted ? (
-        <div className="flex justify-center">
-          <div className="w-5 h-5 rounded-full bg-[#c0392b] flex items-center justify-center shadow-sm">
-            <CheckCircle className="w-3.5 h-3.5 text-white" />
+    ...(devMode ? [
+      {
+        header: "Trusted",
+        align: "center",
+        cell: (user) => user.isTrusted ? (
+          <div className="flex justify-center">
+            <div className="w-5 h-5 rounded-full bg-[#c0392b] flex items-center justify-center shadow-sm">
+              <CheckCircle className="w-3.5 h-3.5 text-white" />
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="flex justify-center">
-          <span className="text-gray-300">-</span>
-        </div>
-      )
-    },
+        ) : (
+          <div className="flex justify-center">
+            <span className="text-gray-300">-</span>
+          </div>
+        )
+      },
+      {
+        header: "Verified",
+        align: "center",
+        cell: (user) => user.isVerified ? (
+          <div className="flex justify-center">
+            <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center shadow-sm">
+              <CheckCircle className="w-3.5 h-3.5 text-white" />
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <span className="text-gray-300">-</span>
+          </div>
+        )
+      }
+    ] : []),
     {
       header: t.status,
       cell: (user) => <StatusBadge status={user.status} />
@@ -512,8 +531,24 @@ export default function UsersPage() {
     },
     ...(isEditing ? [{
       name: "isTrusted",
-      label: "Trusted User (Special Badge)",
-      type: "checkbox"
+      label: t.trustedUser || "Trusted User",
+      type: "badge-checkbox",
+      activeLabel: t.trusted || "Trusted",
+      inactiveLabel: t.notTrusted || "Not Trusted",
+      activeColor: "bg-red-50 border-red-200",
+      iconBgColor: "bg-[#c0392b]",
+      activeTextColor: "text-[#c0392b]"
+    }] : []),
+    ...(isEditing ? [{
+      name: "isVerified",
+      label: t.verificationStatus || "Verification Status",
+      type: "badge-checkbox",
+      disabled: true,
+      activeLabel: t.verified || "Verified",
+      inactiveLabel: t.notVerified || "Not Verified",
+      activeColor: "bg-blue-50 border-blue-200",
+      iconBgColor: "bg-blue-500",
+      activeTextColor: "text-blue-700"
     }] : []),
     ...(isEditing ? [{
       name: "status",
@@ -556,11 +591,18 @@ export default function UsersPage() {
       </div>
 
       {devMode && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mt-3">
-          <StatCard loading={loading} label="REGION & DEPARTMENT SET" value={{ text: (stats?.devStats?.bothSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-teal-500" />
-          <StatCard loading={loading} label="ONLY REGION SET" value={{ text: (stats?.devStats?.onlyRegionSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-cyan-500" />
-          <StatCard loading={loading} label="ONLY DEPARTMENT SET" value={{ text: (stats?.devStats?.onlyDepartmentSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-indigo-500" />
-          <StatCard loading={loading} label="NONE SET" value={{ text: (stats?.devStats?.noneSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-gray-500" />
+        <div className="flex flex-col gap-3 mt-3">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+            <StatCard loading={loading} label={t.regionAndDeptSet || "REGION & DEPARTMENT SET"} value={{ text: (stats?.devStats?.bothSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-teal-500" />
+            <StatCard loading={loading} label={t.onlyRegionSet || "ONLY REGION SET"} value={{ text: (stats?.devStats?.onlyRegionSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-cyan-500" />
+            <StatCard loading={loading} label={t.onlyDeptSet || "ONLY DEPARTMENT SET"} value={{ text: (stats?.devStats?.onlyDepartmentSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-indigo-500" />
+            <StatCard loading={loading} label={t.noneSet || "NONE SET"} value={{ text: (stats?.devStats?.noneSet || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-gray-500" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <StatCard loading={loading} label={t.totalVerified || "TOTAL VERIFIED"} value={{ text: (stats?.devStats?.verifiedUsers || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-green-500" />
+            <StatCard loading={loading} label={t.localVerified || "LOCAL VERIFIED"} value={{ text: (stats?.devStats?.localVerifiedUsers || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-red-400" />
+            <StatCard loading={loading} label={t.unverified || "UNVERIFIED"} value={{ text: (stats?.devStats?.unverifiedUsers || 0).toLocaleString(), color: "text-[#3a2a1a]" }} color="bg-gray-400" />
+          </div>
         </div>
       )}
 
@@ -584,11 +626,23 @@ export default function UsersPage() {
             ]},
             ...(devMode ? [
               {
-                name: "locationStatus", label: "Location Setup", options: [
-                    { label: "Both Set", value: "both" },
-                    { label: "Only Region", value: "regionOnly" },
-                    { label: "Only Department", value: "departmentOnly" },
-                    { label: "None Set", value: "none" }
+                name: "isTrusted", label: t.trustedStatus || "Trusted Status", options: [
+                    { label: t.trusted || "Trusted", value: "true" },
+                    { label: t.notTrusted || "Not Trusted", value: "false" }
+                ]
+              },
+              {
+                name: "isVerified", label: t.verificationStatus || "Verification Status", options: [
+                    { label: t.verified || "Verified", value: "true" },
+                    { label: t.notVerified || "Not Verified", value: "false" }
+                ]
+              },
+              {
+                name: "locationStatus", label: t.locationSetup || "Location Setup", options: [
+                    { label: t.bothSet || "Both Set", value: "both" },
+                    { label: t.onlyRegion || "Only Region", value: "regionOnly" },
+                    { label: t.onlyDepartment || "Only Department", value: "departmentOnly" },
+                    { label: t.noneSet || "None Set", value: "none" }
                 ]
               },
               {
