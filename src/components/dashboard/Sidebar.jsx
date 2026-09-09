@@ -44,20 +44,28 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
       },
   );
 
+  const [settings, setSettings] = React.useState(null);
+
   React.useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndSettings = async () => {
       try {
-        const res = await api.get("/user/get-my-profile");
-        if (res.data.status === "ok" && res.data.data) {
-          setUser(res.data.data);
-          localStorage.setItem("adminUser", JSON.stringify(res.data.data));
+        const [profileRes, settingsRes] = await Promise.all([
+          api.get("/user/get-my-profile"),
+          api.get("/settings")
+        ]);
+        if (profileRes.data.status === "ok" && profileRes.data.data) {
+          setUser(profileRes.data.data);
+          localStorage.setItem("adminUser", JSON.stringify(profileRes.data.data));
           window.dispatchEvent(new Event("user-profile-updated"));
         }
+        if (settingsRes.data.status === "ok" && settingsRes.data.data) {
+          setSettings(settingsRes.data.data);
+        }
       } catch (err) {
-        console.error("Failed to fetch admin profile", err);
+        console.error("Failed to fetch admin profile or settings", err);
       }
     };
-    fetchProfile();
+    fetchProfileAndSettings();
   }, []);
 
   const handleLogout = () => {
@@ -132,6 +140,9 @@ const Sidebar = React.memo(({ isOpen, setIsOpen }) => {
           badgeColor: "bg-orange-500",
         },
         { icon: Phone, key: "contacts", path: "/contacts", badge: null },
+        ...(settings?.devMode
+          ? [{ icon: Users, key: "referrals", path: "/referrals", badge: null }]
+          : []),
       ],
     },
     {

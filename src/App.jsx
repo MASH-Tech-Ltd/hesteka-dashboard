@@ -43,6 +43,7 @@ const BadgesPage = lazy(() => import("./pages/BadgesPage"));
 const SponsorsPage = lazy(() => import("./pages/SponsorsPage"));
 const ArticlesPage = lazy(() => import("./pages/ArticlesPage"));
 const AppModalsPage = lazy(() => import("./pages/AppModalsPage"));
+const ReferralsPage = lazy(() => import("./pages/ReferralsPage"));
 
 // Helper: is admin logged in?
 const isAdmin = () => {
@@ -164,6 +165,7 @@ const App = () => {
               <Route path="posts" element={<PostsPage />} />
               <Route path="sponsors" element={<SponsorsPage />} />
               <Route path="articles" element={<ArticlesPage />} />
+              <Route path="referrals" element={<ReferralsPage />} />
             </Route>
 
             {/* Catch-all */}
