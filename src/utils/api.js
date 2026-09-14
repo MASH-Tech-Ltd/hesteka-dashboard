@@ -10,6 +10,7 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('adminAccessToken');
     if (token) {
+      
       config.headers.Authorization = `Bearer ${token}`;
     }
     
@@ -20,6 +21,27 @@ api.interceptors.request.use(
     // Explicitly identify requests as coming from the Admin Dashboard for higher rate limiting and source tracking
     config.headers['X-Admin-Dashboard'] = 'true';
     config.headers['X-Requested-From'] = 'web/admin';
+    
+    // Obfuscate path and query parameters
+    let urlToEncode = config.url || '';
+    if (config.params && Object.keys(config.params).length > 0) {
+      const searchParams = new URLSearchParams();
+      for (const key in config.params) {
+        if (config.params[key] !== undefined && config.params[key] !== null) {
+          searchParams.append(key, config.params[key]);
+        }
+      }
+      const qs = searchParams.toString();
+      if (qs) {
+        urlToEncode += (urlToEncode.includes('?') ? '&' : '?') + qs;
+      }
+      config.params = {};
+    }
+    
+    if (urlToEncode && !urlToEncode.startsWith('http')) {
+      const prefix = urlToEncode.startsWith('/') ? '' : '/';
+      config.url = '/musu?_' + encodeURIComponent(btoa(unescape(encodeURIComponent(prefix + urlToEncode))));
+    }
     
     return config;
   },
@@ -35,8 +57,10 @@ const requestNewTokenWithRetry = async (refreshToken) => {
   while (attempts < 3) {
     attempts++;
     try {
+      const pathToEncode = '/auth/generate-access-token';
+      const encodedPath = 'musu?_' + encodeURIComponent(btoa(unescape(encodeURIComponent(pathToEncode))));
       const res = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/auth/generate-access-token`,
+        `${import.meta.env.VITE_API_BASE_URL}/${encodedPath}`,
         {},
         {
           headers: {
@@ -47,6 +71,7 @@ const requestNewTokenWithRetry = async (refreshToken) => {
           withCredentials: true,
         }
       );
+      
 
       if (res.data && res.data.status === 'ok') {
         return res.data.data.accessToken;
