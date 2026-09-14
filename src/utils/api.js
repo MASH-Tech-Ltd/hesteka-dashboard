@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -8,22 +8,21 @@ const api = axios.create({
 // Request interceptor for adding the bearer token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('adminAccessToken');
+    const token = localStorage.getItem("adminAccessToken");
     if (token) {
-      
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     // Add language preference to headers
-    const lang = localStorage.getItem('adminLang') || 'en';
-    config.headers['Accept-Language'] = lang;
-    
+    const lang = localStorage.getItem("adminLang") || "en";
+    config.headers["Accept-Language"] = lang;
+
     // Explicitly identify requests as coming from the Admin Dashboard for higher rate limiting and source tracking
-    config.headers['X-Admin-Dashboard'] = 'true';
-    config.headers['X-Requested-From'] = 'web/admin';
-    
+    config.headers["X-Admin-Dashboard"] = "true";
+    config.headers["X-Requested-From"] = "web/admin";
+
     // Obfuscate path and query parameters
-    let urlToEncode = config.url || '';
+    let urlToEncode = config.url || "";
     if (config.params && Object.keys(config.params).length > 0) {
       const searchParams = new URLSearchParams();
       for (const key in config.params) {
@@ -33,21 +32,29 @@ api.interceptors.request.use(
       }
       const qs = searchParams.toString();
       if (qs) {
-        urlToEncode += (urlToEncode.includes('?') ? '&' : '?') + qs;
+        urlToEncode += (urlToEncode.includes("?") ? "&" : "?") + qs;
       }
       config.params = {};
     }
-    
-    if (urlToEncode && !urlToEncode.startsWith('http')) {
-      const prefix = urlToEncode.startsWith('/') ? '' : '/';
-      config.url = '/musu?_' + encodeURIComponent(btoa(unescape(encodeURIComponent(prefix + urlToEncode))));
+
+    if (urlToEncode && !urlToEncode.startsWith("http")) {
+      const prefix = urlToEncode.startsWith("/") ? "" : "/";
+      if (import.meta.env.VITE_ENVIRONMENT === 'development') {
+        config.url =
+          "/musu?_" +
+          encodeURIComponent(
+            btoa(unescape(encodeURIComponent(prefix + urlToEncode))),
+          );
+      } else {
+        config.url = prefix + urlToEncode;
+      }
     }
-    
+
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 let refreshPromise = null;
@@ -57,27 +64,34 @@ const requestNewTokenWithRetry = async (refreshToken) => {
   while (attempts < 3) {
     attempts++;
     try {
-      const pathToEncode = '/auth/generate-access-token';
-      const encodedPath = 'musu?_' + encodeURIComponent(btoa(unescape(encodeURIComponent(pathToEncode))));
+      const pathToEncode = "/auth/generate-access-token";
+      let encodedPath = pathToEncode;
+      if (import.meta.env.VITE_ENVIRONMENT === 'development') {
+        encodedPath =
+          "musu?_" +
+          encodeURIComponent(btoa(unescape(encodeURIComponent(pathToEncode))));
+      }
       const res = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/${encodedPath}`,
+        `${import.meta.env.VITE_API_BASE_URL}${encodedPath.startsWith('/') ? '' : '/'}${encodedPath}`,
         {},
         {
           headers: {
             Authorization: `Bearer ${refreshToken}`,
-            'X-Requested-From': 'web/admin',
-            'X-Admin-Dashboard': 'true',
+            "X-Requested-From": "web/admin",
+            "X-Admin-Dashboard": "true",
           },
           withCredentials: true,
-        }
+        },
       );
-      
 
-      if (res.data && res.data.status === 'ok') {
+      if (res.data && res.data.status === "ok") {
         return res.data.data.accessToken;
       }
     } catch (refreshError) {
-      console.error(`Token refresh attempt ${attempts} of 3 failed:`, refreshError?.response?.data || refreshError.message);
+      console.error(
+        `Token refresh attempt ${attempts} of 3 failed:`,
+        refreshError?.response?.data || refreshError.message,
+      );
       if (attempts < 3) {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
@@ -93,22 +107,28 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // If error is 401 and we haven't retried yet
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      !originalRequest._retry
+    ) {
       originalRequest._retry = true;
-      const refreshToken = localStorage.getItem('adminRefreshToken');
+      const refreshToken = localStorage.getItem("adminRefreshToken");
 
       if (refreshToken) {
         if (!refreshPromise) {
-          refreshPromise = requestNewTokenWithRetry(refreshToken).finally(() => {
-            refreshPromise = null;
-          });
+          refreshPromise = requestNewTokenWithRetry(refreshToken).finally(
+            () => {
+              refreshPromise = null;
+            },
+          );
         }
 
         const newAccessToken = await refreshPromise;
 
         if (newAccessToken) {
-          localStorage.setItem('adminAccessToken', newAccessToken);
-          
+          localStorage.setItem("adminAccessToken", newAccessToken);
+
           // Update the original request's header and retry
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return api(originalRequest);
@@ -116,13 +136,13 @@ api.interceptors.response.use(
       }
 
       // If no refresh token or not able to generate token after 3 attempts, logout & clear storage
-      localStorage.removeItem('adminAccessToken');
-      localStorage.removeItem('adminRefreshToken');
-      localStorage.removeItem('adminUser');
-      window.location.href = '/login';
+      localStorage.removeItem("adminAccessToken");
+      localStorage.removeItem("adminRefreshToken");
+      localStorage.removeItem("adminUser");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
