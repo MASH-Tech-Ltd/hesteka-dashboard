@@ -39,15 +39,11 @@ api.interceptors.request.use(
 
     if (urlToEncode && !urlToEncode.startsWith("http")) {
       const prefix = urlToEncode.startsWith("/") ? "" : "/";
-      if (import.meta.env.VITE_ENVIRONMENT === 'development') {
-        config.url =
-          "/musu?_" +
-          encodeURIComponent(
-            btoa(unescape(encodeURIComponent(prefix + urlToEncode))),
-          );
-      } else {
-        config.url = prefix + urlToEncode;
-      }
+      config.url =
+        "/musu?_" +
+        encodeURIComponent(
+          btoa(unescape(encodeURIComponent(prefix + urlToEncode))),
+        );
     }
 
     return config;
@@ -65,14 +61,11 @@ const requestNewTokenWithRetry = async (refreshToken) => {
     attempts++;
     try {
       const pathToEncode = "/auth/generate-access-token";
-      let encodedPath = pathToEncode;
-      if (import.meta.env.VITE_ENVIRONMENT === 'development') {
-        encodedPath =
-          "musu?_" +
-          encodeURIComponent(btoa(unescape(encodeURIComponent(pathToEncode))));
-      }
+      const encodedPath =
+        "musu?_" +
+        encodeURIComponent(btoa(unescape(encodeURIComponent(pathToEncode))));
       const res = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}${encodedPath.startsWith('/') ? '' : '/'}${encodedPath}`,
+        `${import.meta.env.VITE_API_BASE_URL}${encodedPath.startsWith("/") ? "" : "/"}${encodedPath}`,
         {},
         {
           headers: {
